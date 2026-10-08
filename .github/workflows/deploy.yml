@@ -43,10 +43,23 @@ jobs:
 
       - name: Check Cloudflare credentials
         id: creds
+        shell: bash
         run: |
-          if [ -z "$CF_ACCOUNT" ]; then echo "::notice::No account ID set — Wrangler will detect the account from the API token."; fi
-          if [ -z "$CF_TOKEN" ]; then
-            echo "::warning::Cloudflare credentials not found (token present: $([ -n "$CF_TOKEN" ] && echo yes || echo no), account id present: $([ -n "$CF_ACCOUNT" ] && echo yes || echo no)) — skipping deploy. See docs/DEPLOYMENT.md."
+          # Clean common paste mistakes: whitespace/newlines, quotes, a "Bearer " prefix.
+          TOKEN="$(printf '%s' "$CF_TOKEN" | tr -d '[:space:]"' | sed -E 's/^[Bb]earer//')"
+          ACCOUNT="$(printf '%s' "$CF_ACCOUNT" | tr -d '[:space:]"')"
+          if [ -n "$TOKEN" ]; then echo "::add-mask::$TOKEN"; fi
+          RAWLEN=${#CF_TOKEN}; LEN=${#TOKEN}
+          SHAPE="other"
+          [[ "$TOKEN" =~ ^[A-Za-z0-9_-]{40}$ ]] && SHAPE="looks like an API token"
+          [[ "$TOKEN" =~ ^[a-f0-9]{32}$ ]] && SHAPE="looks like an Account ID (32 hex) — not a token"
+          [[ "$TOKEN" =~ ^[a-f0-9]{37}$ ]] && SHAPE="looks like a Global API Key — create an API token instead"
+          [[ "$TOKEN" =~ ^cfut_ ]] && SHAPE="looks like an API token (cfut_)"
+          echo "::notice title=Cloudflare token check::stored length ${RAWLEN}, cleaned length ${LEN}, shape: ${SHAPE}; account id present: $([ -n "$ACCOUNT" ] && echo yes || echo no)"
+          echo "CF_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "CF_ACCOUNT=$ACCOUNT" >> "$GITHUB_ENV"
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::Cloudflare API token not found — skipping deploy. See docs/DEPLOYMENT.md."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
