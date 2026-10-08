@@ -1,0 +1,70 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // One Worker serves the static site (Workers Static Assets) and the /api backend.
+  "name": "aogchurch-app",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-09-01",
+  "workers_dev": true,
+  "preview_urls": true,
+
+  // Production domain. Wrangler creates the DNS record + certificate on deploy.
+  // The zone aogsccyouth.com must be on this Cloudflare account and the hostname
+  // must not be attached to another Worker (see docs/DEPLOYMENT.md).
+  "routes": [
+    { "pattern": "aogsccyouth.com", "custom_domain": true },
+    { "pattern": "www.aogsccyouth.com", "custom_domain": true }
+  ],
+
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "aogscc-youth-db",
+      "database_id": "40211a07-6b0e-43a9-b91e-41bc8134b380",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // File uploads (photos, documents). KV today; switch to R2 when enabled.
+  "kv_namespaces": [
+    { "binding": "FILES_KV", "id": "0256e53df0cc4a1a9a1ee90483c8986a" }
+  ],
+  // To move uploads to R2: enable R2 in the dashboard, create the bucket
+  //   npx wrangler r2 bucket create aogscc-youth-uploads
+  // then uncomment below and set STORAGE_DRIVER to "r2". Existing KV files keep working.
+  // "r2_buckets": [
+  //   { "binding": "FILES_R2", "bucket_name": "aogscc-youth-uploads" }
+  // ],
+
+  // Cloudflare Email Service — sends from our own domain (onboard aogsccyouth.com under
+  // Compute → Email Service → Email Sending first). Restricted to our sender addresses.
+  "send_email": [
+    { "name": "EMAIL", "allowed_sender_addresses": ["noreply@aogsccyouth.com"] }
+  ],
+
+  "vars": {
+    "ENVIRONMENT": "production",
+    "SITE_URL": "https://aogsccyouth.com",
+    // The ONLY account allowed into /admin (Google sign-in + emailed code every time).
+    "ADMIN_EMAIL": "aogsccmedia@gmail.com",
+    "MAIL_FROM": "noreply@aogsccyouth.com",
+    "MAIL_FROM_NAME": "AOG Sandton City Church",
+    // Google Identity Services web client ID (public, not a secret). Empty = Google button hidden.
+    "GOOGLE_CLIENT_ID": "",
+    "STORAGE_DRIVER": "kv",
+    "MAX_UPLOAD_MB": "10"
+  },
+
+  // Every 10 minutes: send due weekly letters in batches, Saturday reminder, daily housekeeping.
+  "triggers": { "crons": ["*/10 * * * *"] },
+
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "upload_source_maps": true
+}

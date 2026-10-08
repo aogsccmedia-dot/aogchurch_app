@@ -1,0 +1,26 @@
+{
+  "name": "aogchurch-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AOG Sandton City Church Youth — aogsccyouth.com. Cloudflare Workers + Static Assets + D1 + KV/R2.",
+  "type": "module",
+  "engines": { "node": ">=22.12" },
+  "scripts": {
+    "dev": "wrangler dev",
+    "preview:node": "node --experimental-strip-types --experimental-sqlite --no-warnings test/support/server.ts",
+    "test": "node --experimental-strip-types --experimental-sqlite --no-warnings --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test && wrangler deploy --dry-run --outdir dist",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply aogscc-youth-db --remote",
+    "db:migrate:local": "wrangler d1 migrations apply aogscc-youth-db --local",
+    "db:new": "wrangler d1 migrations create aogscc-youth-db",
+    "admin:create": "node scripts/create-admin.mjs",
+    "logs": "wrangler tail"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250901.0",
+    "typescript": "^5.6.3",
+    "wrangler": "^4.40.0"
+  }
+}

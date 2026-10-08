@@ -1,0 +1,484 @@
+import { AVAILABILITY, LABELS, MINISTRIES } from "./options.js";
+import { FIELD_TYPES, renderField } from "./forms.js";
+
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const TZ = "Africa/Johannesburg";
+const fmtDate = (iso) => iso ? new Date(iso).toLocaleString("en-ZA", { dateStyle: "medium", timeStyle: "short", timeZone: TZ }) : "—";
+const age = (dob) => { if (!dob) return ""; const d = new Date(dob), n = new Date(); let a = n.getFullYear() - d.getFullYear(); if (n < new Date(n.getFullYear(), d.getMonth(), d.getDate())) a--; return a; };
+const ministryLabel = (s) => MINISTRIES.find((m) => m.slug === s)?.label || s;
+const parseList = (s) => { try { return JSON.parse(s || "[]"); } catch { return []; } };
+const toLocal = (iso) => { if (!iso) return ""; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
+const fromLocal = (v) => (v ? new Date(v).toISOString() : "");
+
+let me = null;
+
+async function api(path, { method = "GET", body, form } = {}) {
+  const opts = { method, headers: { "x-scc-admin": "1" }, credentials: "same-origin" };
+  if (form) opts.body = form;
+  else if (body !== undefined) { opts.body = JSON.stringify(body); opts.headers["Content-Type"] = "application/json"; }
+  const res = await fetch(path, opts);
+  let data = {};
+  try { data = await res.json(); } catch { /* ignore */ }
+  if (res.status === 401 && !path.startsWith("/api/auth/")) { showLogin(); throw new Error("Please sign in."); }
+  if (!res.ok || data.ok === false) throw Object.assign(new Error(data.error || `Error ${res.status}`), { details: data.details });
+  return data;
+}
+function toast(msg) {
+  let t = $(".toast");
+  if (!t) { t = document.createElement("div"); t.className = "toast"; document.body.append(t); }
+  t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2800);
+}
+const safe = (fn) => async (...a) => { try { await fn(...a); } catch (e) { toast(e.message); } };
+
+// ================================================================ sign in
+let challenge = null;
+const loginErr = (m) => { $("#login-error").textContent = m; $("#login-error").hidden = !m; };
+
+function showCodeStep(r) {
+  challenge = r.challenge;
+  $("#code-request").hidden = true; $("#admin-google").hidden = true;
+  $("#code-verify").hidden = false;
+  $("#code-sent").textContent = `We emailed a 6-digit code to ${r.sent_to}. It expires in 10 minutes.`;
+  $("#code-verify").code.focus();
+}
+
+async function showLogin() {
+  $("#app-view").hidden = true; $("#login-view").hidden = false;
+  const { google_client_id: cid, user } = await fetch("/api/auth/me").then((r) => r.json()).catch(() => ({}));
+  if (user && user.email && cid) {
+    // Signed in with Google already (e.g. via the public site) → just need the code.
+    $("#admin-google").hidden = false;
+  }
+  if (cid) {
+    const s = document.createElement("script");
+    s.src = "https://accounts.google.com/gsi/client"; s.async = true;
+    s.onload = () => {
+      google.accounts.id.initialize({ client_id: cid, ux_mode: "popup", callback: safe(async (resp) => {
+        loginErr("");
+        const r = await api("/api/auth/google", { method: "POST", body: { credential: resp.credential } });
+        if (!r.needs_code) { loginErr("That Google account isn't the church admin account. Please use aogsccmedia@gmail.com."); return; }
+        showCodeStep(r);
+      }) });
+      google.accounts.id.renderButton($("#admin-google"), { theme: "filled_black", size: "large", shape: "pill", text: "continue_with", width: 300 });
+      $("#admin-google").hidden = false;
+    };
+    document.head.append(s);
+  } else {
+    $("#code-request").hidden = false;
+  }
+}
+
+$("#code-request").addEventListener("submit", safe(async (e) => {
+  e.preventDefault(); loginErr("");
+  showCodeStep(await api("/api/auth/admin/request-code", { method: "POST", body: { email: e.target.email.value } }));
+}));
+$("#code-verify").addEventListener("submit", async (e) => {
+  e.preventDefault(); loginErr("");
+  try { await api("/api/auth/admin/verify", { method: "POST", body: { challenge, code: e.target.code.value } }); boot(); }
+  catch (err) { loginErr(err.message); e.target.code.select(); }
+});
+$("#logout").addEventListener("click", async () => { await api("/api/auth/logout", { method: "POST" }).catch(() => {}); location.href = "/"; });
+
+async function boot() {
+  const r = await fetch("/api/auth/me").then((x) => x.json()).catch(() => ({}));
+  if (!r.is_admin) return showLogin();
+  me = r.user;
+  $("#login-view").hidden = true; $("#app-view").hidden = false;
+  $("#who").textContent = me.email;
+  const hour = Number(new Intl.DateTimeFormat("en-ZA", { hour: "numeric", hour12: false, timeZone: TZ }).format(new Date()));
+  $("#greeting").textContent = `${hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"}${me.given_name ? ", " + me.given_name : ""}`;
+  openTab(location.hash.slice(1) || "overview");
+}
+
+// ================================================================ tabs
+const loaders = {};
+function openTab(tab) {
+  const [base, arg] = tab.split(":");
+  if (base === "events-new") return editEvent(null);
+  if (base === "letters-new") return editLetter(null);
+  if (base === "event" && arg) return editEvent(arg);
+  if (base === "letter" && arg) return editLetter(arg);
+  if (!loaders[base]) tab = "overview";
+  const t = loaders[base] ? base : "overview";
+  $$("#nav button").forEach((b) => b.classList.toggle("active", b.dataset.tab === t));
+  $$("[data-view]").forEach((v) => { v.hidden = v.dataset.view !== t; });
+  history.replaceState(null, "", "#" + t);
+  safe(loaders[t])();
+}
+function showView(view, hash, navTab) {
+  $$("[data-view]").forEach((v) => { v.hidden = v.dataset.view !== view; });
+  $$("#nav button").forEach((b) => b.classList.toggle("active", b.dataset.tab === navTab));
+  history.replaceState(null, "", "#" + hash);
+  scrollTo(0, 0);
+}
+$("#nav").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) openTab(b.dataset.tab); });
+document.addEventListener("click", (e) => { const g = e.target.closest("[data-go]"); if (g) { e.preventDefault(); openTab(g.dataset.go); } });
+
+// ================================================================ overview
+loaders.overview = async () => {
+  const { stats, interests, next_letter, email_enabled, google_enabled } = await api("/api/admin/stats");
+  const notes = [];
+  if (!email_enabled) notes.push("<b>Email sending is off.</b> Onboard aogsccyouth.com in Cloudflare → Email Service so confirmations, codes and letters are delivered.");
+  if (!google_enabled) notes.push("<b>Google sign-in is off.</b> Add the Google client ID to switch on one-tap joining.");
+  $("#setup-notes").innerHTML = notes.length ? `<div class="setup">${notes.map((n) => `<span>${n}</span>`).join("")}</div>` : "";
+  const cards = [["members", "Members"], ["new_members", "Awaiting follow-up"], ["this_week", "Joined this week"], ["subscribers", "Letter subscribers"],
+    ["upcoming_events", "Upcoming events"], ["registrations_week", "Registrations this week"], ["new_prayers", "New prayer requests"], ["new_messages", "New messages"]];
+  $("#stats").innerHTML = cards.map(([k, l]) => `<div class="stat"><b>${stats[k]}</b><span>${l}</span></div>`).join("");
+  $$("[data-count]").forEach((b) => { b.textContent = stats[b.dataset.count] || ""; });
+  const max = Math.max(1, ...interests.map((i) => i.n));
+  $("#interest-bars").innerHTML = interests.length ? interests.map((i) => `<div class="bar"><span>${esc(ministryLabel(i.slug))}</span><span class="track"><i style="width:${(i.n / max) * 100}%"></i></span><b>${i.n}</b></div>`).join("") : `<p class="muted">No sign-ups yet.</p>`;
+  $("#next-letter").innerHTML = next_letter
+    ? `<p><b style="font-weight:450">${esc(next_letter.subject)}</b></p><p class="muted">${next_letter.status === "sending" ? "Sending now…" : "Scheduled for " + fmtDate(next_letter.scheduled_for)}</p><button class="btn btn-sm" data-go="letter:${esc(next_letter.id)}">Open</button>`
+    : `<p class="muted">Nothing scheduled for this Sunday yet.</p><button class="btn btn-sm btn-gold" data-go="letters-new">Write this week's letter</button>`;
+  const { members } = await api("/api/admin/members?limit=5");
+  $("#latest").innerHTML = members.length ? `<table class="table"><tbody>${members.map(memberRow).join("")}</tbody></table>` : `<p class="muted">No sign-ups yet. Share the Join link!</p>`;
+};
+
+// ================================================================ members
+let mPage = 1;
+const memberRow = (m) => `<tr data-member="${esc(m.id)}">
+  <td><b style="font-weight:450">${esc(m.first_name)} ${esc(m.last_name)}</b>${m.preferred_name ? ` <span class="sub">(${esc(m.preferred_name)})</span>` : ""}<div class="sub">${esc(m.ref_code)}</div></td>
+  <td>${esc(LABELS.membership_type[m.membership_type]?.split(" —")[0] || m.membership_type)}</td>
+  <td>${esc(m.phone)}<div class="sub">${esc(m.email)}</div></td><td>${age(m.date_of_birth)}</td>
+  <td><span class="pill ${esc(m.status)}">${esc(m.status)}</span></td><td class="sub">${fmtDate(m.created_at)}</td></tr>`;
+loaders.members = async () => {
+  const q = $("#m-q").value.trim(), status = $("#m-status").value;
+  const p = new URLSearchParams({ page: String(mPage), limit: "25" }); if (q) p.set("q", q); if (status) p.set("status", status);
+  const { members, total, limit } = await api("/api/admin/members?" + p);
+  $("#m-table tbody").innerHTML = members.length ? members.map(memberRow).join("") : `<tr><td colspan="6" class="sub" style="text-align:center;padding:30px">No members found.</td></tr>`;
+  const pages = Math.max(1, Math.ceil(total / limit));
+  $("#m-pager").innerHTML = `<span>${total} total</span><button class="btn btn-sm" data-pg="-1" ${mPage <= 1 ? "disabled" : ""}>←</button><span>${mPage} / ${pages}</span><button class="btn btn-sm" data-pg="1" ${mPage >= pages ? "disabled" : ""}>→</button>`;
+};
+let qTimer;
+$("#m-q").addEventListener("input", () => { clearTimeout(qTimer); qTimer = setTimeout(() => { mPage = 1; safe(loaders.members)(); }, 300); });
+$("#m-status").addEventListener("change", () => { mPage = 1; safe(loaders.members)(); });
+$("#m-pager").addEventListener("click", (e) => { const b = e.target.closest("[data-pg]"); if (b) { mPage += Number(b.dataset.pg); safe(loaders.members)(); } });
+document.addEventListener("click", (e) => { const tr = e.target.closest("tr[data-member]"); if (tr) safe(openMember)(tr.dataset.member); });
+
+async function openMember(id) {
+  const { member: m, attachments } = await api(`/api/admin/members/${id}`);
+  const yn = (v) => (v ? "Yes" : "No");
+  const L = (g, v) => (LABELS[g] && LABELS[g][v]) || v || "—";
+  const rows = [
+    ["Reference", m.ref_code], ["Joining as", L("membership_type", m.membership_type)], ["Date of birth", `${m.date_of_birth} (age ${age(m.date_of_birth)})`],
+    ["Gender", L("gender", m.gender)], ["Mobile", m.phone], ["WhatsApp", m.whatsapp], ["Email", m.email], ["Area", [m.address, m.suburb, m.city].filter(Boolean).join(", ")],
+    ["Currently", L("occupation_status", m.occupation_status)], ["Institution", [m.institution, m.grade_or_role].filter(Boolean).join(" · ")],
+    ["Saved", L("salvation_status", m.salvation_status) + (m.salvation_year ? ` (${m.salvation_year})` : "")], ["Water baptism", L("yes_no_want", m.water_baptised)],
+    ["Holy Spirit baptism", L("yes_no_want", m.spirit_baptised)], ["Previous church", m.previous_church], ["Heard via", L("heard_about", m.heard_about)], ["Invited by", m.invited_by],
+    ["Interests", parseList(m.interests).map(ministryLabel).join(", ")], ["Availability", parseList(m.availability).map((s) => AVAILABILITY.find((a) => a[0] === s)?.[1] || s).join(", ")],
+    ["Skills", m.skills], ["Emergency contact", `${m.emergency_name} (${m.emergency_relationship}) · ${m.emergency_phone}`],
+    ["Guardian", m.guardian_name ? `${m.guardian_name} · ${m.guardian_phone || ""} ${m.guardian_email || ""} · consent: ${yn(m.guardian_consent)}` : ""],
+    ["Care notes", m.care_notes], ["Prayer request", m.prayer_request], ["Contact via", [m.comm_whatsapp && "WhatsApp", m.comm_email && "Email", m.comm_sms && "SMS"].filter(Boolean).join(", ")],
+    ["Photo consent", yn(m.photo_consent)], ["POPIA consent", yn(m.popia_consent)], ["Signed", m.signature_name], ["Submitted", fmtDate(m.created_at)],
+  ].filter(([, v]) => v);
+  const wa = (m.whatsapp || m.phone || "").replace(/\D/g, "");
+  $("#member-body").innerHTML = `
+    <header class="vh"><div><p class="eyebrow gold">${esc(m.ref_code)}</p><h2>${esc(m.first_name)} ${esc(m.last_name)}</h2></div><button class="icon-btn" data-close aria-label="Close">✕</button></header>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${wa ? `<a class="btn btn-sm" target="_blank" rel="noopener" href="https://wa.me/${wa}?text=${encodeURIComponent(`Hi ${m.preferred_name || m.first_name}! It's Sandton City Church — welcome to the family 💛`)}">WhatsApp</a>` : ""}
+      <a class="btn btn-sm" href="mailto:${esc(m.email)}">Email</a><a class="btn btn-sm" href="tel:${esc(m.phone)}">Call</a></div>
+    <div class="card form-grid">
+      <div class="grid-2"><div class="field"><label>Status</label><select class="input" id="md-status">${["new", "contacted", "welcomed", "member", "inactive"].map((s) => `<option ${s === m.status ? "selected" : ""}>${s}</option>`).join("")}</select></div>
+        <div class="field"><label>Assigned leader</label><input class="input" id="md-assigned" value="${esc(m.assigned_to || "")}"></div></div>
+      <div class="field"><label>Leader notes</label><textarea class="input" id="md-notes">${esc(m.admin_notes || "")}</textarea></div>
+      <button class="btn btn-gold btn-sm" id="md-save" style="justify-self:start">Save</button></div>
+    ${attachments.length ? `<div class="card"><h3>Attachments</h3><div class="files">${attachments.map((a) => `<a href="/api/admin/files/${esc(a.id)}" target="_blank" rel="noopener">${a.content_type.startsWith("image/") && a.content_type !== "image/heic" ? `<img src="/api/admin/files/${esc(a.id)}" alt="">` : `<span class="doc">${esc((a.filename.split(".").pop() || "file").toUpperCase())}</span>`}<span>${esc(a.kind)} · ${(a.size_bytes / 1024).toFixed(0)} KB</span></a>`).join("")}</div></div>` : ""}
+    <dl class="kv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+    <button class="btn btn-sm" id="md-delete" style="justify-self:start;color:var(--danger)">Delete record (POPIA request)</button>`;
+  const dlg = $("#member-drawer"); dlg.showModal();
+  $("#md-save").onclick = safe(async () => { await api(`/api/admin/members/${id}`, { method: "PATCH", body: { status: $("#md-status").value, admin_notes: $("#md-notes").value, assigned_to: $("#md-assigned").value } }); toast("Saved"); safe(loaders.members)(); });
+  $("#md-delete").onclick = safe(async () => { if (!confirm(`Permanently delete ${m.first_name} ${m.last_name} and their files?`)) return; await api(`/api/admin/members/${id}`, { method: "DELETE" }); dlg.close(); toast("Deleted"); safe(loaders.members)(); });
+}
+$$("dialog.drawer").forEach((d) => d.addEventListener("click", (e) => { if (e.target === d || e.target.closest("[data-close]")) d.close(); }));
+
+// ================================================================ events list
+loaders.events = async () => {
+  const { events } = await api("/api/admin/events");
+  const now = new Date().toISOString();
+  $("#ev-list").innerHTML = events.length ? events.map((ev) => {
+    const d = new Date(ev.starts_at);
+    const thumb = ev.cover_attachment_id ? `<img src="/api/media/${esc(ev.cover_attachment_id)}" alt="">` : `<span class="ph">${new Intl.DateTimeFormat("en-ZA", { day: "2-digit", timeZone: TZ }).format(d)}</span>`;
+    return `<article class="item ev-item" data-go="event:${esc(ev.id)}">${thumb}
+      <div><b style="font-weight:450">${esc(ev.title)}</b><div class="meta">${fmtDate(ev.starts_at)}${ev.location ? " · " + esc(ev.location) : ""}</div></div>
+      <div class="meta-row">${ev.starts_at < now ? '<span class="pill">Past</span>' : ""}${ev.is_published ? '<span class="pill member">Published</span>' : '<span class="pill">Draft</span>'}
+        <span class="pill">${ev.confirmed} registered${ev.capacity ? ` / ${ev.capacity}` : ""}</span>${ev.waitlist ? `<span class="pill new">${ev.waitlist} waitlist</span>` : ""}</div></article>`;
+  }).join("") : `<div class="empty">No events yet. Create your first service or event — each one gets its own registration page.</div>`;
+};
+$("#new-event").addEventListener("click", () => editEvent(null));
+
+// ================================================================ event builder
+let fields = [];
+let currentEvent = null;
+const ef = $("#event-form");
+const OPT = ["select", "radio", "checkbox"];
+const newId = () => "q" + Math.random().toString(36).slice(2, 8);
+
+$("#palette").innerHTML = Object.entries(FIELD_TYPES).map(([t, l]) => `<button type="button" data-add="${t}">${esc(l)}</button>`).join("");
+$("#palette").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-add]"); if (!b) return;
+  const t = b.dataset.add;
+  fields.push({ id: newId(), type: t, label: t === "statement" ? "Add some helpful information here." : "", required: false, ...(OPT.includes(t) ? { options: ["Option 1", "Option 2"] } : {}) });
+  renderFields(); $$(".fb-field").at(-1)?.querySelector("[data-k=label]")?.focus();
+});
+
+function renderFields() {
+  $("#fb-fields").innerHTML = fields.length ? fields.map((f, i) => `
+    <div class="fb-field" draggable="true" data-i="${i}">
+      <div class="fb-head"><span class="grip" title="Drag to reorder">⋮⋮</span><span class="type">${esc(FIELD_TYPES[f.type])}</span>
+        <div class="tools"><button type="button" data-act="up" title="Move up">↑</button><button type="button" data-act="down" title="Move down">↓</button><button type="button" data-act="copy" title="Duplicate">⧉</button><button type="button" data-act="del" title="Remove">✕</button></div></div>
+      ${f.type === "statement" ? `<textarea class="input" data-k="label" placeholder="Text shown on the form">${esc(f.label)}</textarea>` : `<input class="input" data-k="label" value="${esc(f.label)}" placeholder="Your question">`}
+      ${f.type !== "statement" ? `<input class="input" data-k="help" value="${esc(f.help || "")}" placeholder="Helper text (optional)">` : ""}
+      ${OPT.includes(f.type) ? `<textarea class="input" data-k="options" placeholder="One option per line">${esc((f.options || []).join("\n"))}</textarea>` : ""}
+      ${f.type !== "statement" ? `<div class="fb-row"><label class="check"><input type="checkbox" data-k="required" ${f.required ? "checked" : ""}> Required</label>
+        <select class="input" data-k="type" style="width:auto">${Object.entries(FIELD_TYPES).filter(([t]) => t !== "statement").map(([t, l]) => `<option value="${t}" ${t === f.type ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></div>` : ""}
+    </div>`).join("") : `<p class="muted">No extra questions yet — add some below (e.g. dietary needs, T-shirt size, which session).</p>`;
+  renderPreview();
+}
+function renderPreview() {
+  $("#pv-title").textContent = ef.title.value || "Save your seat";
+  $("#pv-phone").hidden = !ef.collect_phone.checked;
+  $("#pv-fields").innerHTML = fields.filter((f) => f.label || f.type === "statement").map((f) => renderField({ ...f, label: f.label || "Untitled question", options: f.options?.length ? f.options : ["Option"] })).join("");
+}
+$("#fb-fields").addEventListener("input", (e) => {
+  const el = e.target.closest("[data-k]"); if (!el) return;
+  const i = Number(el.closest(".fb-field").dataset.i); const k = el.dataset.k;
+  if (k === "options") fields[i].options = el.value.split("\n").map((s) => s.trim()).filter(Boolean);
+  else if (k === "required") fields[i].required = el.checked;
+  else if (k === "type") { fields[i].type = el.value; if (OPT.includes(el.value) && !fields[i].options?.length) fields[i].options = ["Option 1", "Option 2"]; renderFields(); return; }
+  else fields[i][k] = el.value;
+  renderPreview();
+});
+$("#fb-fields").addEventListener("change", (e) => { if (e.target.dataset.k === "required" || e.target.dataset.k === "type") $("#fb-fields").dispatchEvent(new Event("input", { bubbles: true })) ; });
+$("#fb-fields").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const i = Number(b.closest(".fb-field").dataset.i);
+  const a = b.dataset.act;
+  if (a === "del") fields.splice(i, 1);
+  if (a === "copy") fields.splice(i + 1, 0, { ...structuredClone(fields[i]), id: newId() });
+  if (a === "up" && i > 0) [fields[i - 1], fields[i]] = [fields[i], fields[i - 1]];
+  if (a === "down" && i < fields.length - 1) [fields[i + 1], fields[i]] = [fields[i], fields[i + 1]];
+  renderFields();
+});
+let dragI = null;
+$("#fb-fields").addEventListener("dragstart", (e) => { dragI = Number(e.target.closest(".fb-field")?.dataset.i); });
+$("#fb-fields").addEventListener("dragover", (e) => { const f = e.target.closest(".fb-field"); if (f) { e.preventDefault(); $$(".fb-field").forEach((x) => x.classList.toggle("drag-over", x === f)); } });
+$("#fb-fields").addEventListener("drop", (e) => {
+  const f = e.target.closest(".fb-field"); if (!f || dragI === null) return; e.preventDefault();
+  const to = Number(f.dataset.i); const [m] = fields.splice(dragI, 1); fields.splice(to, 0, m); dragI = null; renderFields();
+});
+ef.addEventListener("input", (e) => { if (!e.target.closest("#fb-fields")) renderPreview(); });
+
+async function editEvent(id) {
+  currentEvent = null; fields = []; ef.reset();
+  $("#eb-cover").hidden = true;
+  if (id) {
+    const { event } = await api(`/api/admin/events/${id}`);
+    currentEvent = event;
+    for (const k of ["title", "slug", "category", "location", "description", "capacity", "confirmation_message"]) ef[k].value = event[k] ?? "";
+    ef.starts_at.value = toLocal(event.starts_at); ef.ends_at.value = toLocal(event.ends_at); ef.registration_closes_at.value = toLocal(event.registration_closes_at);
+    ef.is_published.checked = !!event.is_published; ef.rsvp_enabled.checked = !!event.rsvp_enabled; ef.collect_phone.checked = !!event.collect_phone;
+    fields = event.form_schema || [];
+    if (event.cover_attachment_id) { $("#eb-cover").src = `/api/media/${event.cover_attachment_id}`; $("#eb-cover").hidden = false; }
+  } else {
+    ef.location.value = "17 Humber Street, Woodmead, Sandton";
+  }
+  $("#eb-title").textContent = id ? currentEvent.title : "New event";
+  $("#eb-delete").hidden = $("#eb-duplicate").hidden = $("#eb-view").hidden = !id;
+  if (id) $("#eb-view").href = `/event?e=${encodeURIComponent(currentEvent.slug)}`;
+  setEtab("build");
+  renderFields();
+  showView("event-edit", id ? `event:${id}` : "events-new", "events");
+}
+function setEtab(t) {
+  $$("#eb-tabs button").forEach((b) => b.classList.toggle("on", b.dataset.etab === t));
+  $("#eb-build").hidden = t !== "build"; $("#eb-responses").hidden = t !== "responses";
+  if (t === "responses") safe(loadResponses)();
+}
+$("#eb-tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-etab]"); if (!b) return; if (b.dataset.etab === "responses" && !currentEvent) return toast("Save the event first"); setEtab(b.dataset.etab); });
+
+ef.addEventListener("submit", safe(async (e) => {
+  e.preventDefault();
+  const missing = fields.findIndex((f) => !f.label?.trim());
+  if (missing >= 0) { toast(`Question ${missing + 1} needs a label`); return; }
+  const body = {
+    title: ef.title.value, slug: ef.slug.value, category: ef.category.value, location: ef.location.value, description: ef.description.value,
+    starts_at: fromLocal(ef.starts_at.value), ends_at: fromLocal(ef.ends_at.value), registration_closes_at: fromLocal(ef.registration_closes_at.value),
+    capacity: ef.capacity.value, confirmation_message: ef.confirmation_message.value,
+    is_published: ef.is_published.checked, rsvp_enabled: ef.rsvp_enabled.checked, collect_phone: ef.collect_phone.checked, form_schema: fields,
+  };
+  if (currentEvent) { await api(`/api/admin/events/${currentEvent.id}`, { method: "PUT", body }); toast("Event saved"); await editEvent(currentEvent.id); }
+  else { const r = await api("/api/admin/events", { method: "POST", body }); toast("Event created — add a cover image if you like"); await editEvent(r.id); }
+}));
+$("#eb-cover-file").addEventListener("change", safe(async (e) => {
+  if (!currentEvent) { toast("Save the event first"); e.target.value = ""; return; }
+  const fd = new FormData(); fd.append("cover", e.target.files[0]);
+  const r = await api(`/api/admin/events/${currentEvent.id}/cover`, { method: "POST", form: fd });
+  $("#eb-cover").src = r.cover_url; $("#eb-cover").hidden = false; e.target.value = ""; toast("Cover updated");
+}));
+$("#eb-delete").addEventListener("click", safe(async () => {
+  if (!currentEvent || !confirm(`Delete "${currentEvent.title}" and all its registrations?`)) return;
+  await api(`/api/admin/events/${currentEvent.id}`, { method: "DELETE" }); toast("Deleted"); openTab("events");
+}));
+$("#eb-duplicate").addEventListener("click", safe(async () => {
+  const r = await api(`/api/admin/events/${currentEvent.id}/duplicate`, { method: "POST", body: { days: 7 } });
+  toast("Duplicated as a draft for next week"); editEvent(r.id);
+}));
+
+let responses = [];
+async function loadResponses() {
+  const { registrations } = await api(`/api/admin/events/${currentEvent.id}/registrations`);
+  responses = registrations;
+  $("#eb-count").textContent = registrations.filter((r) => r.status !== "cancelled").length || "";
+  $("#resp-csv").href = `/api/admin/events/${currentEvent.id}/registrations.csv`;
+  drawResponses();
+}
+function drawResponses() {
+  const q = $("#resp-q").value.toLowerCase();
+  const list = responses.filter((r) => !q || `${r.name} ${r.email} ${r.phone} ${r.ref_code}`.toLowerCase().includes(q));
+  const confirmed = responses.filter((r) => r.status === "confirmed");
+  const people = confirmed.reduce((n, r) => n + 1 + r.guests, 0);
+  const inn = confirmed.filter((r) => r.checked_in_at).length;
+  $("#resp-summary").textContent = `${confirmed.length} registered · ${people} people · ${responses.filter((r) => r.status === "waitlist").length} waitlist · ${inn} checked in`;
+  const qs = (currentEvent.form_schema || []).filter((f) => f.type !== "statement");
+  $("#resp-table").innerHTML = `<thead><tr><th>Person</th><th>Answers</th><th>Status</th><th>Check-in</th></tr></thead><tbody>${list.length ? list.map((r) => `<tr>
+    <td><b style="font-weight:450">${esc(r.name)}</b>${r.guests ? ` <span class="sub">+${r.guests}</span>` : ""}<div class="sub">${esc(r.email)}${r.phone ? " · " + esc(r.phone) : ""}</div><div class="sub">${esc(r.ref_code)} · ${fmtDate(r.created_at)}</div></td>
+    <td><div class="resp-answers">${qs.map((f) => { const v = r.answers[f.id]; const fl = r.files.filter((x) => x.kind === `answer:${f.id}`);
+      return `<span><b>${esc(f.label)}:</b> ${fl.length ? fl.map((x) => `<a href="/api/admin/files/${esc(x.id)}" target="_blank" style="color:var(--gold-2)">${esc(x.filename)}</a>`).join(", ") : esc(Array.isArray(v) ? v.join(", ") : v ?? "—")}</span>`; }).join("") || '<span class="sub">—</span>'}</div></td>
+    <td><select class="input" data-reg="${esc(r.id)}" style="min-height:36px;padding:4px 30px 4px 10px;font-size:13px">${["confirmed", "waitlist", "cancelled"].map((s) => `<option ${s === r.status ? "selected" : ""}>${s}</option>`).join("")}</select></td>
+    <td><label class="check"><input type="checkbox" data-checkin="${esc(r.id)}" ${r.checked_in_at ? "checked" : ""}> In</label></td></tr>`).join("") : `<tr><td colspan="4" class="sub" style="text-align:center;padding:30px">No registrations yet. Share the event link!</td></tr>`}</tbody>`;
+}
+$("#resp-q").addEventListener("input", drawResponses);
+$("#resp-table").addEventListener("change", safe(async (e) => {
+  if (e.target.dataset.reg) { await api(`/api/admin/registrations/${e.target.dataset.reg}`, { method: "PATCH", body: { status: e.target.value } }); toast("Updated"); }
+  if (e.target.dataset.checkin) { await api(`/api/admin/registrations/${e.target.dataset.checkin}`, { method: "PATCH", body: { checked_in: e.target.checked } }); }
+  await loadResponses();
+}));
+
+// ================================================================ letters
+loaders.letters = async () => {
+  const { announcements, next_sunday } = await api("/api/admin/announcements");
+  $("#letter-list").innerHTML = announcements.length ? announcements.map((a) => {
+    const pct = a.recipients ? Math.round(((a.sent_count + a.failed_count) / a.recipients) * 100) : 0;
+    const st = a.status === "scheduled" ? `Scheduled · ${fmtDate(a.scheduled_for)}` : a.status === "sending" ? `Sending · ${a.sent_count}/${a.recipients}` : a.status === "sent" ? `Sent ${fmtDate(a.sent_at)} · ${a.sent_count} delivered` : "Draft";
+    return `<article class="item" data-go="letter:${esc(a.id)}" style="cursor:pointer"><header><div><b style="font-weight:450">${esc(a.subject)}</b><div class="meta">${esc(a.heading)}</div></div><span class="pill ${a.status === "sent" ? "member" : a.status === "scheduled" ? "new" : ""}">${esc(st)}</span></header>
+      ${a.status === "sending" ? `<div class="progress"><i style="width:${pct}%"></i></div>` : ""}</article>`;
+  }).join("") : `<div class="empty">No letters yet. The next one would go out on ${fmtDate(next_sunday)}.</div>`;
+};
+$("#new-letter").addEventListener("click", () => editLetter(null));
+
+let currentLetter = null;
+const lf = $("#letter-form");
+function serviceRow(s = {}) {
+  const d = document.createElement("div"); d.className = "svc-row";
+  d.innerHTML = `<input class="input" data-s="title" placeholder="Sunday Family Service" value="${esc(s.title || "")}"><input class="input" data-s="when" placeholder="Sunday · 09:30" value="${esc(s.when || "")}">
+    <input class="input" data-s="location" placeholder="Main auditorium" value="${esc(s.location || "")}"><button type="button" title="Remove">✕</button>`;
+  d.querySelector("button").onclick = () => d.remove();
+  $("#services").append(d);
+}
+$("#add-service").addEventListener("click", () => serviceRow());
+const letterBody = () => ({
+  subject: lf.subject.value, preheader: lf.preheader.value, heading: lf.heading.value, body: lf.body.value,
+  scripture_text: lf.scripture_text.value, scripture_ref: lf.scripture_ref.value, include_events: lf.include_events.checked,
+  cta_label: lf.cta_label.value, cta_url: lf.cta_url.value,
+  services: $$("#services .svc-row").map((r) => ({ title: $("[data-s=title]", r).value, when: $("[data-s=when]", r).value, location: $("[data-s=location]", r).value })).filter((s) => s.title),
+});
+
+async function editLetter(id) {
+  currentLetter = null; lf.reset(); $("#services").innerHTML = "";
+  if (id) {
+    const { announcement: a } = await api(`/api/admin/announcements/${id}`);
+    currentLetter = a;
+    for (const k of ["subject", "preheader", "heading", "body", "scripture_text", "scripture_ref", "cta_label", "cta_url"]) lf[k].value = a[k] ?? "";
+    lf.include_events.checked = !!a.include_events;
+    a.services.forEach(serviceRow);
+  } else {
+    lf.subject.value = "This week at Sandton City Church ✨";
+    lf.heading.value = "A new week, the same faithful God";
+    lf.body.value = "What a joy it was to worship together this morning! Thank you for being part of this family.\n\nHere's what's happening this week — we'd love to see you there. Bring a friend, bring your questions, and come expecting God to move.";
+    lf.scripture_text.value = "Those who hope in the Lord will renew their strength. They will soar on wings like eagles.";
+    lf.scripture_ref.value = "Isaiah 40:31";
+    serviceRow();
+  }
+  const locked = currentLetter && !["draft", "scheduled"].includes(currentLetter.status);
+  $$("input, textarea, button[type=submit], #le-schedule, #le-test, #add-service", lf).forEach((el) => { if (el.id !== "le-test") el.disabled = !!locked; });
+  $("#le-title").textContent = id ? currentLetter.subject : "New letter";
+  $("#le-status").textContent = !currentLetter ? "Draft — not saved yet" : currentLetter.status === "scheduled" ? `Scheduled for ${fmtDate(currentLetter.scheduled_for)}` : currentLetter.status === "sent" ? `Sent ${fmtDate(currentLetter.sent_at)} to ${currentLetter.sent_count} people` : currentLetter.status === "sending" ? "Sending now…" : "Draft";
+  $("#le-unschedule").hidden = currentLetter?.status !== "scheduled";
+  $("#le-delete").hidden = !currentLetter || locked;
+  $("#le-preview").srcdoc = id ? "" : `<p style="font:15px sans-serif;padding:24px;color:#5a5046">Save the draft to see the email preview.</p>`;
+  if (id) refreshPreview();
+  showView("letter-edit", id ? `letter:${id}` : "letters-new", "letters");
+}
+async function saveLetter() {
+  if (currentLetter) { await api(`/api/admin/announcements/${currentLetter.id}`, { method: "PUT", body: letterBody() }); return currentLetter.id; }
+  const r = await api("/api/admin/announcements", { method: "POST", body: letterBody() }); return r.id;
+}
+async function refreshPreview() {
+  if (!currentLetter) return;
+  const html = await fetch(`/api/admin/announcements/${currentLetter.id}/preview`).then((r) => r.text());
+  $("#le-preview").srcdoc = html;
+}
+lf.addEventListener("submit", safe(async (e) => { e.preventDefault(); const id = await saveLetter(); toast("Draft saved"); await editLetter(id); }));
+$("#le-refresh").addEventListener("click", safe(async () => { if (currentLetter && ["draft", "scheduled"].includes(currentLetter.status)) await saveLetter(); else if (!currentLetter) { const id = await saveLetter(); return editLetter(id); } await refreshPreview(); }));
+$("#le-test").addEventListener("click", safe(async () => { const id = currentLetter && !["draft", "scheduled"].includes(currentLetter.status) ? currentLetter.id : await saveLetter(); const r = await api(`/api/admin/announcements/${id}/test`, { method: "POST" }); toast(`Test sent to ${r.sent_to}`); if (!currentLetter) editLetter(id); }));
+const schedule = (opts, msg) => safe(async () => { const id = await saveLetter(); const r = await api(`/api/admin/announcements/${id}/schedule`, { method: "POST", body: opts() }); toast(msg(r)); editLetter(id); });
+$("#le-schedule").addEventListener("click", schedule(() => ({}), (r) => `Scheduled for ${fmtDate(r.scheduled_for)} 🎉`));
+$("#le-schedule-custom").addEventListener("click", schedule(() => ({ when: fromLocal($("#le-when").value) }), (r) => `Scheduled for ${fmtDate(r.scheduled_for)}`));
+$("#le-now").addEventListener("click", (e) => { if (confirm("Send this letter to every active subscriber right now?")) schedule(() => ({ now: true }), () => "Sending now…")(e); });
+$("#le-unschedule").addEventListener("click", safe(async () => { await api(`/api/admin/announcements/${currentLetter.id}/cancel`, { method: "POST" }); toast("Unscheduled"); editLetter(currentLetter.id); }));
+$("#le-delete").addEventListener("click", safe(async () => { if (!confirm("Delete this letter?")) return; await api(`/api/admin/announcements/${currentLetter.id}`, { method: "DELETE" }); toast("Deleted"); openTab("letters"); }));
+
+// ================================================================ subscribers
+let sPage = 1;
+loaders.subscribers = async () => {
+  const q = $("#sub-q").value.trim();
+  const p = new URLSearchParams({ page: String(sPage), limit: "50" }); if (q) p.set("q", q);
+  const { subscribers, total, limit, by_status } = await api("/api/admin/subscribers?" + p);
+  $("#sub-counts").textContent = `${by_status.active || 0} active · ${by_status.pending || 0} awaiting confirmation · ${by_status.unsubscribed || 0} unsubscribed`;
+  $("#sub-table tbody").innerHTML = subscribers.length ? subscribers.map((s) => `<tr><td>${esc(s.email)}</td><td>${esc(s.name || "")}</td><td><span class="pill ${s.status === "active" ? "member" : s.status === "pending" ? "new" : ""}">${esc(s.status)}</span></td>
+    <td class="sub">${esc(s.source || "")}</td><td class="sub">${fmtDate(s.created_at)}</td><td><button class="btn btn-sm" data-unsub="${esc(s.id)}">Remove</button></td></tr>`).join("") : `<tr><td colspan="6" class="sub" style="text-align:center;padding:30px">No subscribers yet.</td></tr>`;
+  const pages = Math.max(1, Math.ceil(total / limit));
+  $("#sub-pager").innerHTML = `<span>${total} total</span><button class="btn btn-sm" data-spg="-1" ${sPage <= 1 ? "disabled" : ""}>←</button><span>${sPage} / ${pages}</span><button class="btn btn-sm" data-spg="1" ${sPage >= pages ? "disabled" : ""}>→</button>`;
+};
+$("#sub-q").addEventListener("input", () => { clearTimeout(qTimer); qTimer = setTimeout(() => { sPage = 1; safe(loaders.subscribers)(); }, 300); });
+$("#sub-pager").addEventListener("click", (e) => { const b = e.target.closest("[data-spg]"); if (b) { sPage += Number(b.dataset.spg); safe(loaders.subscribers)(); } });
+$("#sub-table").addEventListener("click", safe(async (e) => { const b = e.target.closest("[data-unsub]"); if (!b || !confirm("Remove this subscriber?")) return; await api(`/api/admin/subscribers/${b.dataset.unsub}`, { method: "DELETE" }); toast("Removed"); loaders.subscribers(); }));
+$("#sub-add").addEventListener("submit", safe(async (e) => { e.preventDefault(); await api("/api/admin/subscribers", { method: "POST", body: Object.fromEntries(new FormData(e.target)) }); e.target.reset(); toast("Subscriber added"); loaders.subscribers(); }));
+
+// ================================================================ prayer & messages
+loaders.prayers = async () => {
+  const s = $("#p-status").value;
+  const { prayers } = await api("/api/admin/prayers?limit=100" + (s ? `&status=${s}` : ""));
+  $("#p-list").innerHTML = prayers.length ? prayers.map((p) => `<article class="item">
+    <header><div><b style="font-weight:450">${p.is_anonymous ? "Anonymous" : esc(p.name)}</b> ${p.pastors_only ? '<span class="pill">Pastors only</span>' : ""} ${p.wants_contact ? '<span class="pill new">Wants contact</span>' : ""}<div class="meta">${fmtDate(p.created_at)}${p.phone ? " · " + esc(p.phone) : ""}${p.email ? " · " + esc(p.email) : ""}</div></div><span class="pill ${esc(p.status)}">${esc(p.status)}</span></header>
+    <p>${esc(p.request)}</p><div class="actions">${["praying", "answered", "archived"].map((st) => `<button class="btn btn-sm" data-prayer="${esc(p.id)}" data-st="${st}">Mark ${st}</button>`).join("")}</div></article>`).join("") : `<div class="empty">No prayer requests here.</div>`;
+};
+$("#p-status").addEventListener("change", () => safe(loaders.prayers)());
+$("#p-list").addEventListener("click", safe(async (e) => { const b = e.target.closest("[data-prayer]"); if (!b) return; await api(`/api/admin/prayers/${b.dataset.prayer}`, { method: "PATCH", body: { status: b.dataset.st } }); toast("Updated"); loaders.prayers(); }));
+loaders.messages = async () => {
+  const { messages } = await api("/api/admin/messages?limit=100");
+  $("#msg-list").innerHTML = messages.length ? messages.map((m) => `<article class="item">
+    <header><div><b style="font-weight:450">${esc(m.name)}</b> <span class="meta">· ${esc(m.subject || "No subject")}</span><div class="meta">${fmtDate(m.created_at)} · ${esc(m.email)}${m.phone ? " · " + esc(m.phone) : ""}</div></div><span class="pill ${esc(m.status)}">${esc(m.status)}</span></header>
+    <p>${esc(m.message)}</p><div class="actions"><a class="btn btn-sm" href="mailto:${esc(m.email)}?subject=${encodeURIComponent("Re: " + (m.subject || "your message to Sandton City Church"))}">Reply by email</a><button class="btn btn-sm" data-msg="${esc(m.id)}" data-st="replied">Mark replied</button><button class="btn btn-sm" data-msg="${esc(m.id)}" data-st="archived">Archive</button></div></article>`).join("") : `<div class="empty">No messages yet.</div>`;
+};
+$("#msg-list").addEventListener("click", safe(async (e) => { const b = e.target.closest("[data-msg]"); if (!b) return; await api(`/api/admin/messages/${b.dataset.msg}`, { method: "PATCH", body: { status: b.dataset.st } }); toast("Updated"); loaders.messages(); }));
+
+// ================================================================ settings & email log
+const SETTINGS = [
+  ["church_name", "Church name"], ["tagline", "Tagline (home page)"], ["address", "Address"], ["map_url", "Google Maps link"],
+  ["service_summary", "Service times (shown on site)"], ["contact_email", "Contact email"], ["whatsapp_number", "WhatsApp number (e.g. +27821234567)"],
+  ["instagram_url", "Instagram URL"], ["youtube_url", "YouTube URL"], ["facebook_url", "Facebook URL"], ["tiktok_url", "TikTok URL"],
+];
+loaders.settings = async () => {
+  const { settings } = await api("/api/admin/settings");
+  $("#settings-form").innerHTML = SETTINGS.map(([k, l]) => `<div class="field"><label>${esc(l)}</label><input class="input" name="${k}" value="${esc(settings[k] || "")}" maxlength="500"></div>`).join("") + `<button class="btn btn-gold" type="submit" style="justify-self:start">Save settings</button>`;
+};
+$("#settings-form").addEventListener("submit", safe(async (e) => { e.preventDefault(); await api("/api/admin/settings", { method: "PUT", body: Object.fromEntries(new FormData(e.target)) }); toast("Settings saved"); }));
+loaders.emails = async () => {
+  const { log } = await api("/api/admin/email-log");
+  $("#email-table tbody").innerHTML = log.length ? log.map((l) => `<tr><td class="sub">${fmtDate(l.created_at.replace(" ", "T") + (l.created_at.endsWith("Z") ? "" : "Z"))}</td><td>${esc(l.to_email)}</td><td class="sub">${esc(l.template)}</td><td>${esc(l.subject)}</td>
+    <td><span class="pill ${l.status === "sent" ? "member" : l.status === "failed" ? "new" : ""}" title="${esc(l.error || "")}">${esc(l.status)}</span></td></tr>`).join("") : `<tr><td colspan="5" class="sub" style="text-align:center;padding:30px">No emails sent yet.</td></tr>`;
+};
+
+boot();

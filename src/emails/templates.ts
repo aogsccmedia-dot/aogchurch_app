@@ -1,0 +1,253 @@
+/**
+ * Branded, email-client-safe templates (tables + inline styles, no webfonts required).
+ * Tone: always warm, personal and encouraging.
+ */
+export interface Brand { site: string }
+
+export const esc = (s: unknown) =>
+  String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+
+const C = {
+  page: "#efe8dc", card: "#fffdf9", ink: "#2b241d", body: "#4a4137", muted: "#8a7f72",
+  gold: "#c8963e", goldSoft: "#f3e3c3", night: "#0d0b09", line: "#eadfcd",
+};
+const SANS = "'Helvetica Neue', Helvetica, Arial, sans-serif";
+const SERIF = "Georgia, 'Times New Roman', serif";
+
+export function button(href: string, label: string): string {
+  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:28px 0 8px"><tr><td style="border-radius:10px;background:${C.gold}">
+    <a href="${esc(href)}" style="display:inline-block;padding:14px 26px;font:600 15px/1 ${SANS};color:#1a1206;text-decoration:none;border-radius:10px;letter-spacing:.02em">${esc(label)}</a>
+  </td></tr></table>`;
+}
+
+export function scripture(text: string, ref: string): string {
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:26px 0"><tr>
+    <td style="border-left:3px solid ${C.gold};padding:4px 0 4px 18px">
+      <p style="margin:0;font:italic 19px/1.5 ${SERIF};color:${C.ink}">“${esc(text)}”</p>
+      <p style="margin:8px 0 0;font:600 12px/1 ${SANS};letter-spacing:.16em;text-transform:uppercase;color:${C.gold}">${esc(ref)}</p>
+    </td></tr></table>`;
+}
+
+export const p = (html: string) => `<p style="margin:0 0 16px;font:16px/1.7 ${SANS};color:${C.body}">${html}</p>`;
+export const paragraphs = (text: string) => text.split(/\n\s*\n/).map((t) => p(esc(t.trim()).replace(/\n/g, "<br>"))).join("");
+
+/** Wrap content in the church layout. */
+export function layout(b: Brand, o: { preheader: string; eyebrow?: string; heading: string; content: string; heroImage?: string; footerNote?: string; unsubscribeUrl?: string }): string {
+  const hero = o.heroImage ? `<tr><td style="padding:0"><img src="${esc(o.heroImage)}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>` : "";
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><title>${esc(o.heading)}</title></head>
+<body style="margin:0;padding:0;background:${C.page}">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${esc(o.preheader)}&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:${C.page}"><tr><td align="center" style="padding:28px 12px">
+  <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background:${C.card};border-radius:18px;overflow:hidden;box-shadow:0 10px 40px rgba(60,40,10,.08)">
+    <tr><td align="center" style="background:${C.night};padding:30px 24px 26px">
+      <a href="${esc(b.site)}" style="text-decoration:none"><img src="${esc(b.site)}/assets/logo-192.png" width="72" height="72" alt="AOG Sandton City Church" style="display:block;margin:0 auto 14px;border-radius:50%;border:0"></a>
+      <p style="margin:0;font:600 11px/1 ${SANS};letter-spacing:.32em;text-transform:uppercase;color:#f6d28b">AOG Sandton City Church</p>
+      <p style="margin:8px 0 0;font:italic 13px/1 ${SERIF};color:#b9b0a3">Bound in fellowship by the Spirit</p>
+    </td></tr>
+    ${hero}
+    <tr><td style="padding:38px 40px 14px">
+      ${o.eyebrow ? `<p style="margin:0 0 10px;font:600 11px/1 ${SANS};letter-spacing:.24em;text-transform:uppercase;color:${C.gold}">${esc(o.eyebrow)}</p>` : ""}
+      <h1 style="margin:0 0 20px;font:400 30px/1.2 ${SERIF};color:${C.ink}">${esc(o.heading)}</h1>
+      ${o.content}
+    </td></tr>
+    <tr><td style="padding:10px 40px 36px">
+      <p style="margin:24px 0 0;font:16px/1.6 ${SANS};color:${C.body}">With love,<br><span style="font:italic 18px/1.6 ${SERIF};color:${C.ink}">Your family at Sandton City Church</span></p>
+    </td></tr>
+    <tr><td style="background:#f8f2e8;border-top:1px solid ${C.line};padding:22px 40px;text-align:center">
+      <p style="margin:0 0 6px;font:13px/1.6 ${SANS};color:${C.muted}">17 Humber Street, Woodmead, Sandton</p>
+      <p style="margin:0;font:13px/1.6 ${SANS};color:${C.muted}"><a href="${esc(b.site)}" style="color:${C.gold};text-decoration:none">aogsccyouth.com</a>${o.unsubscribeUrl ? ` &nbsp;·&nbsp; <a href="${esc(o.unsubscribeUrl)}" style="color:${C.muted}">Unsubscribe</a>` : ""}</p>
+      ${o.footerNote ? `<p style="margin:10px 0 0;font:12px/1.6 ${SANS};color:${C.muted}">${o.footerNote}</p>` : ""}
+    </td></tr>
+  </table>
+</td></tr></table></body></html>`;
+}
+
+const textFooter = (b: Brand, unsub?: string) =>
+  `\n\nWith love,\nYour family at Sandton City Church\n17 Humber Street, Woodmead, Sandton\n${b.site}${unsub ? `\n\nUnsubscribe: ${unsub}` : ""}`;
+
+// ---------------------------------------------------------------- templates
+
+export function adminCode(b: Brand, code: string) {
+  const spaced = code.split("").join(" ");
+  return {
+    subject: `${code} is your admin sign-in code`,
+    html: layout(b, {
+      preheader: `Your one-time code is ${code}. It expires in 10 minutes.`,
+      eyebrow: "Admin sign-in",
+      heading: "Here's your sign-in code",
+      content: p("Someone (hopefully you!) is signing in to the church admin dashboard. Enter this code to continue:") +
+        `<p style="margin:22px 0;font:600 34px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.24em;color:${C.ink};background:${C.goldSoft};border-radius:12px;padding:20px;text-align:center">${esc(spaced)}</p>` +
+        p("The code expires in 10 minutes and can only be used once. If this wasn't you, you can safely ignore this email — nobody can get in without it."),
+    }),
+    text: `Your admin sign-in code is ${code}. It expires in 10 minutes. If this wasn't you, ignore this email.` + textFooter(b),
+  };
+}
+
+export function subscribeConfirm(b: Brand, name: string | null, url: string) {
+  const hi = name ? `Hi ${esc(name)},` : "Hi there,";
+  return {
+    subject: "One tap to confirm your weekly letter 💛",
+    html: layout(b, {
+      preheader: "Confirm your subscription to our weekly announcement letter.",
+      eyebrow: "Almost there",
+      heading: "Please confirm your subscription",
+      content: p(hi) + p("Thank you for wanting to stay close to the family! Every Sunday afternoon we'll send you a short, encouraging letter with the week's services and what's happening at church.") +
+        button(url, "Yes, sign me up") + p(`<span style="font-size:13px;color:${C.muted}">If you didn't ask for this, just ignore this email and you won't hear from us.</span>`),
+    }),
+    text: `${name ? `Hi ${name},` : "Hi there,"}\n\nThank you for wanting to stay close to the family! Please confirm your subscription to our weekly letter:\n${url}\n\nIf you didn't ask for this, ignore this email.` + textFooter(b),
+  };
+}
+
+export function subscribeWelcome(b: Brand, name: string | null, unsub: string) {
+  return {
+    subject: "You're in — welcome to the weekly letter",
+    html: layout(b, {
+      preheader: "Every Sunday afternoon, a little encouragement and the week ahead.",
+      eyebrow: "Welcome",
+      heading: `${name ? `${esc(name)}, you're` : "You're"} part of the circle`,
+      heroImage: `${b.site}/assets/photos/congregation-1200.jpg`,
+      content: p("We're so glad you're here. Every Sunday afternoon you'll receive a short letter with the services for the week ahead, upcoming events, and a word to carry with you.") +
+        scripture("Let us not give up meeting together, but let us encourage one another.", "Hebrews 10:25") +
+        p("Until then, know that you are loved, you are seen, and there's always a seat saved for you at 17 Humber Street.") + button(b.site + "/#services", "See this week's services"),
+      unsubscribeUrl: unsub,
+    }),
+    text: `Welcome! Every Sunday afternoon you'll receive a short letter with the week's services, events and a word to carry with you.\n\n"Let us not give up meeting together, but let us encourage one another." — Hebrews 10:25` + textFooter(b, unsub),
+  };
+}
+
+export function joinWelcome(b: Brand, name: string, ref: string) {
+  return {
+    subject: `Welcome to the family, ${name} 💛`,
+    html: layout(b, {
+      preheader: "We've received your details — a leader will reach out personally this week.",
+      eyebrow: "Welcome home",
+      heading: `Welcome to the family, ${esc(name)}`,
+      heroImage: `${b.site}/assets/photos/hospitality-1200.jpg`,
+      content: p("Thank you for taking the step to join AOG Sandton City Church. It genuinely made our day.") +
+        p("One of our leaders will reach out to you personally within the week to say hello, answer any questions, and help you find your place. You don't have to have it all figured out — just come as you are.") +
+        scripture("So then you are no longer strangers and aliens, but you are fellow citizens with the saints and members of the household of God.", "Ephesians 2:19") +
+        p(`Your reference is <strong style="color:${C.ink};letter-spacing:.08em">${esc(ref)}</strong> — keep it handy in case you need it.`) + button(b.site + "/me", "View my profile"),
+    }),
+    text: `Welcome to the family, ${name}!\n\nThank you for joining AOG Sandton City Church. A leader will reach out personally within the week.\n\nYour reference: ${ref}\n\n"You are no longer strangers... but members of the household of God." — Ephesians 2:19` + textFooter(b),
+  };
+}
+
+export function adminNewMember(b: Brand, m: { name: string; ref: string; phone: string; email: string; type: string; age: number | null; interests: string }) {
+  return {
+    subject: `New member sign-up: ${m.name}`,
+    html: layout(b, {
+      preheader: `${m.name} just joined (${m.type}). Reach out this week!`,
+      eyebrow: "New sign-up",
+      heading: `${esc(m.name)} just joined`,
+      content: `<table role="presentation" cellspacing="0" cellpadding="6" border="0" style="font:15px/1.5 ${SANS};color:${C.body}">
+        <tr><td style="color:${C.muted}">Reference</td><td>${esc(m.ref)}</td></tr>
+        <tr><td style="color:${C.muted}">Joining as</td><td>${esc(m.type)}</td></tr>
+        <tr><td style="color:${C.muted}">Age</td><td>${m.age ?? "—"}</td></tr>
+        <tr><td style="color:${C.muted}">Phone</td><td>${esc(m.phone)}</td></tr>
+        <tr><td style="color:${C.muted}">Email</td><td>${esc(m.email)}</td></tr>
+        <tr><td style="color:${C.muted}">Interests</td><td>${esc(m.interests || "—")}</td></tr></table>` + button(b.site + "/admin/#members", "Open in dashboard"),
+    }),
+    text: `${m.name} just joined (${m.type}). Ref ${m.ref}. Phone ${m.phone}. Email ${m.email}.\n${b.site}/admin/#members`,
+  };
+}
+
+export function eventConfirmation(b: Brand, o: { name: string; status: string; ref: string; title: string; when: string; location: string | null; message: string | null; calendarUrl: string; eventUrl: string }) {
+  const wait = o.status === "waitlist";
+  return {
+    subject: wait ? `You're on the waitlist for ${o.title}` : `You're registered: ${o.title}`,
+    html: layout(b, {
+      preheader: wait ? "We'll let you know the moment a spot opens up." : `See you ${o.when}!`,
+      eyebrow: wait ? "Waitlist" : "You're in",
+      heading: wait ? `You're on the waitlist, ${esc(o.name)}` : `See you there, ${esc(o.name)}!`,
+      content: p(wait ? `<strong>${esc(o.title)}</strong> is full right now, but you're on the waitlist and we'll be in touch the moment a spot opens up.` : `You're registered for <strong>${esc(o.title)}</strong>. We can't wait to see you.`) +
+        `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:8px 0 6px;background:${C.goldSoft};border-radius:12px"><tr><td style="padding:18px 20px;font:15px/1.7 ${SANS};color:${C.ink}">
+          <strong>${esc(o.title)}</strong><br>${esc(o.when)}${o.location ? `<br>${esc(o.location)}` : ""}<br><span style="color:${C.muted};font-size:13px">Ref ${esc(o.ref)}</span></td></tr></table>` +
+        (o.message ? p(esc(o.message)) : "") + (wait ? "" : button(o.calendarUrl, "Add to my calendar")) +
+        p(`<a href="${esc(o.eventUrl)}" style="color:${C.gold}">View event details</a>`),
+    }),
+    text: `${wait ? "You're on the waitlist for" : "You're registered for"} ${o.title}\n${o.when}${o.location ? `\n${o.location}` : ""}\nRef ${o.ref}\n${o.message || ""}\n${o.eventUrl}` + textFooter(b),
+  };
+}
+
+export function prayerReceived(b: Brand, name: string) {
+  return {
+    subject: "We're praying with you",
+    html: layout(b, {
+      preheader: "Your prayer request reached us. You're not alone.",
+      eyebrow: "Prayer",
+      heading: `${esc(name)}, we're standing with you`,
+      heroImage: `${b.site}/assets/photos/prayer-1200.jpg`,
+      content: p("Thank you for trusting us with what's on your heart. Your request has reached our prayer team, and we're bringing it before the Lord.") +
+        scripture("Cast all your anxiety on him because he cares for you.", "1 Peter 5:7") +
+        p("Whatever you're facing, you don't face it alone. If you asked us to reach out, someone will be in touch soon."),
+    }),
+    text: `${name}, thank you for trusting us with what's on your heart. Our prayer team is praying with you.\n\n"Cast all your anxiety on him because he cares for you." — 1 Peter 5:7` + textFooter(b),
+  };
+}
+
+export function contactReceived(b: Brand, name: string) {
+  return {
+    subject: "Thanks for reaching out 💛",
+    html: layout(b, {
+      preheader: "We've got your message and will reply soon.",
+      eyebrow: "Message received",
+      heading: `Thank you, ${esc(name)}`,
+      content: p("We've received your message and someone from the church will get back to you soon. We're really glad you got in touch.") + button(b.site, "Visit our website"),
+    }),
+    text: `Thank you, ${name}! We've received your message and will get back to you soon.` + textFooter(b),
+  };
+}
+
+export interface AnnouncementData {
+  subject: string; preheader: string | null; heading: string; body: string;
+  scripture_text: string | null; scripture_ref: string | null;
+  services: { title: string; when: string; location?: string; note?: string }[];
+  events: { title: string; when: string; location: string | null; url: string }[];
+  cta_label: string | null; cta_url: string | null;
+}
+
+export function announcement(b: Brand, a: AnnouncementData, firstName: string | null, unsub: string) {
+  const row = (title: string, when: string, loc?: string | null, note?: string | null, url?: string) =>
+    `<tr><td style="padding:14px 0;border-bottom:1px solid ${C.line}">
+      <p style="margin:0;font:600 16px/1.4 ${SANS};color:${C.ink}">${url ? `<a href="${esc(url)}" style="color:${C.ink};text-decoration:none">${esc(title)}</a>` : esc(title)}</p>
+      <p style="margin:4px 0 0;font:14px/1.5 ${SANS};color:${C.gold}">${esc(when)}</p>
+      ${loc ? `<p style="margin:2px 0 0;font:14px/1.5 ${SANS};color:${C.muted}">${esc(loc)}</p>` : ""}
+      ${note ? `<p style="margin:6px 0 0;font:14px/1.6 ${SANS};color:${C.body}">${esc(note)}</p>` : ""}</td></tr>`;
+  const items = [
+    ...a.services.map((s) => row(s.title, s.when, s.location, s.note)),
+    ...a.events.map((e) => row(e.title, e.when, e.location, null, e.url)),
+  ];
+  const schedule = items.length ? `<p style="margin:30px 0 4px;font:600 11px/1 ${SANS};letter-spacing:.24em;text-transform:uppercase;color:${C.gold}">This week at church</p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">${items.join("")}</table>` : "";
+  const greeting = p(firstName ? `Dear ${esc(firstName)},` : "Dear friend,");
+  return {
+    subject: a.subject,
+    html: layout(b, {
+      preheader: a.preheader || "This week's services and a word of encouragement.",
+      eyebrow: "The weekly letter",
+      heading: a.heading,
+      heroImage: `${b.site}/assets/photos/worship-1200.jpg`,
+      content: greeting + paragraphs(a.body) + (a.scripture_text ? scripture(a.scripture_text, a.scripture_ref || "") : "") + schedule +
+        (a.cta_url && a.cta_label ? button(a.cta_url, a.cta_label) : button(b.site + "/#services", "See all services")),
+      unsubscribeUrl: unsub,
+      footerNote: "You're receiving this because you signed up for our weekly announcement letter.",
+    }),
+    text: `${firstName ? `Dear ${firstName},` : "Dear friend,"}\n\n${a.body}\n\n${a.scripture_text ? `"${a.scripture_text}" — ${a.scripture_ref || ""}\n\n` : ""}` +
+      (items.length ? "THIS WEEK AT CHURCH\n" + [...a.services.map((s) => `• ${s.title} — ${s.when}${s.location ? ` — ${s.location}` : ""}`), ...a.events.map((e) => `• ${e.title} — ${e.when} — ${e.url}`)].join("\n") : "") +
+      textFooter(b, unsub),
+  };
+}
+
+export function adminLetterReminder(b: Brand) {
+  return {
+    subject: "Reminder: this Sunday's letter isn't scheduled yet",
+    html: layout(b, {
+      preheader: "Schedule the weekly announcement letter before Sunday afternoon.",
+      eyebrow: "Gentle reminder",
+      heading: "Your Sunday letter is waiting",
+      content: p("There's no announcement letter scheduled for this Sunday yet. It only takes a few minutes — add the week's services and a word of encouragement, and it'll go out automatically on Sunday afternoon.") +
+        button(b.site + "/admin/#letters", "Write this week's letter"),
+    }),
+    text: `There's no announcement letter scheduled for this Sunday yet. ${b.site}/admin/#letters`,
+  };
+}

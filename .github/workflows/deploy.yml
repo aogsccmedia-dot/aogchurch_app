@@ -1,0 +1,85 @@
+# Production deploy to Cloudflare (aogsccyouth.com).
+# Every push to main: verify → apply D1 migrations → deploy the Worker + static site.
+#
+# Requires repository secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   — "Edit Cloudflare Workers" template, scoped to the account + aogsccyouth.com zone,
+#                            plus "D1: Edit" permission for migrations
+#   CLOUDFLARE_ACCOUNT_ID  — from the Cloudflare dashboard
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+# Never run two production deploys at once; queue them in order.
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Deploy to Cloudflare
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://aogsccyouth.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Cloudflare credentials
+        id: creds
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$TOKEN" ] || [ -z "$ACCOUNT" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID secrets are not set — skipping deploy. See docs/DEPLOYMENT.md."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.creds.outputs.ready == 'true'
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        if: steps.creds.outputs.ready == 'true'
+        run: npm install --no-audit --no-fund
+
+      - name: Apply database migrations (D1)
+        if: steps.creds.outputs.ready == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply aogscc-youth-db --remote
+
+      - name: Deploy Worker
+        if: steps.creds.outputs.ready == 'true'
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --message "commit ${{ github.sha }}"
+
+      - name: Smoke test
+        if: steps.creds.outputs.ready == 'true'
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS https://aogsccyouth.com/api/health; then echo; exit 0; fi
+            echo "waiting for the new version…"; sleep 10
+          done
+          echo "::warning::Health check didn't pass yet (DNS / certificate may still be provisioning on a first deploy)."

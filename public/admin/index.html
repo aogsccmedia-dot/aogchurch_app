@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin · AOG Sandton City Church</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0b0a09">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400&family=Jost:wght@300;350;400;450;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin">
+  <!-- Sign in -->
+  <main id="login-view" class="login" hidden>
+    <div class="login-card">
+      <img src="/assets/logo-192.png" alt="" width="72" height="72">
+      <div><p class="eyebrow gold">AOG Sandton City Church</p><h1>Admin sign in</h1>
+        <p class="muted">Only the church media account can access this dashboard. A verification code is emailed on every sign-in.</p></div>
+      <div id="admin-google" class="google-slot" hidden></div>
+      <form id="code-request" class="form-grid" hidden>
+        <div class="field"><label for="l-email">Admin email</label><input class="input" id="l-email" name="email" type="email" autocomplete="username" required></div>
+        <button class="btn btn-gold" type="submit">Email me a code</button>
+      </form>
+      <form id="code-verify" class="form-grid" hidden>
+        <p class="muted" id="code-sent"></p>
+        <input class="input code-input" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="••••••" required>
+        <button class="btn btn-gold" type="submit">Verify &amp; continue</button>
+      </form>
+      <div class="notice err" id="login-error" hidden></div>
+      <a href="/" class="muted-link">← Back to the website</a>
+    </div>
+  </main>
+
+  <!-- App -->
+  <div id="app-view" class="shell" hidden>
+    <aside class="side">
+      <a class="brand" href="/" target="_blank"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>SCC Admin</span></a>
+      <nav id="nav">
+        <button data-tab="overview" class="active">Overview</button>
+        <button data-tab="members">Members <span class="badge" data-count="new_members"></span></button>
+        <button data-tab="events">Events &amp; forms</button>
+        <button data-tab="letters">Weekly letter</button>
+        <button data-tab="subscribers">Subscribers</button>
+        <button data-tab="prayers">Prayer <span class="badge" data-count="new_prayers"></span></button>
+        <button data-tab="messages">Messages <span class="badge" data-count="new_messages"></span></button>
+        <button data-tab="settings">Site settings</button>
+        <button data-tab="emails">Email log</button>
+      </nav>
+      <div class="side-foot"><span id="who"></span><button class="btn btn-sm" id="logout">Sign out</button></div>
+    </aside>
+
+    <main class="main">
+      <section data-view="overview">
+        <header class="vh"><div><p class="eyebrow gold">Dashboard</p><h1 id="greeting">Overview</h1></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm btn-gold" data-go="events-new">+ New event</button><button class="btn btn-sm" data-go="letters-new">Write this week's letter</button></div></header>
+        <div id="setup-notes"></div>
+        <div class="stats" id="stats"></div>
+        <div class="grid-2" style="align-items:start">
+          <div class="card"><h3>Ministry interest</h3><div id="interest-bars" class="bars"></div></div>
+          <div class="card"><h3>Weekly letter</h3><div id="next-letter"></div></div>
+        </div>
+        <div class="card"><h3>Latest sign-ups</h3><div id="latest"></div></div>
+      </section>
+
+      <section data-view="members" hidden>
+        <header class="vh"><div><p class="eyebrow gold">People</p><h1>Members</h1></div><a class="btn btn-sm" href="/api/admin/export/members.csv">Export CSV</a></header>
+        <div class="toolbar">
+          <input class="input" id="m-q" type="search" placeholder="Search name, email, phone or ref…">
+          <select class="input" id="m-status"><option value="">All statuses</option><option>new</option><option>contacted</option><option>welcomed</option><option>member</option><option>inactive</option></select>
+        </div>
+        <div class="table-wrap"><table class="table" id="m-table"><thead><tr><th>Name</th><th>Joining as</th><th>Contact</th><th>Age</th><th>Status</th><th>Joined</th></tr></thead><tbody></tbody></table></div>
+        <div class="pager" id="m-pager"></div>
+      </section>
+
+      <!-- Events list -->
+      <section data-view="events" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Calendar</p><h1>Events &amp; forms</h1><p class="muted">Create services and events with their own registration form — like Tally, but on our domain.</p></div>
+          <button class="btn btn-gold btn-sm" id="new-event">+ New event</button></header>
+        <div id="ev-list" class="list"></div>
+      </section>
+
+      <!-- Event builder -->
+      <section data-view="event-edit" hidden>
+        <header class="vh">
+          <div><button class="btn btn-ghost btn-sm" data-go="events">← All events</button><h1 id="eb-title">New event</h1></div>
+          <div class="seg" id="eb-tabs"><button data-etab="build" class="on">Build</button><button data-etab="responses">Responses <span class="badge" id="eb-count"></span></button></div>
+        </header>
+        <div id="eb-build" class="builder">
+          <form id="event-form" class="builder-main form-grid" novalidate>
+            <div class="card form-grid">
+              <h3>Details</h3>
+              <div class="field"><label>Title</label><input class="input" name="title" required maxlength="140" placeholder="Sunday Family Service"></div>
+              <div class="grid-2">
+                <div class="field"><label>Category</label><select class="input" name="category"><option value="service">Service</option><option value="night">Youth night</option><option value="camp">Camp</option><option value="outreach">Outreach</option><option value="conference">Conference</option><option value="other">Other</option></select></div>
+                <div class="field"><label>Page link</label><input class="input" name="slug" maxlength="60" placeholder="auto from title"></div>
+              </div>
+              <div class="grid-2">
+                <div class="field"><label>Starts</label><input class="input" name="starts_at" type="datetime-local" required></div>
+                <div class="field"><label>Ends</label><input class="input" name="ends_at" type="datetime-local"></div>
+              </div>
+              <div class="field"><label>Location</label><input class="input" name="location" maxlength="200" placeholder="17 Humber Street, Woodmead, Sandton"></div>
+              <div class="field"><label>Description</label><textarea class="input" name="description" maxlength="5000" placeholder="What should people know?"></textarea></div>
+              <div class="field"><label>Cover image</label><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><img id="eb-cover" alt="" style="width:120px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;background:#1d1a16" hidden><input type="file" id="eb-cover-file" accept="image/jpeg,image/png,image/webp"><span class="hint">Save the event first, then add a cover.</span></div></div>
+            </div>
+            <div class="card form-grid">
+              <h3>Registration</h3>
+              <div class="grid-2">
+                <div class="field"><label>Capacity (people)</label><input class="input" name="capacity" type="number" min="1" placeholder="Unlimited"></div>
+                <div class="field"><label>Registration closes</label><input class="input" name="registration_closes_at" type="datetime-local"></div>
+              </div>
+              <div class="field"><label>Confirmation message</label><textarea class="input" name="confirmation_message" maxlength="1000" placeholder="Shown after registering and included in the confirmation email"></textarea></div>
+              <label class="check"><input type="checkbox" name="rsvp_enabled" checked> Accept registrations</label>
+              <label class="check"><input type="checkbox" name="collect_phone" checked> Ask for a phone number</label>
+              <label class="check"><input type="checkbox" name="is_published"> Published on the website</label>
+            </div>
+            <div class="card form-grid">
+              <div class="vh" style="align-items:center"><h3>Form questions</h3><span class="muted">Name &amp; email are always included.</span></div>
+              <div id="fb-fields" class="fb-fields"></div>
+              <div class="palette" id="palette"></div>
+            </div>
+            <div class="sticky-actions">
+              <button type="button" class="btn btn-sm" id="eb-delete">Delete</button>
+              <button type="button" class="btn btn-sm" id="eb-duplicate">Duplicate +7 days</button>
+              <a class="btn btn-sm" id="eb-view" target="_blank">View page ↗</a>
+              <button type="submit" class="btn btn-gold">Save event</button>
+            </div>
+          </form>
+          <aside class="builder-preview">
+            <p class="eyebrow">Live preview</p>
+            <div class="preview-phone"><div class="reg-card" style="position:static">
+              <div><p class="eyebrow gold">Register</p><h3 id="pv-title">Save your seat</h3></div>
+              <div class="form-grid">
+                <div class="field"><label class="req">Full name</label><input class="input" disabled></div>
+                <div class="field"><label class="req">Email</label><input class="input" disabled></div>
+                <div class="field" id="pv-phone"><label class="req">Phone</label><input class="input" disabled></div>
+                <div id="pv-fields" class="form-grid"></div>
+                <button class="btn btn-gold" type="button" disabled>Register →</button>
+              </div>
+            </div></div>
+          </aside>
+        </div>
+        <div id="eb-responses" hidden>
+          <div class="toolbar" style="justify-content:space-between"><div id="resp-summary" class="muted"></div>
+            <div style="display:flex;gap:8px"><input class="input" id="resp-q" type="search" placeholder="Search…" style="min-width:200px"><a class="btn btn-sm" id="resp-csv">Export CSV</a></div></div>
+          <div class="table-wrap"><table class="table" id="resp-table"></table></div>
+        </div>
+      </section>
+
+      <!-- Letters -->
+      <section data-view="letters" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Weekly letter</p><h1>Announcement letters</h1><p class="muted">Letters go out automatically on Sunday at 14:00 to every active subscriber.</p></div>
+          <button class="btn btn-gold btn-sm" id="new-letter">+ Write a letter</button></header>
+        <div id="letter-list" class="list"></div>
+      </section>
+
+      <section data-view="letter-edit" hidden>
+        <header class="vh"><div><button class="btn btn-ghost btn-sm" data-go="letters">← All letters</button><h1 id="le-title">New letter</h1><p class="muted" id="le-status"></p></div></header>
+        <div class="builder">
+          <form id="letter-form" class="builder-main form-grid" novalidate>
+            <div class="card form-grid">
+              <div class="field"><label>Email subject</label><input class="input" name="subject" required maxlength="160" placeholder="This week at Sandton City Church ✨"></div>
+              <div class="field"><label>Preview text</label><input class="input" name="preheader" maxlength="200" placeholder="Shown next to the subject in the inbox"></div>
+              <div class="field"><label>Heading</label><input class="input" name="heading" required maxlength="160" placeholder="A week to grow together"></div>
+              <div class="field"><label>Message</label><textarea class="input" name="body" required maxlength="8000" style="min-height:200px" placeholder="Write a warm, encouraging note. Leave a blank line between paragraphs."></textarea></div>
+              <div class="grid-2">
+                <div class="field"><label>Scripture</label><textarea class="input" name="scripture_text" maxlength="600" style="min-height:80px"></textarea></div>
+                <div class="field"><label>Reference</label><input class="input" name="scripture_ref" maxlength="80" placeholder="Isaiah 40:31"></div>
+              </div>
+            </div>
+            <div class="card form-grid">
+              <div class="vh" style="align-items:center"><h3>This week's services</h3><button type="button" class="btn btn-sm" id="add-service">+ Add service</button></div>
+              <div id="services" class="form-grid"></div>
+              <label class="check"><input type="checkbox" name="include_events" checked> Also include published events happening in the next 8 days</label>
+            </div>
+            <div class="card form-grid">
+              <h3>Button (optional)</h3>
+              <div class="grid-2"><div class="field"><label>Label</label><input class="input" name="cta_label" maxlength="60" placeholder="Register for camp"></div><div class="field"><label>Link</label><input class="input" name="cta_url" maxlength="300" placeholder="https://aogsccyouth.com/event?e=…"></div></div>
+            </div>
+            <div class="sticky-actions">
+              <button type="button" class="btn btn-sm" id="le-delete">Delete</button>
+              <button type="submit" class="btn btn-sm">Save draft</button>
+              <button type="button" class="btn btn-sm" id="le-test">Send test to me</button>
+              <button type="button" class="btn btn-sm" id="le-unschedule" hidden>Unschedule</button>
+              <button type="button" class="btn btn-gold btn-sm" id="le-schedule">Schedule for Sunday 14:00</button>
+            </div>
+            <details class="card"><summary class="muted" style="cursor:pointer">More sending options</summary>
+              <div class="form-grid" style="margin-top:12px"><div class="field"><label>Send at a specific time</label><input class="input" type="datetime-local" id="le-when"></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-sm" id="le-schedule-custom">Schedule at this time</button><button type="button" class="btn btn-sm" id="le-now" style="color:var(--gold-2)">Send to everyone now</button></div></div>
+            </details>
+          </form>
+          <aside class="builder-preview">
+            <p class="eyebrow">Email preview <button class="btn btn-ghost btn-sm" id="le-refresh" type="button">↻ Refresh</button></p>
+            <iframe id="le-preview" title="Email preview" sandbox="allow-same-origin"></iframe>
+          </aside>
+        </div>
+      </section>
+
+      <section data-view="subscribers" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Audience</p><h1>Subscribers</h1><p class="muted" id="sub-counts"></p></div><a class="btn btn-sm" href="/api/admin/export/subscribers.csv">Export CSV</a></header>
+        <form id="sub-add" class="toolbar"><input class="input" name="email" type="email" placeholder="Add an email…" required><input class="input" name="name" placeholder="Name (optional)" style="max-width:220px"><button class="btn btn-sm btn-gold" type="submit">Add</button></form>
+        <div class="toolbar"><input class="input" id="sub-q" type="search" placeholder="Search subscribers…"></div>
+        <div class="table-wrap"><table class="table" id="sub-table"><thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Source</th><th>Since</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="pager" id="sub-pager"></div>
+      </section>
+
+      <section data-view="prayers" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Care</p><h1>Prayer requests</h1></div>
+          <select class="input" id="p-status" style="max-width:200px"><option value="">All</option><option>new</option><option>praying</option><option>answered</option><option>archived</option></select></header>
+        <div id="p-list" class="list"></div>
+      </section>
+
+      <section data-view="messages" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Inbox</p><h1>Messages</h1></div></header>
+        <div id="msg-list" class="list"></div>
+      </section>
+
+      <section data-view="settings" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Website</p><h1>Site settings</h1><p class="muted">These show on the public site immediately — no redeploy needed.</p></div></header>
+        <form id="settings-form" class="card form-grid"></form>
+      </section>
+
+      <section data-view="emails" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Delivery</p><h1>Email log</h1><p class="muted">The last 100 emails the website sent.</p></div></header>
+        <div class="table-wrap"><table class="table" id="email-table"><thead><tr><th>When</th><th>To</th><th>Type</th><th>Subject</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog class="drawer" id="member-drawer"><div class="drawer-body" id="member-body"></div></dialog>
+  <script type="module" src="/js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>My profile · AOG Sandton City Church</title>
+  <meta name="description" content="Your profile, events and weekly letter settings.">
+  <meta name="theme-color" content="#0b0a09">
+  <meta name="robots" content="noindex">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="AOG Sandton City Church">
+  <meta property="og:title" content="My profile · AOG Sandton City Church">
+  <meta property="og:description" content="Your profile, events and weekly letter settings.">
+  <meta property="og:image" content="https://aogsccyouth.com/assets/og.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/assets/logo-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400;1,500&family=Jost:wght@300;350;400;450;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/pages.css">
+</head>
+<body>
+  <a class="sr-only" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap bar">
+      <div class="header-left">
+        <button class="icon-btn" data-menu-open aria-label="Open menu" aria-expanded="false" aria-controls="menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        </button>
+        <a class="brand" href="/" aria-label="AOG Sandton City Church home"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
+      </div>
+      <nav class="main-nav" aria-label="Primary">
+        <a href="/#about">Who we are</a><a href="/#services">Services</a><a href="/#serve">Get involved</a><a href="/#letter">Weekly letter</a><a href="/#visit">Visit</a>
+      </nav>
+      <div class="header-actions"><span data-user-slot></span><a class="btn btn-gold" href="/join" data-join-cta>Join<span class="long"> church</span></a></div>
+    </div>
+  </header>
+
+  <div class="menu" id="menu" aria-hidden="true">
+    <div class="bar">
+      <a class="brand" href="/"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
+      <button class="icon-btn" data-menu-close aria-label="Close menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+    </div>
+    <nav aria-label="Main">
+      <a href="/#about"><span>01</span>Who we are</a>
+      <a href="/#services"><span>02</span>Services &amp; events</a>
+      <a href="/#serve"><span>03</span>Get involved</a>
+      <a href="/#letter"><span>04</span>Weekly letter</a>
+      <a href="/#prayer"><span>05</span>Prayer</a>
+      <a href="/#visit"><span>06</span>Visit us</a>
+      <a href="/join"><span>07</span>Join the church</a>
+    </nav>
+    <div class="foot"><span>17 Humber Street, Woodmead, Sandton</span><a href="/me">My profile</a><a href="/admin/">Admin</a></div>
+  </div>
+
+  <main id="main" class="wrap">
+    <div id="me-signin" class="cta-band" hidden>
+      <p class="eyebrow gold">My profile</p>
+      <h2>Welcome <span class="serif">home.</span></h2>
+      <p class="lede" style="text-align:center">Sign in with Google to see your events, manage the weekly letter and complete joining.</p>
+      <div id="me-google" class="google-slot"></div>
+    </div>
+    <div class="me-grid" id="me-view" hidden>
+      <aside class="me-card">
+        <span class="avatar" id="me-avatar"></span>
+        <div><h2 id="me-name" style="font-size:26px"></h2><p class="muted-text" id="me-email"></p></div>
+        <div id="me-member"></div>
+        <div class="toggle"><div><b style="font-weight:450">Weekly letter</b><p class="muted-text" style="font-size:13px">Sunday afternoons · services &amp; encouragement</p></div>
+          <label class="switch"><input type="checkbox" id="me-letter" aria-label="Receive the weekly letter"></label></div>
+        <button class="btn btn-sm" id="me-signout">Sign out</button>
+      </aside>
+      <section style="display:grid;gap:18px">
+        <div class="section-head" style="margin:0"><p class="eyebrow gold">My events</p><h2>Where I'll be</h2></div>
+        <div id="me-events" class="event-grid"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="cols">
+        <div style="display:grid;gap:14px;align-content:start">
+          <a class="brand" href="/"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
+          <p>A community-centred, Bible-based church. Bound in fellowship by the Spirit.</p>
+          <p>17 Humber Street, Woodmead, Sandton</p>
+        </div>
+        <div><h4>Explore</h4><ul><li><a href="/#about">Who we are</a></li><li><a href="/#services">Services &amp; events</a></li><li><a href="/#serve">Get involved</a></li><li><a href="/#prayer">Prayer</a></li></ul></div>
+        <div><h4>Connect</h4><ul><li><a href="/join">Join the church</a></li><li><a href="/#letter">Weekly letter</a></li><li><a href="/me">My profile</a></li><li><a href="/privacy">Privacy (POPIA)</a></li></ul></div>
+      </div>
+      <div class="legal"><span>© <span id="year">2026</span> AOG Sandton City Church</span><span>Bound in fellowship by the Spirit</span></div>
+    </div>
+  </footer>
+  <script type="module" src="/js/site.js"></script>
+  <script type="module" src="/js/auth.js"></script>
+  <script type="module" src="/js/me.js"></script>
+</body>
+</html>
