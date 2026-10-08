@@ -15,7 +15,6 @@
     "db:migrate": "wrangler d1 migrations apply aogscc-youth-db --remote",
     "db:migrate:local": "wrangler d1 migrations apply aogscc-youth-db --local",
     "db:new": "wrangler d1 migrations create aogscc-youth-db",
-    "admin:create": "node scripts/create-admin.mjs",
     "logs": "wrangler tail"
   },
   "devDependencies": {
