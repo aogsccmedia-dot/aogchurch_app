@@ -1,6 +1,7 @@
 import { api, esc, toast } from "./site.js";
 import { getMe, googleButton, whenSignedIn } from "./auth.js";
 import { renderField } from "./forms.js";
+import { icon } from "./icons.js";
 
 const slug = new URLSearchParams(location.search).get("e");
 const $ = (id) => document.getElementById(id);
@@ -23,8 +24,10 @@ function done(status, ref, message, already) {
     <h3>${already ? "You're already registered" : wait ? "You're on the waitlist" : "You're in! 🎉"}</h3>
     <p class="muted-text">${wait ? "This event is full right now — we'll email you the moment a spot opens." : "We've emailed your confirmation. We can't wait to see you!"}</p>
     ${message ? `<p class="statement">${esc(message)}</p>` : ""}
-    <span class="tag">Ref ${esc(ref)}</span>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><a class="btn btn-sm" href="${esc(event.calendar_url)}" target="_blank" rel="noopener">Add to calendar</a><a class="btn btn-sm" href="/#services">More events</a></div>`;
+    <span class="tag">Ref ${esc(ref)}${event.price_label ? " · " + esc(event.price_label) : ""}</span>
+    ${wait ? "" : `<p class="eyebrow" style="margin-top:6px">Add it to your calendar</p>
+    <div class="cal-buttons"><a class="btn btn-sm" href="${esc(event.calendar_url)}" target="_blank" rel="noopener">${icon("calendarPlus")} Google</a><a class="btn btn-sm" href="${esc(event.ics_url)}">${icon("download")} Apple / iPhone</a><a class="btn btn-sm" href="${esc(event.outlook_url)}" target="_blank" rel="noopener">${icon("calendarPlus")} Outlook</a></div>`}
+    <a class="btn btn-ghost btn-sm" href="/#services">${icon("arrowLeft")} More events</a>`;
 }
 
 function prefill(me) {
@@ -54,7 +57,10 @@ async function load() {
   $("ev-where").textContent = event.location || "17 Humber Street, Woodmead, Sandton";
   $("ev-desc").textContent = event.description || "";
   $("ev-cal").href = event.calendar_url;
-  if (event.cover_url) $("ev-cover").innerHTML = `<img src="${esc(event.cover_url)}" alt="">`;
+  $("ev-ics").href = event.ics_url;
+  $("ev-outlook").href = event.outlook_url;
+  if (event.price_label) { $("ev-price-row").hidden = false; $("ev-price").textContent = event.price_label; }
+  if (event.cover_url) $("ev-cover").innerHTML = `<img src="${esc(event.cover_url)}" alt="${esc(event.title)} poster">`;
   if (event.capacity) { $("ev-cap-row").hidden = false; $("ev-cap").textContent = event.spots_left > 0 ? `${event.spots_left} of ${event.capacity} spots left` : "Fully booked — join the waitlist"; }
   if (!event.collect_phone) { $("r-phone-field").hidden = true; }
   else form.phone.required = true;
@@ -103,4 +109,5 @@ whenSignedIn(async (me) => {
   if (r?.mine) done(r.mine.status, r.mine.ref_code, null, true);
 });
 
+document.addEventListener("click", (e) => { const m = document.querySelector(".cal-menu"); if (m && !m.contains(e.target)) m.open = false; });
 load();

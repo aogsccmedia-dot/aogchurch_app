@@ -1,3 +1,4 @@
+import { icon } from "./icons.js";
 import { AVAILABILITY, LABELS, MINISTRIES } from "./options.js";
 import { api, esc } from "./site.js";
 import { getMe, googleButton, whenSignedIn } from "./auth.js";
@@ -158,7 +159,7 @@ function go(i) {
   [...stepList.children].forEach((li, k) => { li.classList.toggle("done", k < current); li.classList.toggle("current", k === current); });
   backBtn.style.visibility = current === 0 ? "hidden" : "visible";
   const last = current === steps.length - 1;
-  nextBtn.innerHTML = last ? "Submit &amp; join the family ✦" : 'Continue <span class="arr">→</span>';
+  nextBtn.innerHTML = last ? "Submit &amp; join the family ✦" : `Continue ${icon("arrowRight", "arr")}`;
   if (last) renderReview();
   document.querySelector(".join-card").scrollIntoView({ behavior: "smooth", block: "start" });
   saveDraft();

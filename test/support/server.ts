@@ -12,7 +12,7 @@ import { fakeAssets, fakeD1, fakeKV } from "./fakes.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-export interface SentMail { to: unknown; subject: string; html?: string; text?: string; headers?: Record<string, string> }
+export interface SentMail { to: unknown; subject: string; html?: string; text?: string; headers?: Record<string, string>; attachments?: unknown[] }
 
 export async function makeEnv(over: Record<string, unknown> = {}) {
   const outbox: SentMail[] = [];
@@ -37,6 +37,8 @@ export async function runCron(env: unknown, when = Date.now()) {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const env = await makeEnv({ GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "" });
+  // Optional: SEED_SQL=path/to/file.sql to preload sample data.
+  if (process.env.SEED_SQL) env.DB._db.exec((await import("node:fs")).readFileSync(process.env.SEED_SQL, "utf8"));
   const port = Number(process.env.PORT || 8788);
   const origSend = env.EMAIL.send.bind(env.EMAIL);
   env.EMAIL.send = async (m: SentMail) => {

@@ -3,14 +3,14 @@ import { adminEmail, siteUrl } from "../env.ts";
 import { HttpError, Router, clientIp, json, readJson } from "../lib/http.ts";
 import { Validator, ageOn, formToRaw } from "../lib/validate.ts";
 import { rateLimit, ipHash } from "../lib/ratelimit.ts";
-import { refCode, uuid } from "../lib/crypto.ts";
+import { b64, refCode, uuid } from "../lib/crypto.ts";
 import { activeDriver, getFile } from "../lib/storage.ts";
 import { readUpload, storeFiles, type PendingFile } from "../lib/uploads.ts";
 import { getSession, isAdminEmail } from "../lib/auth.ts";
 import { parseSchema, validateAnswers } from "../lib/forms.ts";
 import { sendMail } from "../lib/email.ts";
 import { confirmSubscription, subscribe, unsubscribe } from "../lib/newsletter.ts";
-import { calendarUrl, formatWhen } from "../lib/time.ts";
+import { calendarUrl, formatWhen, icsFile, outlookUrl } from "../lib/time.ts";
 import * as T from "../emails/templates.ts";
 import {
   AVAILABILITY, GENDERS, HEARD_ABOUT, MEMBERSHIP_TYPES, MINISTRIES, OCCUPATION,
@@ -23,6 +23,7 @@ interface EventRow {
   id: string; slug: string; title: string; category: string; description: string | null; starts_at: string; ends_at: string | null;
   location: string | null; is_published: number; rsvp_enabled: number; cover_attachment_id: string | null; form_schema: string;
   capacity: number | null; registration_closes_at: string | null; confirmation_message: string | null; collect_phone: number;
+  cover_image: string | null; price_label: string | null;
 }
 
 async function eventCounts(env: Env, id: string) {
@@ -36,7 +37,7 @@ function publicEvent(e: EventRow, counts: { registered: number }) {
   const closed = !e.rsvp_enabled || (e.registration_closes_at ? e.registration_closes_at < new Date().toISOString() : false) || e.starts_at < new Date(Date.now() - 3 * 3600_000).toISOString();
   return {
     id: e.id, slug: e.slug, title: e.title, category: e.category, description: e.description, starts_at: e.starts_at, ends_at: e.ends_at,
-    location: e.location, cover_url: e.cover_attachment_id ? `/api/media/${e.cover_attachment_id}` : null,
+    location: e.location, cover_url: e.cover_attachment_id ? `/api/media/${e.cover_attachment_id}` : e.cover_image || null, price_label: e.price_label,
     registration_open: !closed, capacity: e.capacity, spots_left: e.capacity ? Math.max(0, e.capacity - counts.registered) : null,
     collect_phone: !!e.collect_phone,
   };
@@ -84,7 +85,15 @@ export function publicRoutes(router: Router, env: Env): void {
       mine = await env.DB.prepare("SELECT ref_code, status FROM event_registrations WHERE event_id = ? AND email = ? AND status != 'cancelled'")
         .bind(e.id, session.user.email).first();
     }
-    return json({ ok: true, event: { ...publicEvent(e, await eventCounts(env, e.id)), form: parseSchema(e.form_schema), calendar_url: calendarUrl(e) }, mine });
+    return json({ ok: true, event: { ...publicEvent(e, await eventCounts(env, e.id)), form: parseSchema(e.form_schema), calendar_url: calendarUrl(e), outlook_url: outlookUrl(e),
+      ics_url: `/api/events/${encodeURIComponent(e.slug)}/calendar.ics` }, mine });
+  });
+
+  router.get("/api/events/:slug/calendar.ics", async (_req, { slug }) => {
+    const e = await env.DB.prepare("SELECT * FROM events WHERE (slug = ? OR id = ?) AND is_published = 1").bind(slug, slug).first<EventRow>();
+    if (!e) throw new HttpError(404, "We couldn't find that event.");
+    return new Response(icsFile({ ...e, url: `${siteUrl(env)}/event?e=${encodeURIComponent(e.slug)}` }), { headers: {
+      "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": `attachment; filename="${e.slug}.ics"`, "Cache-Control": "public, max-age=300" } });
   });
 
   router.post("/api/events/:slug/register", async (req, { slug }) => {
@@ -130,8 +139,12 @@ export function publicRoutes(router: Router, env: Env): void {
     const m = T.eventConfirmation({ site: siteUrl(env) }, {
       name: name!.split(" ")[0], status, ref, title: e.title, when: formatWhen(e.starts_at, e.ends_at), location: e.location,
       message: e.confirmation_message, calendarUrl: calendarUrl(e), eventUrl: `${siteUrl(env)}/event?e=${encodeURIComponent(e.slug)}`,
+      price: e.price_label, cover: e.cover_image ? `${siteUrl(env)}${e.cover_image}` : null, outlookUrl: outlookUrl(e),
+      icsUrl: `${siteUrl(env)}/api/events/${encodeURIComponent(e.slug)}/calendar.ics`,
     });
-    await sendMail(env, { to: email!, toName: name!, ...m, template: "event_confirmation" });
+    const eventUrl = `${siteUrl(env)}/event?e=${encodeURIComponent(e.slug)}`;
+    await sendMail(env, { to: email!, toName: name!, ...m, template: "event_confirmation",
+      attachments: status === "confirmed" ? [{ filename: `${e.slug}.ics`, type: "text/calendar", disposition: "attachment", content: b64(new TextEncoder().encode(icsFile({ ...e, url: eventUrl }))) }] : undefined });
     return json({ ok: true, status, ref, message: e.confirmation_message }, 201);
   });
 

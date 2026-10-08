@@ -19,23 +19,47 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400;1,500&family=Jost:wght@300;350;400;450;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/pages.css">
 </head>
 <body>
+  <a class="sr-only" href="#main">Skip to content</a>
   <header class="site-header">
     <div class="wrap bar">
-      <a class="icon-btn" href="/" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 5l-7 7 7 7"/></svg></a>
-      <a class="brand" href="/" aria-label="Home"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
-      <div class="header-actions"><span class="eyebrow" id="save-state" aria-live="polite"></span><span data-user-slot></span></div>
+      <div class="header-left">
+        <button class="icon-btn" data-menu-open aria-label="Open menu" aria-expanded="false" aria-controls="menu">
+          <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
+        </button>
+        <a class="brand" href="/" aria-label="AOG Sandton City Church home"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
+      </div>
+      <nav class="main-nav" aria-label="Primary">
+        <a href="/#about">Who we are</a><a href="/#services">Events</a><a href="/#serve">Get involved</a><a href="/#letter">Weekly letter</a><a href="/#visit">Visit</a>
+      </nav>
+      <div class="header-actions"><span data-user-slot></span><a class="btn btn-gold" href="/join" data-join-cta><span>Join<span class="long"> church</span></span></a></div>
     </div>
   </header>
 
-  
+  <div class="menu" id="menu" aria-hidden="true">
+    <div class="bar">
+      <a class="brand" href="/"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
+      <button class="icon-btn" data-menu-close aria-label="Close menu"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    </div>
+    <nav aria-label="Main">
+      <a href="/#about"><span>01</span>Who we are</a>
+      <a href="/#services"><span>02</span>Services &amp; events</a>
+      <a href="/#serve"><span>03</span>Get involved</a>
+      <a href="/#letter"><span>04</span>Weekly letter</a>
+      <a href="/#prayer"><span>05</span>Prayer</a>
+      <a href="/#visit"><span>06</span>Visit us</a>
+      <a href="/join"><span>07</span>Join the church</a>
+    </nav>
+    <div class="foot"><span>17 Humber Street, Woodmead, Sandton</span><a href="/me">My profile</a><a href="/admin/">Admin</a></div>
+  </div>
+
   <main id="main" class="wrap join-shell">
     <aside class="join-aside">
-      <p class="eyebrow gold">Join the church</p>
+      <div class="aside-top"><p class="eyebrow gold">Join the church</p><span class="eyebrow" id="save-state" aria-live="polite"></span></div>
       <h1>Welcome <span class="serif">home.</span></h1>
       <p class="aside-extra">A few questions so we can welcome you properly. Your progress is saved on this device as you go.</p>
       <ol class="steps" id="steps" aria-label="Progress"></ol>
@@ -180,7 +204,7 @@
 
         <div class="wizard-nav" id="wizard-nav">
           <button type="button" class="btn" id="back">← Back</button>
-          <button type="button" class="btn btn-gold" id="next">Continue <span class="arr">→</span></button>
+          <button type="button" class="btn btn-gold" id="next">Continue <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
         </div>
       </form>
 

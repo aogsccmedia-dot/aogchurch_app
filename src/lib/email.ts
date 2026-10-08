@@ -9,6 +9,7 @@ export interface Mail {
   text: string;
   template: string;
   headers?: Record<string, string>;
+  attachments?: { filename: string; type: string; disposition: "attachment" | "inline"; content: string }[];
 }
 
 /**
@@ -32,6 +33,7 @@ export async function sendMail(env: Env, mail: Mail): Promise<boolean> {
         html: mail.html,
         text: mail.text,
         headers: mail.headers,
+        attachments: mail.attachments,
       });
     } catch (e) {
       status = "failed";

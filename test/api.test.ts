@@ -199,7 +199,7 @@ describe("events & form builder", () => {
   test("admin builds an event with a custom form", async () => {
     const r = await post("/api/admin/events", {
       title: "Youth Camp 2030", starts_at: "2030-07-01T08:00:00Z", ends_at: "2030-07-03T14:00:00Z", location: "Magaliesberg",
-      is_published: true, rsvp_enabled: true, collect_phone: true, capacity: 2, confirmation_message: "Pack a sleeping bag!",
+      is_published: true, rsvp_enabled: true, collect_phone: true, capacity: 2, confirmation_message: "Pack a sleeping bag!", price_label: "R99 per person",
       form_schema: [
         { type: "statement", label: "Camp fee is R500, payable on arrival." },
         { id: "size", type: "select", label: "T-shirt size", required: true, options: ["S", "M", "L"] },
@@ -217,7 +217,9 @@ describe("events & form builder", () => {
 
   test("public page shows the form; required answers enforced", async () => {
     const list = await (await call("/api/events")).json() as { events: { slug: string; spots_left: number }[] };
-    assert.equal(list.events.find((e) => e.slug === slug)!.spots_left, 2);
+    const listed = list.events.find((e) => e.slug === slug)! as { spots_left: number; price_label?: string };
+    assert.equal(listed.spots_left, 2);
+    assert.equal(listed.price_label, "R99 per person");
     const ev = await (await call(`/api/events/${slug}`)).json() as { event: { form: { id: string }[]; calendar_url: string } };
     assert.equal(ev.event.form.length, 5);
     assert.match(ev.event.calendar_url, /calendar\.google\.com/);
@@ -238,7 +240,14 @@ describe("events & form builder", () => {
     };
     const a = await (await reg("Amahle Zulu", "amahle@example.com")).json() as { status: string; ref: string };
     assert.equal(a.status, "confirmed");
-    assert.ok(mails("amahle@example.com").at(-1)!.subject.startsWith("You're registered"));
+    const conf = mails("amahle@example.com").at(-1)! as { subject: string; attachments?: { filename: string; type: string }[]; html?: string };
+    assert.ok(conf.subject.startsWith("You're registered"));
+    assert.equal(conf.attachments?.[0].type, "text/calendar", "calendar invite attached");
+    assert.ok(conf.html!.includes("Apple / iPhone") && conf.html!.includes("R99 per person"));
+    const ics = await call(`/api/events/${slug}/calendar.ics`);
+    assert.equal(ics.headers.get("content-type"), "text/calendar; charset=utf-8");
+    const body = await ics.text();
+    assert.ok(body.includes("DTSTART:20300701T080000Z") && body.includes("SUMMARY:Youth Camp 2030"));
     const dup = await (await reg("Amahle Zulu", "amahle@example.com")).json() as { already: boolean };
     assert.equal(dup.already, true);
     const b = await (await reg("Bongani Nkosi", "bongani@example.com", "1")).json() as { status: string };

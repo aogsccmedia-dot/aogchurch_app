@@ -9,7 +9,7 @@
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400&family=Jost:wght@300;350;400;450;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/pages.css">
   <link rel="stylesheet" href="/css/admin.css">
@@ -105,12 +105,15 @@
               </div>
               <div class="field"><label>Location</label><input class="input" name="location" maxlength="200" placeholder="17 Humber Street, Woodmead, Sandton"></div>
               <div class="field"><label>Description</label><textarea class="input" name="description" maxlength="5000" placeholder="What should people know?"></textarea></div>
-              <div class="field"><label>Cover image</label><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><img id="eb-cover" alt="" style="width:120px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;background:#1d1a16" hidden><input type="file" id="eb-cover-file" accept="image/jpeg,image/png,image/webp"><span class="hint">Save the event first, then add a cover.</span></div></div>
+              <div class="field"><label>Cover image</label><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><img id="eb-cover" alt="" style="width:120px;aspect-ratio:1/1;object-fit:cover;border-radius:10px;background:#1d1a16" hidden><input type="file" id="eb-cover-file" accept="image/jpeg,image/png,image/webp"><span class="hint">Square images look best (e.g. 1080 × 1080). Save the event first.</span></div></div>
             </div>
             <div class="card form-grid">
               <h3>Registration</h3>
               <div class="grid-2">
                 <div class="field"><label>Capacity (people)</label><input class="input" name="capacity" type="number" min="1" placeholder="Unlimited"></div>
+                <div class="field"><label>Ticket price</label><input class="input" name="price_label" maxlength="60" placeholder="e.g. R150 per person (blank = free)"></div>
+              </div>
+              <div class="grid-2">
                 <div class="field"><label>Registration closes</label><input class="input" name="registration_closes_at" type="datetime-local"></div>
               </div>
               <div class="field"><label>Confirmation message</label><textarea class="input" name="confirmation_message" maxlength="1000" placeholder="Shown after registering and included in the confirmation email"></textarea></div>
@@ -139,7 +142,7 @@
                 <div class="field"><label class="req">Email</label><input class="input" disabled></div>
                 <div class="field" id="pv-phone"><label class="req">Phone</label><input class="input" disabled></div>
                 <div id="pv-fields" class="form-grid"></div>
-                <button class="btn btn-gold" type="button" disabled>Register →</button>
+                <button class="btn btn-gold" type="button" disabled>Register</button>
               </div>
             </div></div>
           </aside>

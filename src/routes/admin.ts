@@ -52,7 +52,8 @@ export async function promoteWaitlist(env: Env, eventId: string) {
     await env.DB.prepare("UPDATE event_registrations SET status = 'confirmed' WHERE id = ?").bind(next.id).run();
     const m = T.eventConfirmation({ site: siteUrl(env) }, { name: next.name.split(" ")[0], status: "confirmed", ref: next.ref_code, title: e.title,
       when: formatWhen(e.starts_at, e.ends_at), location: e.location, message: "Good news — a spot opened up and it's yours!", calendarUrl: calendarUrl(e),
-      eventUrl: `${siteUrl(env)}/event?e=${encodeURIComponent(e.slug)}` });
+      eventUrl: `${siteUrl(env)}/event?e=${encodeURIComponent(e.slug)}`, price: null, cover: null, outlookUrl: null,
+      icsUrl: `${siteUrl(env)}/api/events/${encodeURIComponent(e.slug)}/calendar.ics` });
     await sendMail(env, { to: next.email, ...m, template: "event_promoted" });
     promoted++;
   }
@@ -224,6 +225,7 @@ export function adminRoutes(router: Router, env: Env): void {
       capacity: body.capacity === "" || body.capacity == null ? null : Math.max(1, Math.floor(Number(body.capacity)) || 0) || null,
       registration_closes_at: v.text("registration_closes_at", { max: 40 }),
       confirmation_message: v.text("confirmation_message", { max: 1000 }),
+      price_label: v.text("price_label", { max: 60 }),
       form_schema: "[]",
     };
     for (const k of ["starts_at", "ends_at", "registration_closes_at"] as const) {
@@ -239,7 +241,7 @@ export function adminRoutes(router: Router, env: Env): void {
 
   router.get("/api/admin/events", guard(async () => {
     const { results } = await env.DB.prepare(
-      `SELECT e.id, e.slug, e.title, e.category, e.starts_at, e.ends_at, e.location, e.is_published, e.rsvp_enabled, e.capacity, e.cover_attachment_id,
+      `SELECT e.id, e.slug, e.title, e.category, e.starts_at, e.ends_at, e.location, e.is_published, e.rsvp_enabled, e.capacity, e.cover_attachment_id, e.cover_image, e.price_label,
         (SELECT COUNT(*) FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'confirmed') AS confirmed,
         (SELECT COUNT(*) FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'waitlist') AS waitlist,
         (SELECT COALESCE(SUM(1 + guests),0) FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'confirmed') AS headcount
@@ -258,9 +260,9 @@ export function adminRoutes(router: Router, env: Env): void {
     const id = uuid();
     const slug = await uniqueSlug(e.slug || e.title!);
     await env.DB.prepare(`INSERT INTO events (id, slug, title, category, description, starts_at, ends_at, location, is_published, rsvp_enabled,
-        collect_phone, capacity, registration_closes_at, confirmation_message, form_schema) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        collect_phone, capacity, registration_closes_at, confirmation_message, form_schema, price_label) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(id, slug, e.title, e.category, e.description, e.starts_at, e.ends_at, e.location, e.is_published, e.rsvp_enabled,
-        e.collect_phone, e.capacity, e.registration_closes_at, e.confirmation_message, e.form_schema).run();
+        e.collect_phone, e.capacity, e.registration_closes_at, e.confirmation_message, e.form_schema, e.price_label).run();
     await audit(env, s, "create", "event", id);
     return json({ ok: true, id, slug }, 201);
   }));
@@ -269,9 +271,9 @@ export function adminRoutes(router: Router, env: Env): void {
     const e = readEvent(await readJson(req, 256 * 1024));
     const slug = await uniqueSlug(e.slug || e.title!, id);
     const r = await env.DB.prepare(`UPDATE events SET slug=?, title=?, category=?, description=?, starts_at=?, ends_at=?, location=?, is_published=?, rsvp_enabled=?,
-        collect_phone=?, capacity=?, registration_closes_at=?, confirmation_message=?, form_schema=?, updated_at=? WHERE id = ?`)
+        collect_phone=?, capacity=?, registration_closes_at=?, confirmation_message=?, form_schema=?, price_label=?, updated_at=? WHERE id = ?`)
       .bind(slug, e.title, e.category, e.description, e.starts_at, e.ends_at, e.location, e.is_published, e.rsvp_enabled, e.collect_phone,
-        e.capacity, e.registration_closes_at, e.confirmation_message, e.form_schema, new Date().toISOString(), id).run();
+        e.capacity, e.registration_closes_at, e.confirmation_message, e.form_schema, e.price_label, new Date().toISOString(), id).run();
     if (!r.meta.changes) throw new HttpError(404, "Event not found.");
     await promoteWaitlist(env, id);
     await audit(env, s, "update", "event", id);
@@ -287,9 +289,9 @@ export function adminRoutes(router: Router, env: Env): void {
     const nid = uuid();
     const slug = await uniqueSlug(`${e.title}-${String(shift(e.starts_at)).slice(0, 10)}`);
     await env.DB.prepare(`INSERT INTO events (id, slug, title, category, description, starts_at, ends_at, location, is_published, rsvp_enabled,
-        collect_phone, capacity, registration_closes_at, confirmation_message, form_schema, cover_attachment_id) VALUES (?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?)`)
+        collect_phone, capacity, registration_closes_at, confirmation_message, form_schema, cover_attachment_id, cover_image, price_label) VALUES (?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?)`)
       .bind(nid, slug, e.title, e.category, e.description, shift(e.starts_at), shift(e.ends_at), e.location, e.rsvp_enabled, e.collect_phone,
-        e.capacity, shift(e.registration_closes_at), e.confirmation_message, e.form_schema, e.cover_attachment_id).run();
+        e.capacity, shift(e.registration_closes_at), e.confirmation_message, e.form_schema, e.cover_attachment_id, e.cover_image, e.price_label).run();
     await audit(env, s, "duplicate", "event", nid, { from: id });
     return json({ ok: true, id: nid, slug }, 201);
   }));

@@ -31,7 +31,7 @@
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 
   --font-sans: "Jost", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
 
   --max: 1200px;
   --gutter: clamp(16px, 4vw, 40px);
@@ -70,14 +70,14 @@ button { font: inherit; color: inherit; }
   color: var(--muted); font-weight: 450;
 }
 .eyebrow.gold { color: var(--gold); }
-h1, h2, h3, h4 { font-weight: 350; letter-spacing: -0.01em; line-height: 1.12; margin: 0; }
+h1, h2, h3, h4 { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.015em; line-height: 1.12; margin: 0; }
 h1 { font-size: clamp(34px, 6vw, 68px); }
 h2 { font-size: clamp(28px, 4vw, 46px); }
 h3 { font-size: clamp(20px, 2.2vw, 26px); }
 p { margin: 0; }
 .lede { color: var(--text-2); font-size: clamp(15px, 1.4vw, 17.5px); max-width: 58ch; }
-.serif { font-family: var(--font-serif); font-style: italic; font-weight: 400; }
-.scripture { font-family: var(--font-serif); font-style: italic; color: var(--gold-2); font-size: 1.15em; }
+.serif { font-family: var(--font-serif); font-style: italic; font-weight: 400; color: var(--gold-2); }
+.scripture { font-family: var(--font-serif); font-style: italic; color: var(--gold-2); font-size: 1.05em; line-height: 1.5; }
 
 /* Section label with hairlines either side, like "FEATURED LIGHTING" */
 .rule-label {
@@ -87,27 +87,27 @@ p { margin: 0; }
 .rule-label::before, .rule-label::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--line-strong)); }
 .rule-label::after { background: linear-gradient(270deg, transparent, var(--line-strong)); }
 
-/* ---------- buttons ---------- */
+/* ---------- buttons: solid, flat, minimal ---------- */
 .btn {
-  --b: var(--line-strong);
-  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  padding: 11px 20px; min-height: 44px;
-  border: 1px solid var(--b); border-radius: 8px; background: transparent;
-  font-size: 14px; letter-spacing: 0.04em; cursor: pointer;
-  transition: border-color .25s var(--ease), background .25s var(--ease), color .25s var(--ease), box-shadow .3s var(--ease), transform .2s var(--ease);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 0 18px; min-height: 44px; flex-shrink: 0;
+  border: 0; border-radius: 10px; background: #221f1a; color: var(--text);
+  font: 450 14px/1 var(--font-sans); letter-spacing: .01em; white-space: nowrap; cursor: pointer;
+  transition: background .2s var(--ease), color .2s var(--ease), transform .15s var(--ease);
 }
-.btn:hover { --b: rgba(255, 244, 228, 0.42); background: rgba(255, 244, 228, 0.04); }
-.btn:active { transform: translateY(1px); }
-.btn .arr { transition: transform .25s var(--ease); }
-.btn:hover .arr { transform: translateX(3px); }
-.btn-gold {
-  --b: rgba(227, 178, 91, 0.7);
-  color: #1a1206; background: linear-gradient(180deg, var(--gold-2), var(--gold));
-  font-weight: 500; box-shadow: 0 0 0 0 rgba(255, 181, 77, 0);
-}
-.btn-gold:hover { background: linear-gradient(180deg, #ffe0a3, var(--gold-2)); box-shadow: 0 0 40px -6px rgba(255, 181, 77, 0.55); }
-.btn-ghost { border-color: transparent; }
-.btn-sm { padding: 7px 13px; min-height: 36px; font-size: 13px; }
+.btn:hover { background: #2d2922; }
+.btn:active { transform: scale(.98); }
+.btn .i, .btn .arr { width: 16px; height: 16px; flex: none; transition: transform .2s var(--ease); }
+.btn:hover .arr { transform: translateX(2px); }
+.btn-gold { background: var(--gold); color: #17110a; font-weight: 500; }
+.btn-gold:hover { background: var(--gold-2); }
+.btn-light { background: var(--text); color: #17110a; }
+.btn-light:hover { background: #fff; }
+.btn-ghost { background: transparent; color: var(--text-2); }
+.btn-ghost:hover { background: rgba(255, 244, 228, .06); color: var(--text); }
+.btn-sm { padding: 0 13px; min-height: 36px; font-size: 13px; border-radius: 8px; }
+.btn-block { width: 100%; }
+.i { width: 18px; height: 18px; flex: none; }
 .btn[disabled] { opacity: .5; pointer-events: none; }
 
 /* ---------- header ---------- */

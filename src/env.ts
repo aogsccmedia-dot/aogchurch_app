@@ -11,6 +11,7 @@ export interface SendEmailBinding {
     text?: string;
     replyTo?: string | { email: string; name?: string };
     headers?: Record<string, string>;
+    attachments?: { filename: string; type: string; disposition: "attachment" | "inline"; content: string | ArrayBuffer }[];
   }): Promise<{ messageId: string }>;
 }
 

@@ -198,9 +198,9 @@ loaders.events = async () => {
   const now = new Date().toISOString();
   $("#ev-list").innerHTML = events.length ? events.map((ev) => {
     const d = new Date(ev.starts_at);
-    const thumb = ev.cover_attachment_id ? `<img src="/api/media/${esc(ev.cover_attachment_id)}" alt="">` : `<span class="ph">${new Intl.DateTimeFormat("en-ZA", { day: "2-digit", timeZone: TZ }).format(d)}</span>`;
+    const thumb = ev.cover_attachment_id || ev.cover_image ? `<img src="${esc(ev.cover_attachment_id ? `/api/media/${ev.cover_attachment_id}` : ev.cover_image)}" alt="">` : `<span class="ph">${new Intl.DateTimeFormat("en-ZA", { day: "2-digit", timeZone: TZ }).format(d)}</span>`;
     return `<article class="item ev-item" data-go="event:${esc(ev.id)}">${thumb}
-      <div><b style="font-weight:450">${esc(ev.title)}</b><div class="meta">${fmtDate(ev.starts_at)}${ev.location ? " · " + esc(ev.location) : ""}</div></div>
+      <div><b style="font-weight:450">${esc(ev.title)}</b><div class="meta">${fmtDate(ev.starts_at)}${ev.location ? " · " + esc(ev.location) : ""}${ev.price_label ? " · " + esc(ev.price_label) : ""}</div></div>
       <div class="meta-row">${ev.starts_at < now ? '<span class="pill">Past</span>' : ""}${ev.is_published ? '<span class="pill member">Published</span>' : '<span class="pill">Draft</span>'}
         <span class="pill">${ev.confirmed} registered${ev.capacity ? ` / ${ev.capacity}` : ""}</span>${ev.waitlist ? `<span class="pill new">${ev.waitlist} waitlist</span>` : ""}</div></article>`;
   }).join("") : `<div class="empty">No events yet. Create your first service or event — each one gets its own registration page.</div>`;
@@ -275,11 +275,11 @@ async function editEvent(id) {
   if (id) {
     const { event } = await api(`/api/admin/events/${id}`);
     currentEvent = event;
-    for (const k of ["title", "slug", "category", "location", "description", "capacity", "confirmation_message"]) ef[k].value = event[k] ?? "";
+    for (const k of ["title", "slug", "category", "location", "description", "capacity", "confirmation_message", "price_label"]) ef[k].value = event[k] ?? "";
     ef.starts_at.value = toLocal(event.starts_at); ef.ends_at.value = toLocal(event.ends_at); ef.registration_closes_at.value = toLocal(event.registration_closes_at);
     ef.is_published.checked = !!event.is_published; ef.rsvp_enabled.checked = !!event.rsvp_enabled; ef.collect_phone.checked = !!event.collect_phone;
     fields = event.form_schema || [];
-    if (event.cover_attachment_id) { $("#eb-cover").src = `/api/media/${event.cover_attachment_id}`; $("#eb-cover").hidden = false; }
+    if (event.cover_attachment_id || event.cover_image) { $("#eb-cover").src = event.cover_attachment_id ? `/api/media/${event.cover_attachment_id}` : event.cover_image; $("#eb-cover").hidden = false; }
   } else {
     ef.location.value = "17 Humber Street, Woodmead, Sandton";
   }
@@ -304,7 +304,7 @@ ef.addEventListener("submit", safe(async (e) => {
   const body = {
     title: ef.title.value, slug: ef.slug.value, category: ef.category.value, location: ef.location.value, description: ef.description.value,
     starts_at: fromLocal(ef.starts_at.value), ends_at: fromLocal(ef.ends_at.value), registration_closes_at: fromLocal(ef.registration_closes_at.value),
-    capacity: ef.capacity.value, confirmation_message: ef.confirmation_message.value,
+    capacity: ef.capacity.value, confirmation_message: ef.confirmation_message.value, price_label: ef.price_label.value,
     is_published: ef.is_published.checked, rsvp_enabled: ef.rsvp_enabled.checked, collect_phone: ef.collect_phone.checked, form_schema: fields,
   };
   if (currentEvent) { await api(`/api/admin/events/${currentEvent.id}`, { method: "PUT", body }); toast("Event saved"); await editEvent(currentEvent.id); }

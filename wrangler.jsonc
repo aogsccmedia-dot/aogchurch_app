@@ -57,7 +57,7 @@
     "MAIL_FROM": "noreply@aogsccyouth.com",
     "MAIL_FROM_NAME": "AOG Sandton City Church",
     // Google Identity Services web client ID (public, not a secret). Empty = Google button hidden.
-    "GOOGLE_CLIENT_ID": "",
+    "GOOGLE_CLIENT_ID": "388453371259-jjpkbr514u1orlvikrkgfjigonbsrp3d.apps.googleusercontent.com",
     "STORAGE_DRIVER": "kv",
     "MAX_UPLOAD_MB": "10"
   },

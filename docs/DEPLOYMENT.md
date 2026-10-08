@@ -11,7 +11,7 @@
 
 ## One-time setup
 
-### 1. Email sending (Cloudflare Email Service)
+### 1. Email sending (Cloudflare Email Service) ✅ enabled
 Dashboard → **Compute → Email Service → Email Sending → Onboard Domain** → `aogsccyouth.com`.
 This adds SPF/DKIM/DMARC records under `cf-bounce.aogsccyouth.com`. The Worker sends as `noreply@aogsccyouth.com` (see `send_email` in `wrangler.jsonc`), and replies go to `aogsccmedia@gmail.com`.
 > Do this **before the first deploy**. Admin sign-in codes depend on it.
@@ -28,7 +28,7 @@ This adds SPF/DKIM/DMARC records under `cf-bounce.aogsccyouth.com`. The Worker s
 ### 3. Google sign-in
 1. https://console.cloud.google.com/apis/credentials → **Create credentials → OAuth client ID → Web application**.
 2. Authorised JavaScript origins: `https://aogsccyouth.com` (and `http://localhost:8787` for development).
-3. Put the client ID in `wrangler.jsonc` → `vars.GOOGLE_CLIENT_ID` and push. It's a public value, not a secret.
+3. Put the client ID in `wrangler.jsonc` → `vars.GOOGLE_CLIENT_ID` and push. It's a public value, not a secret. ✅ Done: `388453371259-…apps.googleusercontent.com`.
 
 Until step 3 is done, admin sign-in falls back to **email code only** (only `aogsccmedia@gmail.com` can request one). Once Google is on, the admin must sign in with Google **and** enter the emailed code.
 

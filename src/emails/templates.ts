@@ -12,7 +12,9 @@ const C = {
   gold: "#c8963e", goldSoft: "#f3e3c3", night: "#0d0b09", line: "#eadfcd",
 };
 const SANS = "'Helvetica Neue', Helvetica, Arial, sans-serif";
-const SERIF = "Georgia, 'Times New Roman', serif";
+// Playfair Display: open-source high-contrast display serif, closest to Magilio.
+// Clients that block web fonts (e.g. Gmail) gracefully fall back to Georgia.
+const SERIF = "'Playfair Display', Georgia, 'Times New Roman', serif";
 
 export function button(href: string, label: string): string {
   return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:28px 0 8px"><tr><td style="border-radius:10px;background:${C.gold}">
@@ -34,7 +36,9 @@ export const paragraphs = (text: string) => text.split(/\n\s*\n/).map((t) => p(e
 /** Wrap content in the church layout. */
 export function layout(b: Brand, o: { preheader: string; eyebrow?: string; heading: string; content: string; heroImage?: string; footerNote?: string; unsubscribeUrl?: string }): string {
   const hero = o.heroImage ? `<tr><td style="padding:0"><img src="${esc(o.heroImage)}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>` : "";
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><title>${esc(o.heading)}</title></head>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><title>${esc(o.heading)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap');</style></head>
 <body style="margin:0;padding:0;background:${C.page}">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${esc(o.preheader)}&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:${C.page}"><tr><td align="center" style="padding:28px 12px">
@@ -151,21 +155,29 @@ export function adminNewMember(b: Brand, m: { name: string; ref: string; phone: 
   };
 }
 
-export function eventConfirmation(b: Brand, o: { name: string; status: string; ref: string; title: string; when: string; location: string | null; message: string | null; calendarUrl: string; eventUrl: string }) {
+export function eventConfirmation(b: Brand, o: { name: string; status: string; ref: string; title: string; when: string; location: string | null; message: string | null;
+  calendarUrl: string; eventUrl: string; price?: string | null; cover?: string | null; outlookUrl?: string | null; icsUrl?: string | null }) {
   const wait = o.status === "waitlist";
+  const cal = (href: string, label: string) => `<a href="${esc(href)}" style="display:inline-block;margin:0 8px 8px 0;padding:10px 14px;border-radius:8px;background:#f3ead9;font:600 13px/1 ${SANS};color:${C.ink};text-decoration:none">${esc(label)}</a>`;
   return {
     subject: wait ? `You're on the waitlist for ${o.title}` : `You're registered: ${o.title}`,
     html: layout(b, {
       preheader: wait ? "We'll let you know the moment a spot opens up." : `See you ${o.when}!`,
       eyebrow: wait ? "Waitlist" : "You're in",
       heading: wait ? `You're on the waitlist, ${esc(o.name)}` : `See you there, ${esc(o.name)}!`,
-      content: p(wait ? `<strong>${esc(o.title)}</strong> is full right now, but you're on the waitlist and we'll be in touch the moment a spot opens up.` : `You're registered for <strong>${esc(o.title)}</strong>. We can't wait to see you.`) +
-        `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:8px 0 6px;background:${C.goldSoft};border-radius:12px"><tr><td style="padding:18px 20px;font:15px/1.7 ${SANS};color:${C.ink}">
-          <strong>${esc(o.title)}</strong><br>${esc(o.when)}${o.location ? `<br>${esc(o.location)}` : ""}<br><span style="color:${C.muted};font-size:13px">Ref ${esc(o.ref)}</span></td></tr></table>` +
-        (o.message ? p(esc(o.message)) : "") + (wait ? "" : button(o.calendarUrl, "Add to my calendar")) +
-        p(`<a href="${esc(o.eventUrl)}" style="color:${C.gold}">View event details</a>`),
+      content: p(wait ? `<strong>${esc(o.title)}</strong> is full right now, but you're on the waitlist and we'll be in touch the moment a spot opens up.` : `You're registered for <strong>${esc(o.title)}</strong>. We can't wait to worship with you.`) +
+        `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:8px 0 18px;background:${C.goldSoft};border-radius:14px;overflow:hidden"><tr>
+          ${o.cover ? `<td width="140" valign="top" style="padding:0"><img src="${esc(o.cover)}" width="140" height="140" alt="" style="display:block;width:140px;height:140px;object-fit:cover;border:0"></td>` : ""}
+          <td valign="middle" style="padding:16px 20px;font:15px/1.65 ${SANS};color:${C.ink}">
+          <span style="font:500 19px/1.3 ${SERIF};color:${C.ink}">${esc(o.title)}</span><br>${esc(o.when)}${o.location ? `<br>${esc(o.location)}` : ""}
+          ${o.price ? `<br><span style="color:${C.gold};font-weight:600">${esc(o.price)}</span>` : ""}<br><span style="color:${C.muted};font-size:13px">Ref ${esc(o.ref)}</span></td></tr></table>` +
+        (o.message ? p(esc(o.message)) : "") +
+        (wait ? "" : `<p style="margin:18px 0 8px;font:600 11px/1 ${SANS};letter-spacing:.2em;text-transform:uppercase;color:${C.gold}">Add it to your calendar</p>
+          <p style="margin:0 0 6px">${cal(o.calendarUrl, "Google")}${o.icsUrl ? cal(o.icsUrl, "Apple / iPhone") : ""}${o.outlookUrl ? cal(o.outlookUrl, "Outlook") : ""}</p>
+          <p style="margin:0 0 16px;font:13px/1.6 ${SANS};color:${C.muted}">A calendar invite (.ics) is also attached to this email.</p>`) +
+        button(o.eventUrl, "View event details"),
     }),
-    text: `${wait ? "You're on the waitlist for" : "You're registered for"} ${o.title}\n${o.when}${o.location ? `\n${o.location}` : ""}\nRef ${o.ref}\n${o.message || ""}\n${o.eventUrl}` + textFooter(b),
+    text: `${wait ? "You're on the waitlist for" : "You're registered for"} ${o.title}\n${o.when}${o.location ? `\n${o.location}` : ""}${o.price ? `\n${o.price}` : ""}\nRef ${o.ref}\n${o.message || ""}\nAdd to Google Calendar: ${o.calendarUrl}\n${o.eventUrl}` + textFooter(b),
   };
 }
 

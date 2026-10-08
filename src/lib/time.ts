@@ -24,3 +24,28 @@ export function calendarUrl(e: { title: string; starts_at: string; ends_at: stri
     location: e.location || "17 Humber Street, Woodmead, Sandton", details: (e.description || "").slice(0, 500) });
   return `https://calendar.google.com/calendar/render?${p}`;
 }
+
+/** Outlook / Microsoft 365 web "add event" link. */
+export function outlookUrl(e: { title: string; starts_at: string; ends_at: string | null; location: string | null; description?: string | null }): string {
+  const end = e.ends_at || new Date(new Date(e.starts_at).getTime() + 2 * 3600_000).toISOString();
+  const p = new URLSearchParams({ path: "/calendar/action/compose", rru: "addevent", subject: e.title, startdt: new Date(e.starts_at).toISOString(),
+    enddt: new Date(end).toISOString(), location: e.location || "17 Humber Street, Woodmead, Sandton", body: (e.description || "").slice(0, 500) });
+  return `https://outlook.live.com/calendar/0/deeplink/compose?${p}`;
+}
+
+const icsEsc = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+/** RFC 5545 calendar file — works with Apple Calendar, Outlook, Google and phones. */
+export function icsFile(e: { id: string; title: string; starts_at: string; ends_at: string | null; location: string | null; description?: string | null; url: string }): string {
+  const end = e.ends_at || new Date(new Date(e.starts_at).getTime() + 2 * 3600_000).toISOString();
+  const lines = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//AOG Sandton City Church//Events//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+    "BEGIN:VEVENT", `UID:${e.id}@aogsccyouth.com`, `DTSTAMP:${gcal(new Date().toISOString())}`,
+    `DTSTART:${gcal(new Date(e.starts_at).toISOString())}`, `DTEND:${gcal(new Date(end).toISOString())}`,
+    `SUMMARY:${icsEsc(e.title)}`, `LOCATION:${icsEsc(e.location || "17 Humber Street, Woodmead, Sandton")}`,
+    `DESCRIPTION:${icsEsc(((e.description || "") + "\n\n" + e.url).trim())}`, `URL:${e.url}`,
+    "BEGIN:VALARM", "TRIGGER:-PT2H", "ACTION:DISPLAY", `DESCRIPTION:${icsEsc(e.title)}`, "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR",
+  ];
+  // Fold long lines to 75 octets as the spec requires.
+  return lines.map((l) => l.length <= 74 ? l : l.match(/.{1,73}/g)!.join("\r\n ")).join("\r\n") + "\r\n";
+}

@@ -108,8 +108,8 @@ dialog.drawer::backdrop { background: rgba(5, 4, 3, .6); }
 .svc-row { display: grid; grid-template-columns: 1.3fr 1fr 1fr auto; gap: 8px; }
 .svc-row .input { min-height: 40px; padding: 8px 12px; font-size: 14px; }
 .svc-row button { background: none; border: 0; color: var(--muted); cursor: pointer; }
-.ev-item { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 16px; align-items: center; cursor: pointer; }
-.ev-item img, .ev-item .ph { width: 96px; aspect-ratio: 16/10; object-fit: cover; border-radius: 10px; background: #1d1a16; display: grid; place-items: center; color: var(--gold); font-size: 22px; font-weight: 300; }
+.ev-item { display: grid; grid-template-columns: 80px minmax(0, 1fr) auto; gap: 16px; align-items: center; cursor: pointer; }
+.ev-item img, .ev-item .ph { width: 80px; aspect-ratio: 1/1; object-fit: cover; border-radius: 10px; background: #1d1a16; display: grid; place-items: center; color: var(--gold); font-size: 22px; font-weight: 300; }
 .ev-item .meta-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .setup { border: 1px solid rgba(255, 181, 77, .35); background: rgba(255, 181, 77, .06); border-radius: 14px; padding: 14px 18px; font-size: 14px; color: var(--text-2); display: grid; gap: 6px; }
 .setup b { color: var(--gold-2); font-weight: 500; }
@@ -118,4 +118,4 @@ dialog.drawer::backdrop { background: rgba(5, 4, 3, .6); }
 .resp-answers { font-size: 13px; color: var(--text-2); display: grid; gap: 2px; }
 .resp-answers b { color: var(--muted); font-weight: 400; }
 @media (max-width: 1180px) { .builder { grid-template-columns: 1fr; } .builder-preview { position: static; max-height: none; } }
-@media (max-width: 640px) { .svc-row { grid-template-columns: 1fr; } .ev-item { grid-template-columns: 1fr; } .ev-item img, .ev-item .ph { width: 100%; } }
+@media (max-width: 640px) { .svc-row { grid-template-columns: 1fr; } .ev-item { grid-template-columns: 64px minmax(0, 1fr); } .ev-item img, .ev-item .ph { width: 64px; } .ev-item .meta-row { grid-column: 1 / -1; justify-content: flex-start; } }
