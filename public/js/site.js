@@ -109,6 +109,32 @@ export function jsonForm(form, path, { onSuccess } = {}) {
 }
 
 document.getElementById("year")?.replaceChildren(String(new Date().getFullYear()));
+
+/** Underline the nav item for the page or home-page section the visitor is on. */
+function initCurrentNav() {
+  const links = [...document.querySelectorAll(".main-nav a, .menu nav a, .site-footer a")];
+  const mark = (match) => links.forEach((a) => {
+    const on = match(new URL(a.href, location.href));
+    if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  });
+  const path = location.pathname.replace(/\.html$/, "").replace(/\/$/, "") || "/";
+  if (path !== "/") {
+    const section = { "/event": "#services" }[path];
+    mark((u) => (section ? u.pathname === "/" && u.hash === section : u.pathname.replace(/\/$/, "") === path && !u.hash));
+    return;
+  }
+  const ids = [...new Set(links.map((a) => new URL(a.href, location.href)).filter((u) => u.pathname === "/" && u.hash).map((u) => u.hash.slice(1)))];
+  const sections = ids.map((id) => document.getElementById(id)).filter(Boolean);
+  if (!sections.length) return;
+  // The section crossing the upper third of the screen is "current"; nothing is underlined in the hero.
+  const update = () => {
+    const current = sections.find((sec) => { const r = sec.getBoundingClientRect(); return r.top <= innerHeight * 0.35 && r.bottom > innerHeight * 0.35; });
+    mark((u) => !!current && u.pathname === "/" && u.hash === "#" + current.id);
+  };
+  addEventListener("scroll", update, { passive: true });
+  update();
+}
+initCurrentNav();
 initHeader();
 initReveal();
 fillSettings();
