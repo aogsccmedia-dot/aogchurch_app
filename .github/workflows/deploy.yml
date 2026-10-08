@@ -44,7 +44,8 @@ jobs:
       - name: Check Cloudflare credentials
         id: creds
         run: |
-          if [ -z "$CF_TOKEN" ] || [ -z "$CF_ACCOUNT" ]; then
+          if [ -z "$CF_ACCOUNT" ]; then echo "::notice::No account ID set — Wrangler will detect the account from the API token."; fi
+          if [ -z "$CF_TOKEN" ]; then
             echo "::warning::Cloudflare credentials not found (token present: $([ -n "$CF_TOKEN" ] && echo yes || echo no), account id present: $([ -n "$CF_ACCOUNT" ] && echo yes || echo no)) — skipping deploy. See docs/DEPLOYMENT.md."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
