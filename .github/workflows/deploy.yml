@@ -63,20 +63,33 @@ jobs:
 
       - name: Apply database migrations (D1)
         if: steps.creds.outputs.ready == 'true'
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ env.CF_TOKEN }}
-          accountId: ${{ env.CF_ACCOUNT }}
-          command: d1 migrations apply aogscc-youth-db --remote
+        id: migrate
+        continue-on-error: true   # schema changes are idempotent; never block a site deploy on them
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ env.CF_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CF_ACCOUNT }}
+        run: |
+          set -o pipefail
+          if ! npx wrangler d1 migrations apply aogscc-youth-db --remote 2>&1 | tee migrate.log; then
+            echo "::warning title=D1 migrations failed::$(grep -v '^\s*$' migrate.log | tail -15 | tr '\n' ' ' | cut -c1-1500)"
+            exit 1
+          fi
 
       - name: Deploy Worker
         if: steps.creds.outputs.ready == 'true'
         id: deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ env.CF_TOKEN }}
-          accountId: ${{ env.CF_ACCOUNT }}
-          command: deploy --message "commit ${{ github.sha }}"
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ env.CF_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CF_ACCOUNT }}
+        run: |
+          set -o pipefail
+          if ! npx wrangler deploy --message "commit ${{ github.sha }}" 2>&1 | tee deploy.log; then
+            echo "::error title=wrangler deploy failed::$(grep -v '^\s*$' deploy.log | tail -20 | tr '\n' ' ' | cut -c1-2000)"
+            exit 1
+          fi
+          echo "::notice title=Deployed::$(grep -E 'https://|Current Version|Uploaded' deploy.log | tr '\n' ' ' | cut -c1-800)"
 
       - name: Smoke test
         if: steps.creds.outputs.ready == 'true'
