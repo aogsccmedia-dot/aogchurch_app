@@ -308,7 +308,7 @@ describe("paid events: EFT + proof of payment + admin approval", () => {
     const r = await (await reg("Sipho Ndlovu", "sipho@example.com", true, "1")).json() as { status: string; amount_due: number };
     assert.equal(r.status, "pending");
     assert.equal(r.amount_due, 300);
-    assert.match(mails("sipho@example.com").at(-1)!.subject, /Payment received/);
+    assert.match(mails("sipho@example.com").at(-1)!.subject, /received your details/);
     assert.match(mails("aogsccmedia@gmail.com").at(-1)!.subject, /Payment to approve: Sipho Ndlovu/);
     const list = await (await call("/api/events")).json() as { events: { slug: string; spots_left: number }[] };
     assert.equal(list.events.find((e) => e.slug === slug)!.spots_left, 2, "pending registrations hold their seats");
@@ -328,7 +328,7 @@ describe("paid events: EFT + proof of payment + admin approval", () => {
     const patch = (rid: string, body: unknown) => call(`/api/admin/registrations/${rid}`, { method: "PATCH", headers: { ...A(cookie), ...JSONH }, body: JSON.stringify(body) });
     await patch(byEmail("sipho@example.com").id, { status: "confirmed" });
     const ticket = mails("sipho@example.com").at(-1)! as { subject: string; attachments?: { type: string }[]; html?: string };
-    assert.match(ticket.subject, /You're registered/);
+    assert.match(ticket.subject, /Congratulations/);
     assert.equal(ticket.attachments?.[0].type, "text/calendar");
     assert.ok(ticket.html!.includes("Your payment has been approved"));
 
@@ -337,12 +337,12 @@ describe("paid events: EFT + proof of payment + admin approval", () => {
     assert.match(declined.subject, /About your registration/);
     assert.ok(declined.html!.includes("R100, not R150"));
     // Declining freed a seat → the waitlisted person moves up to "awaiting approval".
-    assert.match(mails("late@example.com").at(-1)!.subject, /Payment received/);
+    assert.match(mails("late@example.com").at(-1)!.subject, /received your details/);
 
     const all = await (await post(`/api/admin/events/${id}/approve-all`, {}, A(cookie))).json() as { approved: number };
     assert.equal(all.approved, 2);
-    assert.match(mails("zama@example.com").at(-1)!.subject, /You're registered/);
-    assert.match(mails("late@example.com").at(-1)!.subject, /You're registered/);
+    assert.match(mails("zama@example.com").at(-1)!.subject, /Congratulations/);
+    assert.match(mails("late@example.com").at(-1)!.subject, /Congratulations/);
     // A declined person can register again.
     assert.equal((await reg("Lindo Mthembu", "lindo@example.com", true)).status, 201);
     const csv = await (await call(`/api/admin/events/${id}/registrations.csv`, { headers: { cookie } })).text();

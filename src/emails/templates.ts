@@ -156,16 +156,17 @@ export function adminNewMember(b: Brand, m: { name: string; ref: string; phone: 
 }
 
 export function eventConfirmation(b: Brand, o: { name: string; status: string; ref: string; title: string; when: string; location: string | null; message: string | null;
-  calendarUrl: string; eventUrl: string; price?: string | null; cover?: string | null; outlookUrl?: string | null; icsUrl?: string | null }) {
+  calendarUrl: string; eventUrl: string; price?: string | null; cover?: string | null; outlookUrl?: string | null; icsUrl?: string | null; approved?: boolean }) {
   const wait = o.status === "waitlist";
+  const ok = !wait && o.approved;
   const cal = (href: string, label: string) => `<a href="${esc(href)}" style="display:inline-block;margin:0 8px 8px 0;padding:10px 14px;border-radius:8px;background:#f3ead9;font:600 13px/1 ${SANS};color:${C.ink};text-decoration:none">${esc(label)}</a>`;
   return {
-    subject: wait ? `You're on the waitlist for ${o.title}` : `You're registered: ${o.title}`,
+    subject: wait ? `You're on the waitlist for ${o.title}` : ok ? `Congratulations — you're confirmed for ${o.title} 🎉` : `You're registered: ${o.title}`,
     html: layout(b, {
-      preheader: wait ? "We'll let you know the moment a spot opens up." : `See you ${o.when}!`,
-      eyebrow: wait ? "Waitlist" : "You're in",
-      heading: wait ? `You're on the waitlist, ${esc(o.name)}` : `See you there, ${esc(o.name)}!`,
-      content: p(wait ? `<strong>${esc(o.title)}</strong> is full right now, but you're on the waitlist and we'll be in touch the moment a spot opens up.` : `You're registered for <strong>${esc(o.title)}</strong>. We can't wait to worship with you.`) +
+      preheader: wait ? "We'll let you know the moment a spot opens up." : ok ? "Your payment is verified and your seat is confirmed. This email is your ticket." : `See you ${o.when}!`,
+      eyebrow: wait ? "Waitlist" : ok ? "Approved · you're in" : "You're in",
+      heading: wait ? `You're on the waitlist, ${esc(o.name)}` : ok ? `Congratulations, ${esc(o.name)}!` : `See you there, ${esc(o.name)}!`,
+      content: p(wait ? `<strong>${esc(o.title)}</strong> is full right now, but you're on the waitlist and we'll be in touch the moment a spot opens up.` : ok ? `Great news: we've verified your payment and your seat at <strong>${esc(o.title)}</strong> is confirmed. We can't wait to worship with you!` : `You're registered for <strong>${esc(o.title)}</strong>. We can't wait to worship with you.`) +
         `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:8px 0 18px;background:${C.goldSoft};border-radius:14px;overflow:hidden"><tr>
           ${o.cover ? `<td width="140" valign="top" style="padding:0"><img src="${esc(o.cover)}" width="140" height="140" alt="" style="display:block;width:140px;height:140px;object-fit:cover;border:0"></td>` : ""}
           <td valign="middle" style="padding:16px 20px;font:15px/1.65 ${SANS};color:${C.ink}">
@@ -177,7 +178,7 @@ export function eventConfirmation(b: Brand, o: { name: string; status: string; r
           <p style="margin:0 0 16px;font:13px/1.6 ${SANS};color:${C.muted}">A calendar invite (.ics) is also attached to this email.</p>`) +
         button(o.eventUrl, "View event details"),
     }),
-    text: `${wait ? "You're on the waitlist for" : "You're registered for"} ${o.title}\n${o.when}${o.location ? `\n${o.location}` : ""}${o.price ? `\n${o.price}` : ""}\nRef ${o.ref}\n${o.message || ""}\nAdd to Google Calendar: ${o.calendarUrl}\n${o.eventUrl}` + textFooter(b),
+    text: `${wait ? "You're on the waitlist for" : ok ? "Congratulations! Your payment is verified and you're confirmed for" : "You're registered for"} ${o.title}\n${o.when}${o.location ? `\n${o.location}` : ""}${o.price ? `\n${o.price}` : ""}\nRef ${o.ref}\n${o.message || ""}\nAdd to Google Calendar: ${o.calendarUrl}\n${o.eventUrl}` + textFooter(b),
   };
 }
 
@@ -191,17 +192,17 @@ function eventBox(o: { title: string; when: string; location: string | null; ref
 
 export function eventPending(b: Brand, o: { name: string; ref: string; title: string; when: string; location: string | null; eventUrl: string; cover?: string | null; amount: string; people: number }) {
   return {
-    subject: `Payment received — ${o.title}`,
+    subject: `We've received your details — ${o.title}`,
     html: layout(b, {
-      preheader: "We've got your proof of payment. Your ticket is on its way once it's approved.",
-      eyebrow: "Awaiting approval",
+      preheader: "We've got your registration and proof of payment. We're verifying it now.",
+      eyebrow: "Received · being verified",
       heading: `Thank you, ${esc(o.name)}!`,
-      content: p(`We've received your registration and proof of payment for <strong>${esc(o.title)}</strong>. Our team will check it and confirm your seat shortly — usually within a day or two.`) +
+      content: p(`We've received your registration and proof of payment for <strong>${esc(o.title)}</strong>, and our team is verifying it now. This usually takes a day or two.`) +
         eventBox({ ...o, extra: o.amount ? `<br><span style="color:${C.gold};font-weight:600">${esc(o.amount)} · ${o.people} ${o.people === 1 ? "person" : "people"}</span>` : "" }) +
-        p("As soon as it's approved we'll email your ticket with a calendar invite. You don't need to do anything else.") +
+        p("As soon as it's approved we'll send you a second email confirming your seat, with your ticket and a calendar invite. You don't need to do anything else.") +
         button(o.eventUrl, "View event"),
     }),
-    text: `Thank you, ${o.name}! We've received your proof of payment for ${o.title} (${o.when}). Ref ${o.ref}. We'll email your ticket once it's approved.` + textFooter(b),
+    text: `Thank you, ${o.name}! We've received your registration and proof of payment for ${o.title} (${o.when}) and we're verifying it now. Ref ${o.ref}. Once it's approved we'll email you to confirm your seat.` + textFooter(b),
   };
 }
 

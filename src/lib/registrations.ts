@@ -51,7 +51,7 @@ export async function notifyRegistration(env: Env, e: EventRow, r: RegRow, opts:
   }
   if (r.status === "confirmed" || r.status === "waitlist") {
     const m = T.eventConfirmation({ site }, {
-      ...base, status: r.status,
+      ...base, status: r.status, approved: !!e.requires_pop && r.status === "confirmed" && !opts.promoted,
       message: opts.promoted ? "Good news — a spot opened up and it's yours!" : e.requires_pop && r.status === "confirmed" ? "Your payment has been approved. This email is your ticket — show your reference at the door." : e.confirmation_message,
       calendarUrl: calendarUrl(e), outlookUrl: outlookUrl(e), icsUrl: `${site}/api/events/${encodeURIComponent(e.slug)}/calendar.ics`,
     });

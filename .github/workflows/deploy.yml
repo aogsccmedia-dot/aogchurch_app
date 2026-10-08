@@ -108,7 +108,7 @@ jobs:
             echo "::error title=wrangler deploy failed::$(grep -v '^\s*$' deploy.log | tail -20 | tr '\n' ' ' | cut -c1-2000)"
             exit 1
           fi
-          echo "::notice title=Deployed::$(grep -E 'https://|Current Version|Uploaded' deploy.log | tr '\n' ' ' | cut -c1-800)"
+          echo "::notice title=Deployed::$(sed -n '/Deployed/,$p' deploy.log | grep -v '^\s*$' | tr '\n' ' ' | cut -c1-1200)"
 
       - name: Smoke test
         if: steps.creds.outputs.ready == 'true'
@@ -117,4 +117,6 @@ jobs:
             if curl -fsS https://aogsccyouth.com/api/health; then echo; exit 0; fi
             echo "waiting for the new version…"; sleep 10
           done
-          echo "::warning::Health check didn't pass yet (DNS / certificate may still be provisioning on a first deploy)."
+          w=$(curl -sS -o /dev/null -w '%{http_code}' https://aogchurch-app.aogsccmedia.workers.dev/api/health 2>&1 || true)
+          d=$(curl -sS -o /dev/null -w '%{http_code} %{remote_ip}' https://aogsccyouth.com/api/health 2>&1 || true)
+          echo "::warning::Health check didn't pass yet. workers.dev → $w · aogsccyouth.com → $d"
