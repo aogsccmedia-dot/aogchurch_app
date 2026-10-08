@@ -41,7 +41,7 @@ export async function googleButton(el, { text = "continue_with", width } = {}) {
   if (!clientId || !el) { if (el) el.hidden = true; return false; }
   try { await loadGsi(); } catch { el.hidden = true; return false; }
   google.accounts.id.initialize({ client_id: clientId, callback: handleCredential, ux_mode: "popup", auto_select: false, itp_support: true });
-  google.accounts.id.renderButton(el, { theme: "filled_black", size: "large", shape: "pill", text, logo_alignment: "left", width: width || Math.min(360, el.clientWidth || 320) });
+  google.accounts.id.renderButton(el, { theme: document.body.classList.contains("admin") ? "filled_black" : "outline", size: "large", shape: "pill", text, logo_alignment: "left", width: width || Math.min(360, el.clientWidth || 320) });
   el.hidden = false;
   return true;
 }

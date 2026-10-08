@@ -1,10 +1,57 @@
 /* ==========================================================================
-   SCC Youth — design tokens & shared components
-   Inspired by a dark, lamp-lit product showcase: near-black warm surfaces,
-   soft emissive glows, thin hairlines and quiet small-caps labels.
+   Sandton City Church — design tokens & shared components
+   Public website: warm light theme (cream paper, ink, gold — like the event posters).
+   Admin dashboard: dark theme (body.admin overrides the tokens below).
    ========================================================================== */
 
 :root {
+  --bg: #f6f1e8;
+  --bg-2: #fffdf9;
+  --surface: #efe8dc;
+  --surface-2: #e7dfd1;
+  --line: rgba(43, 32, 16, 0.10);
+  --line-strong: rgba(43, 32, 16, 0.20);
+  --text: #1c1712;
+  --text-2: #4c4339;
+  --muted: #7d7265;
+  --gold: #9a6a1f;          /* accent text & icons */
+  --gold-2: #8a5c14;        /* emphasis text (serif italics, prices) */
+  --gold-deep: #c8963e;
+  --gold-btn: #d6a650;      /* solid gold buttons (dark text on top) */
+  --gold-btn-2: #e3b866;
+  --danger: #b4321f;
+  --ok: #2f7a47;
+  --hover: rgba(43, 32, 16, 0.06);
+  --btn: #ebe3d5;
+  --btn-2: #e1d7c6;
+  --input: #fffdf9;
+  --input-focus: #ffffff;
+  --placeholder: #a2988a;
+  --dim: #d8cfbf;           /* unselected dots, switches */
+  --header-bg: rgba(246, 241, 232, 0.9);
+  --menu-bg: rgba(246, 241, 232, 0.98);
+  --backdrop: rgba(28, 23, 18, 0.45);
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%234c4339' stroke-width='1.5'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
+
+  --tone-warm: #d6a650;
+  --tone-white: #fff4e2;
+  --tone-blue: #2d7fa3;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow: 0 24px 60px -28px rgba(60, 40, 10, 0.35);
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  --font-sans: "Jost", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
+
+  --max: 1200px;
+  --gutter: clamp(16px, 4vw, 40px);
+  color-scheme: light;
+}
+
+/* Admin dashboard keeps the dark theme. */
+body.admin {
   --bg: #0b0a09;
   --bg-2: #11100e;
   --surface: #161411;
@@ -17,24 +64,24 @@
   --gold: #e3b25b;
   --gold-2: #f6d28b;
   --gold-deep: #9a6a1f;
+  --gold-btn: #e3b25b;
+  --gold-btn-2: #f6d28b;
   --danger: #ff8a7a;
   --ok: #8fd6a4;
-
-  /* Light tones (mirrors the lamp tone picker) */
+  --hover: rgba(255, 244, 228, 0.06);
+  --btn: #221f1a;
+  --btn-2: #2d2922;
+  --input: #11100e;
+  --input-focus: #14120f;
+  --placeholder: #5f584e;
+  --dim: #3a352e;
+  --header-bg: rgba(11, 10, 9, 0.85);
+  --menu-bg: rgba(8, 7, 6, 0.97);
+  --backdrop: rgba(5, 4, 3, 0.7);
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%23b9b0a3' stroke-width='1.5'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
   --tone-warm: #ffb54d;
-  --tone-white: #fff4e2;
   --tone-blue: #6fd6ff;
-
-  --radius: 14px;
-  --radius-sm: 9px;
   --shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.8);
-  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-
-  --font-sans: "Jost", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
-
-  --max: 1200px;
-  --gutter: clamp(16px, 4vw, 40px);
   color-scheme: dark;
 }
 
@@ -91,20 +138,20 @@ p { margin: 0; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 0 18px; min-height: 44px; flex-shrink: 0;
-  border: 0; border-radius: 10px; background: #221f1a; color: var(--text);
+  border: 0; border-radius: 10px; background: var(--btn); color: var(--text);
   font: 450 14px/1 var(--font-sans); letter-spacing: .01em; white-space: nowrap; cursor: pointer;
   transition: background .2s var(--ease), color .2s var(--ease), transform .15s var(--ease);
 }
-.btn:hover { background: #2d2922; }
+.btn:hover { background: var(--btn-2); }
 .btn:active { transform: scale(.98); }
 .btn .i, .btn .arr { width: 16px; height: 16px; flex: none; transition: transform .2s var(--ease); }
 .btn:hover .arr { transform: translateX(2px); }
-.btn-gold { background: var(--gold); color: #17110a; font-weight: 500; }
-.btn-gold:hover { background: var(--gold-2); }
+.btn-gold { background: var(--gold-btn); color: #17110a; font-weight: 500; }
+.btn-gold:hover { background: var(--gold-btn-2); }
 .btn-light { background: var(--text); color: #17110a; }
 .btn-light:hover { background: #fff; }
 .btn-ghost { background: transparent; color: var(--text-2); }
-.btn-ghost:hover { background: rgba(255, 244, 228, .06); color: var(--text); }
+.btn-ghost:hover { background: var(--hover); color: var(--text); }
 .btn-sm { padding: 0 13px; min-height: 36px; font-size: 13px; border-radius: 8px; }
 .btn-block { width: 100%; }
 .i { width: 18px; height: 18px; flex: none; }
@@ -113,7 +160,7 @@ p { margin: 0; }
 /* ---------- header ---------- */
 .site-header {
   position: sticky; top: 0; z-index: 50;
-  background: linear-gradient(180deg, rgba(11, 10, 9, 0.92), rgba(11, 10, 9, 0.72));
+  background: var(--header-bg);
   backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2);
   border-bottom: 1px solid transparent; transition: border-color .3s;
 }
@@ -123,7 +170,7 @@ p { margin: 0; }
   width: 44px; height: 44px; display: grid; place-items: center; border-radius: 10px;
   background: none; border: 0; cursor: pointer; color: var(--text);
 }
-.icon-btn:hover { background: rgba(255, 244, 228, 0.06); }
+.icon-btn:hover { background: var(--hover); }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 450; letter-spacing: 0.14em; font-size: 14px; text-transform: uppercase; }
 .brand img { width: 34px; height: 34px; border-radius: 50%; box-shadow: 0 0 0 1px var(--line); }
 .header-actions { justify-self: end; display: flex; gap: 8px; align-items: center; }
@@ -131,7 +178,7 @@ p { margin: 0; }
 
 /* full-screen menu */
 .menu {
-  position: fixed; inset: 0; z-index: 60; background: rgba(8, 7, 6, 0.97);
+  position: fixed; inset: 0; z-index: 60; background: var(--menu-bg);
   display: grid; grid-template-rows: auto 1fr auto; padding: 0 var(--gutter) 32px;
   opacity: 0; visibility: hidden; transition: opacity .35s var(--ease), visibility .35s;
 }
@@ -155,14 +202,14 @@ p { margin: 0; }
 .req::after { content: " *"; color: var(--gold); }
 .input, select.input, textarea.input {
   width: 100%; min-height: 46px; padding: 11px 14px;
-  background: var(--bg-2); border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  background: var(--input); border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
   color: var(--text); font: inherit; font-size: 15.5px; transition: border-color .2s, box-shadow .2s, background .2s;
 }
 textarea.input { min-height: 110px; resize: vertical; }
-.input::placeholder { color: #5f584e; }
-.input:hover { border-color: rgba(255, 244, 228, 0.28); }
-.input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(227, 178, 91, 0.16); background: #14120f; }
-select.input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%23b9b0a3' stroke-width='1.5'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; }
+.input::placeholder { color: var(--placeholder); }
+.input:hover { border-color: var(--muted); }
+.input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(214, 166, 80, 0.22); background: var(--input-focus); }
+select.input { appearance: none; background-image: var(--select-arrow); background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; }
 input[type="date"].input::-webkit-calendar-picker-indicator { filter: invert(0.8); }
 .field.invalid .input { border-color: var(--danger); }
 .field .error { color: var(--danger); font-size: 13px; display: none; }
@@ -179,7 +226,7 @@ input[type="date"].input::-webkit-calendar-picker-indicator { filter: invert(0.8
   display: inline-flex; align-items: center; gap: 8px; padding: 9px 15px; border-radius: 999px;
   border: 1px solid var(--line-strong); color: var(--text-2); font-size: 14px; transition: all .2s var(--ease);
 }
-.chip span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #3a352e; transition: all .25s var(--ease); }
+.chip span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--dim); transition: all .25s var(--ease); }
 .chip input:checked + span { color: var(--text); border-color: rgba(255, 181, 77, 0.6); background: rgba(255, 181, 77, 0.07); }
 .chip input:checked + span::before { background: var(--tone-warm); box-shadow: 0 0 10px 2px rgba(255, 181, 77, 0.7); }
 .chip input:focus-visible + span { outline: 2px solid var(--gold); outline-offset: 2px; }
