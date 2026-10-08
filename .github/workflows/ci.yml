@@ -28,7 +28,13 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! npm install --no-audit --no-fund 2>&1 | tee npm-install.log; then
+            echo "::error title=npm install failed::$(grep -E 'npm (error|ERR)' npm-install.log | head -20 | tr '\n' ' ')"
+            exit 1
+          fi
 
       - name: Type-check
         run: npm run typecheck
