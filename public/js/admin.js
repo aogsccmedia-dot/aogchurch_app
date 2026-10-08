@@ -1,5 +1,6 @@
 import { AVAILABILITY, LABELS, MINISTRIES } from "./options.js";
 import { FIELD_TYPES, renderField } from "./forms.js";
+import { icon } from "./icons.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -123,8 +124,8 @@ loaders.overview = async () => {
   if (!email_enabled) notes.push("<b>Email sending is off.</b> Onboard aogsccyouth.com in Cloudflare → Email Service so confirmations, codes and letters are delivered.");
   if (!google_enabled) notes.push("<b>Google sign-in is off.</b> Add the Google client ID to switch on one-tap joining.");
   $("#setup-notes").innerHTML = notes.length ? `<div class="setup">${notes.map((n) => `<span>${n}</span>`).join("")}</div>` : "";
-  const cards = [["members", "Members"], ["new_members", "Awaiting follow-up"], ["this_week", "Joined this week"], ["subscribers", "Letter subscribers"],
-    ["upcoming_events", "Upcoming events"], ["registrations_week", "Registrations this week"], ["new_prayers", "New prayer requests"], ["new_messages", "New messages"]];
+  const cards = [["pending_payments", "Payments to approve"], ["members", "Members"], ["new_members", "Awaiting follow-up"], ["this_week", "Joined this week"], ["subscribers", "Letter subscribers"],
+    ["upcoming_events", "Upcoming events"], ["registrations_week", "Registrations this week"], ["new_prayers", "New prayer requests"]];
   $("#stats").innerHTML = cards.map(([k, l]) => `<div class="stat"><b>${stats[k]}</b><span>${l}</span></div>`).join("");
   $$("[data-count]").forEach((b) => { b.textContent = stats[b.dataset.count] || ""; });
   const max = Math.max(1, ...interests.map((i) => i.n));
@@ -202,7 +203,7 @@ loaders.events = async () => {
     return `<article class="item ev-item" data-go="event:${esc(ev.id)}">${thumb}
       <div><b style="font-weight:450">${esc(ev.title)}</b><div class="meta">${fmtDate(ev.starts_at)}${ev.location ? " · " + esc(ev.location) : ""}${ev.price_label ? " · " + esc(ev.price_label) : ""}</div></div>
       <div class="meta-row">${ev.starts_at < now ? '<span class="pill">Past</span>' : ""}${ev.is_published ? '<span class="pill member">Published</span>' : '<span class="pill">Draft</span>'}
-        <span class="pill">${ev.confirmed} registered${ev.capacity ? ` / ${ev.capacity}` : ""}</span>${ev.waitlist ? `<span class="pill new">${ev.waitlist} waitlist</span>` : ""}</div></article>`;
+        <span class="pill">${ev.confirmed} registered${ev.capacity ? ` / ${ev.capacity}` : ""}</span>${ev.pending ? `<span class="pill pending">${ev.pending} to approve</span>` : ""}${ev.waitlist ? `<span class="pill">${ev.waitlist} waitlist</span>` : ""}</div></article>`;
   }).join("") : `<div class="empty">No events yet. Create your first service or event — each one gets its own registration page.</div>`;
 };
 $("#new-event").addEventListener("click", () => editEvent(null));
@@ -275,7 +276,8 @@ async function editEvent(id) {
   if (id) {
     const { event } = await api(`/api/admin/events/${id}`);
     currentEvent = event;
-    for (const k of ["title", "slug", "category", "location", "description", "capacity", "confirmation_message", "price_label"]) ef[k].value = event[k] ?? "";
+    for (const k of ["title", "slug", "category", "location", "description", "capacity", "confirmation_message", "ticket_price", "payment_instructions"]) ef[k].value = event[k] ?? "";
+    ef.requires_pop.checked = !!event.requires_pop; ef.auto_approve.checked = !!event.auto_approve;
     ef.starts_at.value = toLocal(event.starts_at); ef.ends_at.value = toLocal(event.ends_at); ef.registration_closes_at.value = toLocal(event.registration_closes_at);
     ef.is_published.checked = !!event.is_published; ef.rsvp_enabled.checked = !!event.rsvp_enabled; ef.collect_phone.checked = !!event.collect_phone;
     fields = event.form_schema || [];
@@ -304,7 +306,8 @@ ef.addEventListener("submit", safe(async (e) => {
   const body = {
     title: ef.title.value, slug: ef.slug.value, category: ef.category.value, location: ef.location.value, description: ef.description.value,
     starts_at: fromLocal(ef.starts_at.value), ends_at: fromLocal(ef.ends_at.value), registration_closes_at: fromLocal(ef.registration_closes_at.value),
-    capacity: ef.capacity.value, confirmation_message: ef.confirmation_message.value, price_label: ef.price_label.value,
+    capacity: ef.capacity.value, confirmation_message: ef.confirmation_message.value, ticket_price: ef.ticket_price.value,
+    requires_pop: ef.requires_pop.checked, auto_approve: ef.auto_approve.checked, payment_instructions: ef.payment_instructions.value,
     is_published: ef.is_published.checked, rsvp_enabled: ef.rsvp_enabled.checked, collect_phone: ef.collect_phone.checked, form_schema: fields,
   };
   if (currentEvent) { await api(`/api/admin/events/${currentEvent.id}`, { method: "PUT", body }); toast("Event saved"); await editEvent(currentEvent.id); }
@@ -329,28 +332,60 @@ let responses = [];
 async function loadResponses() {
   const { registrations } = await api(`/api/admin/events/${currentEvent.id}/registrations`);
   responses = registrations;
-  $("#eb-count").textContent = registrations.filter((r) => r.status !== "cancelled").length || "";
+  $("#eb-count").textContent = registrations.filter((r) => r.status === "pending").length || "";
   $("#resp-csv").href = `/api/admin/events/${currentEvent.id}/registrations.csv`;
   drawResponses();
 }
+const STATUS_LABEL = { pending: "Awaiting approval", confirmed: "Confirmed", waitlist: "Waitlist", rejected: "Declined", cancelled: "Cancelled" };
 function drawResponses() {
   const q = $("#resp-q").value.toLowerCase();
-  const list = responses.filter((r) => !q || `${r.name} ${r.email} ${r.phone} ${r.ref_code}`.toLowerCase().includes(q));
-  const confirmed = responses.filter((r) => r.status === "confirmed");
-  const people = confirmed.reduce((n, r) => n + 1 + r.guests, 0);
-  const inn = confirmed.filter((r) => r.checked_in_at).length;
-  $("#resp-summary").textContent = `${confirmed.length} registered · ${people} people · ${responses.filter((r) => r.status === "waitlist").length} waitlist · ${inn} checked in`;
-  const qs = (currentEvent.form_schema || []).filter((f) => f.type !== "statement");
-  $("#resp-table").innerHTML = `<thead><tr><th>Person</th><th>Answers</th><th>Status</th><th>Check-in</th></tr></thead><tbody>${list.length ? list.map((r) => `<tr>
+  const f = $("#resp-filter").value;
+  const list = responses.filter((r) => (!f || r.status === f) && (!q || `${r.name} ${r.email} ${r.phone} ${r.ref_code}`.toLowerCase().includes(q)));
+  const by = (st) => responses.filter((r) => r.status === st);
+  const people = by("confirmed").reduce((n, r) => n + 1 + r.guests, 0);
+  const paid = by("confirmed").reduce((n, r) => n + (r.amount_due || 0), 0);
+  const pending = by("pending");
+  $("#approve-all").hidden = !pending.length;
+  $("#approve-all").textContent = `Approve all pending (${pending.length})`;
+  $("#resp-summary").textContent = `${by("confirmed").length} confirmed · ${people} people${paid ? ` · R${paid.toLocaleString("en-ZA")} approved` : ""} · ${pending.length} awaiting approval · ${by("waitlist").length} waitlist · ${by("confirmed").filter((r) => r.checked_in_at).length} checked in`;
+  const qs = (currentEvent.form_schema || []).filter((x) => x.type !== "statement");
+  $("#resp-table").innerHTML = `<thead><tr><th>Person</th><th>Payment</th><th>Answers</th><th>Status</th><th>Check-in</th></tr></thead><tbody>${list.length ? list.map((r) => `<tr>
     <td><b style="font-weight:450">${esc(r.name)}</b>${r.guests ? ` <span class="sub">+${r.guests}</span>` : ""}<div class="sub">${esc(r.email)}${r.phone ? " · " + esc(r.phone) : ""}</div><div class="sub">${esc(r.ref_code)} · ${fmtDate(r.created_at)}</div></td>
-    <td><div class="resp-answers">${qs.map((f) => { const v = r.answers[f.id]; const fl = r.files.filter((x) => x.kind === `answer:${f.id}`);
-      return `<span><b>${esc(f.label)}:</b> ${fl.length ? fl.map((x) => `<a href="/api/admin/files/${esc(x.id)}" target="_blank" style="color:var(--gold-2)">${esc(x.filename)}</a>`).join(", ") : esc(Array.isArray(v) ? v.join(", ") : v ?? "—")}</span>`; }).join("") || '<span class="sub">—</span>'}</div></td>
-    <td><select class="input" data-reg="${esc(r.id)}" style="min-height:36px;padding:4px 30px 4px 10px;font-size:13px">${["confirmed", "waitlist", "cancelled"].map((s) => `<option ${s === r.status ? "selected" : ""}>${s}</option>`).join("")}</select></td>
-    <td><label class="check"><input type="checkbox" data-checkin="${esc(r.id)}" ${r.checked_in_at ? "checked" : ""}> In</label></td></tr>`).join("") : `<tr><td colspan="4" class="sub" style="text-align:center;padding:30px">No registrations yet. Share the event link!</td></tr>`}</tbody>`;
+    <td>${r.amount_due ? `<b style="font-weight:450">R${Number(r.amount_due).toLocaleString("en-ZA")}</b>` : '<span class="sub">—</span>'}
+      ${r.pop_attachment_id ? `<div><a class="pop-link" href="/api/admin/files/${esc(r.pop_attachment_id)}" target="_blank" rel="noopener">${icon("file")} View proof</a></div>` : ""}
+      ${r.status === "pending" ? `<div class="row-actions"><button class="btn btn-sm btn-gold" data-approve="${esc(r.id)}">${icon("check")} Approve</button><button class="btn btn-sm" data-decline="${esc(r.id)}">Decline</button></div>` : ""}
+      ${r.reviewed_at ? `<div class="sub">Reviewed ${fmtDate(r.reviewed_at)}</div>` : ""}</td>
+    <td><div class="resp-answers">${qs.map((fld) => { const v = r.answers[fld.id]; const fl = r.files.filter((x) => x.kind === `answer:${fld.id}`);
+      return `<span><b>${esc(fld.label)}${/[?:.]$/.test(fld.label) ? "" : ":"}</b> ${fl.length ? fl.map((x) => `<a href="/api/admin/files/${esc(x.id)}" target="_blank" style="color:var(--gold-2)">${esc(x.filename)}</a>`).join(", ") : esc(Array.isArray(v) ? v.join(", ") : v ?? "—")}</span>`; }).join("") || '<span class="sub">—</span>'}</div></td>
+    <td><span class="pill ${esc(r.status)}">${esc(STATUS_LABEL[r.status] || r.status)}</span>
+      <select class="input" data-reg="${esc(r.id)}" style="min-height:34px;padding:4px 30px 4px 10px;font-size:13px;margin-top:6px" aria-label="Change status">${Object.entries(STATUS_LABEL).map(([k, l]) => `<option value="${k}" ${k === r.status ? "selected" : ""}>${l}</option>`).join("")}</select></td>
+    <td><label class="check"><input type="checkbox" data-checkin="${esc(r.id)}" ${r.checked_in_at ? "checked" : ""}> In</label></td></tr>`).join("") : `<tr><td colspan="5" class="sub" style="text-align:center;padding:30px">No registrations here yet.</td></tr>`}</tbody>`;
 }
 $("#resp-q").addEventListener("input", drawResponses);
+$("#resp-filter").addEventListener("change", drawResponses);
+$("#approve-all").addEventListener("click", safe(async () => {
+  const n = responses.filter((r) => r.status === "pending").length;
+  if (!confirm(`Approve all ${n} pending registration(s)? Each person will be emailed their ticket.`)) return;
+  const r = await api(`/api/admin/events/${currentEvent.id}/approve-all`, { method: "POST", body: {} });
+  toast(`${r.approved} approved — tickets emailed`); await loadResponses();
+}));
+$("#resp-table").addEventListener("click", safe(async (e) => {
+  const a = e.target.closest("[data-approve]"), d = e.target.closest("[data-decline]");
+  if (a) { await api(`/api/admin/registrations/${a.dataset.approve}`, { method: "PATCH", body: { status: "confirmed" } }); toast("Approved — ticket emailed"); await loadResponses(); }
+  if (d) {
+    const note = prompt("Optional note to the person (e.g. amount didn't match):", "");
+    if (note === null) return;
+    await api(`/api/admin/registrations/${d.dataset.decline}`, { method: "PATCH", body: { status: "rejected", note } }); toast("Declined — they've been notified"); await loadResponses();
+  }
+}));
 $("#resp-table").addEventListener("change", safe(async (e) => {
-  if (e.target.dataset.reg) { await api(`/api/admin/registrations/${e.target.dataset.reg}`, { method: "PATCH", body: { status: e.target.value } }); toast("Updated"); }
+  if (e.target.dataset.reg) {
+    const st = e.target.value;
+    const note = st === "rejected" ? prompt("Optional note to the person:", "") : null;
+    if (st === "rejected" && note === null) { drawResponses(); return; }
+    await api(`/api/admin/registrations/${e.target.dataset.reg}`, { method: "PATCH", body: { status: st, note } });
+    toast(st === "confirmed" ? "Approved — ticket emailed" : st === "rejected" ? "Declined — they've been notified" : "Updated");
+  }
   if (e.target.dataset.checkin) { await api(`/api/admin/registrations/${e.target.dataset.checkin}`, { method: "PATCH", body: { checked_in: e.target.checked } }); }
   await loadResponses();
 }));
@@ -472,7 +507,9 @@ const SETTINGS = [
 ];
 loaders.settings = async () => {
   const { settings } = await api("/api/admin/settings");
-  $("#settings-form").innerHTML = SETTINGS.map(([k, l]) => `<div class="field"><label>${esc(l)}</label><input class="input" name="${k}" value="${esc(settings[k] || "")}" maxlength="500"></div>`).join("") + `<button class="btn btn-gold" type="submit" style="justify-self:start">Save settings</button>`;
+  $("#settings-form").innerHTML = SETTINGS.map(([k, l]) => `<div class="field"><label>${esc(l)}</label><input class="input" name="${k}" value="${esc(settings[k] || "")}" maxlength="500"></div>`).join("") +
+    `<div class="field"><label>Default banking details (paid events)</label><textarea class="input" name="banking_details" maxlength="2000" placeholder="Account name&#10;Bank&#10;Account number&#10;Branch code&#10;Reference to use">${esc(settings.banking_details || "")}</textarea><span class="hint">Shown on paid event pages when the event doesn't have its own banking details.</span></div>` +
+    `<button class="btn btn-gold" type="submit" style="justify-self:start">Save settings</button>`;
 };
 $("#settings-form").addEventListener("submit", safe(async (e) => { e.preventDefault(); await api("/api/admin/settings", { method: "PUT", body: Object.fromEntries(new FormData(e.target)) }); toast("Settings saved"); }));
 loaders.emails = async () => {
@@ -481,4 +518,5 @@ loaders.emails = async () => {
     <td><span class="pill ${l.status === "sent" ? "member" : l.status === "failed" ? "new" : ""}" title="${esc(l.error || "")}">${esc(l.status)}</span></td></tr>`).join("") : `<tr><td colspan="5" class="sub" style="text-align:center;padding:30px">No emails sent yet.</td></tr>`;
 };
 
+addEventListener("hashchange", () => { if (me) openTab(location.hash.slice(1) || "overview"); });
 boot();

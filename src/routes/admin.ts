@@ -11,7 +11,8 @@ import { sendMail } from "../lib/email.ts";
 import { buildAnnouncement, processAnnouncements, renderAnnouncement, type AnnouncementRow } from "../lib/newsletter.ts";
 import { calendarUrl, formatWhen, nextSundayAfternoon } from "../lib/time.ts";
 import * as T from "../emails/templates.ts";
-import { EVENT_CATEGORIES, MEMBER_STATUSES, MESSAGE_STATUSES, PRAYER_STATUSES, PUBLIC_SETTINGS } from "../constants.ts";
+import { notifyRegistration, promoteWaitlist, type EventRow, type RegRow } from "../lib/registrations.ts";
+import { ADMIN_ONLY_SETTINGS, EVENT_CATEGORIES, MEMBER_STATUSES, MESSAGE_STATUSES, PRAYER_STATUSES, PUBLIC_SETTINGS } from "../constants.ts";
 
 type H = (req: Request, p: Record<string, string>, s: Session) => Promise<Response>;
 
@@ -38,27 +39,7 @@ function pageParams(url: URL) {
   return { limit, offset: (page - 1) * limit, page };
 }
 
-/** When a confirmed spot frees up, move the earliest waitlisted people in and tell them. */
-export async function promoteWaitlist(env: Env, eventId: string) {
-  const e = await env.DB.prepare("SELECT * FROM events WHERE id = ?").bind(eventId)
-    .first<{ id: string; slug: string; title: string; capacity: number | null; starts_at: string; ends_at: string | null; location: string | null; confirmation_message: string | null; description: string | null }>();
-  if (!e?.capacity) return 0;
-  let promoted = 0;
-  for (;;) {
-    const used = (await env.DB.prepare("SELECT COALESCE(SUM(1 + guests),0) AS n FROM event_registrations WHERE event_id = ? AND status = 'confirmed'").bind(eventId).first<{ n: number }>())!.n;
-    const next = await env.DB.prepare("SELECT * FROM event_registrations WHERE event_id = ? AND status = 'waitlist' ORDER BY created_at LIMIT 1")
-      .bind(eventId).first<{ id: string; name: string; email: string; ref_code: string; guests: number }>();
-    if (!next || used + 1 + next.guests > e.capacity) break;
-    await env.DB.prepare("UPDATE event_registrations SET status = 'confirmed' WHERE id = ?").bind(next.id).run();
-    const m = T.eventConfirmation({ site: siteUrl(env) }, { name: next.name.split(" ")[0], status: "confirmed", ref: next.ref_code, title: e.title,
-      when: formatWhen(e.starts_at, e.ends_at), location: e.location, message: "Good news — a spot opened up and it's yours!", calendarUrl: calendarUrl(e),
-      eventUrl: `${siteUrl(env)}/event?e=${encodeURIComponent(e.slug)}`, price: null, cover: null, outlookUrl: null,
-      icsUrl: `${siteUrl(env)}/api/events/${encodeURIComponent(e.slug)}/calendar.ics` });
-    await sendMail(env, { to: next.email, ...m, template: "event_promoted" });
-    promoted++;
-  }
-  return promoted;
-}
+export { promoteWaitlist };
 
 export function adminRoutes(router: Router, env: Env): void {
   const guard = (h: H) => async (req: Request, p: Record<string, string>) => {
@@ -82,13 +63,14 @@ export function adminRoutes(router: Router, env: Env): void {
       q("SELECT COUNT(*) AS n FROM subscribers WHERE status = 'active'"),
       q("SELECT COUNT(*) AS n FROM event_registrations WHERE created_at >= ? AND status != 'cancelled'", weekAgo),
       q("SELECT COUNT(*) AS n FROM users"),
+      q("SELECT COUNT(*) AS n FROM event_registrations WHERE status = 'pending'"),
     ]);
     const n = (i: number) => (rs[i].results[0] as { n: number }).n;
     const interests = await env.DB.prepare("SELECT j.value AS slug, COUNT(*) AS n FROM members, json_each(members.interests) j GROUP BY j.value ORDER BY n DESC").all();
     const next = await env.DB.prepare("SELECT id, subject, status, scheduled_for FROM announcements WHERE status IN ('scheduled','sending') ORDER BY scheduled_for LIMIT 1").first();
     return json({ ok: true, stats: {
       members: n(0), new_members: n(1), this_week: n(2), new_prayers: n(3), new_messages: n(4), upcoming_events: n(5),
-      subscribers: n(6), registrations_week: n(7), accounts: n(8),
+      subscribers: n(6), registrations_week: n(7), accounts: n(8), pending_payments: n(9),
     }, interests: interests.results, next_letter: next, email_enabled: !!env.EMAIL, google_enabled: !!env.GOOGLE_CLIENT_ID });
   }));
 
@@ -226,12 +208,18 @@ export function adminRoutes(router: Router, env: Env): void {
       registration_closes_at: v.text("registration_closes_at", { max: 40 }),
       confirmation_message: v.text("confirmation_message", { max: 1000 }),
       price_label: v.text("price_label", { max: 60 }),
+      ticket_price: body.ticket_price === "" || body.ticket_price == null ? null : Math.max(0, Math.round(Number(body.ticket_price))) || null,
+      requires_pop: v.bool("requires_pop") ? 1 : 0,
+      auto_approve: v.bool("auto_approve") ? 1 : 0,
+      payment_instructions: v.text("payment_instructions", { max: 2000 }),
       form_schema: "[]",
     };
     for (const k of ["starts_at", "ends_at", "registration_closes_at"] as const) {
       if (e[k] && isNaN(Date.parse(e[k]!))) v.errors[k] = "Invalid date/time.";
     }
     v.assert();
+    if (e.ticket_price) e.price_label = `R${e.ticket_price} per person`;
+    if (!e.ticket_price && e.price_label && /^R?\s*\d/.test(e.price_label)) e.ticket_price = Number(e.price_label.replace(/[^\d]/g, "")) || null;
     e.form_schema = JSON.stringify(sanitizeSchema(body.form_schema ?? []));
     e.starts_at = new Date(e.starts_at!).toISOString();
     if (e.ends_at) e.ends_at = new Date(e.ends_at).toISOString();
@@ -241,9 +229,10 @@ export function adminRoutes(router: Router, env: Env): void {
 
   router.get("/api/admin/events", guard(async () => {
     const { results } = await env.DB.prepare(
-      `SELECT e.id, e.slug, e.title, e.category, e.starts_at, e.ends_at, e.location, e.is_published, e.rsvp_enabled, e.capacity, e.cover_attachment_id, e.cover_image, e.price_label,
+      `SELECT e.id, e.slug, e.title, e.category, e.starts_at, e.ends_at, e.location, e.is_published, e.rsvp_enabled, e.capacity, e.cover_attachment_id, e.cover_image, e.price_label, e.requires_pop,
         (SELECT COUNT(*) FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'confirmed') AS confirmed,
         (SELECT COUNT(*) FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'waitlist') AS waitlist,
+        (SELECT COUNT(*) FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'pending') AS pending,
         (SELECT COALESCE(SUM(1 + guests),0) FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'confirmed') AS headcount
        FROM events e ORDER BY e.starts_at DESC LIMIT 300`).all();
     return json({ ok: true, events: results });
@@ -260,9 +249,11 @@ export function adminRoutes(router: Router, env: Env): void {
     const id = uuid();
     const slug = await uniqueSlug(e.slug || e.title!);
     await env.DB.prepare(`INSERT INTO events (id, slug, title, category, description, starts_at, ends_at, location, is_published, rsvp_enabled,
-        collect_phone, capacity, registration_closes_at, confirmation_message, form_schema, price_label) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        collect_phone, capacity, registration_closes_at, confirmation_message, form_schema, price_label, ticket_price, requires_pop, auto_approve, payment_instructions)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(id, slug, e.title, e.category, e.description, e.starts_at, e.ends_at, e.location, e.is_published, e.rsvp_enabled,
-        e.collect_phone, e.capacity, e.registration_closes_at, e.confirmation_message, e.form_schema, e.price_label).run();
+        e.collect_phone, e.capacity, e.registration_closes_at, e.confirmation_message, e.form_schema, e.price_label,
+        e.ticket_price, e.requires_pop, e.auto_approve, e.payment_instructions).run();
     await audit(env, s, "create", "event", id);
     return json({ ok: true, id, slug }, 201);
   }));
@@ -271,9 +262,11 @@ export function adminRoutes(router: Router, env: Env): void {
     const e = readEvent(await readJson(req, 256 * 1024));
     const slug = await uniqueSlug(e.slug || e.title!, id);
     const r = await env.DB.prepare(`UPDATE events SET slug=?, title=?, category=?, description=?, starts_at=?, ends_at=?, location=?, is_published=?, rsvp_enabled=?,
-        collect_phone=?, capacity=?, registration_closes_at=?, confirmation_message=?, form_schema=?, price_label=?, updated_at=? WHERE id = ?`)
+        collect_phone=?, capacity=?, registration_closes_at=?, confirmation_message=?, form_schema=?, price_label=?, ticket_price=?, requires_pop=?,
+        auto_approve=?, payment_instructions=?, updated_at=? WHERE id = ?`)
       .bind(slug, e.title, e.category, e.description, e.starts_at, e.ends_at, e.location, e.is_published, e.rsvp_enabled, e.collect_phone,
-        e.capacity, e.registration_closes_at, e.confirmation_message, e.form_schema, e.price_label, new Date().toISOString(), id).run();
+        e.capacity, e.registration_closes_at, e.confirmation_message, e.form_schema, e.price_label, e.ticket_price, e.requires_pop,
+        e.auto_approve, e.payment_instructions, new Date().toISOString(), id).run();
     if (!r.meta.changes) throw new HttpError(404, "Event not found.");
     await promoteWaitlist(env, id);
     await audit(env, s, "update", "event", id);
@@ -289,9 +282,11 @@ export function adminRoutes(router: Router, env: Env): void {
     const nid = uuid();
     const slug = await uniqueSlug(`${e.title}-${String(shift(e.starts_at)).slice(0, 10)}`);
     await env.DB.prepare(`INSERT INTO events (id, slug, title, category, description, starts_at, ends_at, location, is_published, rsvp_enabled,
-        collect_phone, capacity, registration_closes_at, confirmation_message, form_schema, cover_attachment_id, cover_image, price_label) VALUES (?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?)`)
+        collect_phone, capacity, registration_closes_at, confirmation_message, form_schema, cover_attachment_id, cover_image, price_label,
+        ticket_price, requires_pop, auto_approve, payment_instructions) VALUES (?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(nid, slug, e.title, e.category, e.description, shift(e.starts_at), shift(e.ends_at), e.location, e.rsvp_enabled, e.collect_phone,
-        e.capacity, shift(e.registration_closes_at), e.confirmation_message, e.form_schema, e.cover_attachment_id, e.cover_image, e.price_label).run();
+        e.capacity, shift(e.registration_closes_at), e.confirmation_message, e.form_schema, e.cover_attachment_id, e.cover_image, e.price_label,
+        e.ticket_price, e.requires_pop, e.auto_approve, e.payment_instructions).run();
     await audit(env, s, "duplicate", "event", nid, { from: id });
     return json({ ok: true, id: nid, slug }, 201);
   }));
@@ -330,19 +325,43 @@ export function adminRoutes(router: Router, env: Env): void {
     return json({ ok: true, registrations: results.map((r) => ({ ...r, answers: JSON.parse(String(r.answers || "{}")), files: files.filter((f) => f.owner_id === r.id) })) });
   }));
 
+  /**
+   * Change a registration's status. Approving (→ confirmed) emails the ticket + calendar invite;
+   * declining (→ rejected) emails a kind note. Freed seats go to the waitlist automatically.
+   */
   router.patch("/api/admin/registrations/:id", guard(async (req, { id }, s) => {
     const body = await readJson(req);
-    const reg = await env.DB.prepare("SELECT event_id FROM event_registrations WHERE id = ?").bind(id).first<{ event_id: string }>();
+    const reg = await env.DB.prepare("SELECT * FROM event_registrations WHERE id = ?").bind(id).first<RegRow>();
     if (!reg) throw new HttpError(404, "Registration not found.");
-    if (body.status && ["confirmed", "waitlist", "cancelled"].includes(String(body.status))) {
-      await env.DB.prepare("UPDATE event_registrations SET status = ? WHERE id = ?").bind(body.status, id).run();
+    const STATUSES = ["pending", "confirmed", "waitlist", "rejected", "cancelled"];
+    const next = typeof body.status === "string" && STATUSES.includes(body.status) ? body.status : null;
+    const note = typeof body.note === "string" ? body.note.slice(0, 500) : null;
+    if (next && next !== reg.status) {
+      await env.DB.prepare("UPDATE event_registrations SET status = ?, reviewed_at = ?, review_note = COALESCE(?, review_note) WHERE id = ?")
+        .bind(next, new Date().toISOString(), note, id).run();
+      const e = await env.DB.prepare("SELECT * FROM events WHERE id = ?").bind(reg.event_id).first<EventRow>();
+      if (e && (next === "confirmed" || next === "rejected") && body.notify !== false) await notifyRegistration(env, e, { ...reg, status: next }, { note });
+      if (["cancelled", "rejected", "waitlist"].includes(next)) await promoteWaitlist(env, reg.event_id);
     }
     if (typeof body.checked_in === "boolean") {
       await env.DB.prepare("UPDATE event_registrations SET checked_in_at = ? WHERE id = ?").bind(body.checked_in ? new Date().toISOString() : null, id).run();
     }
-    if (body.status === "cancelled") await promoteWaitlist(env, reg.event_id);
-    await audit(env, s, "update", "registration", id, body);
+    await audit(env, s, "update", "registration", id, { status: next, checked_in: body.checked_in });
     return json({ ok: true });
+  }));
+
+  // Approve every registration still awaiting approval for an event, in sign-up order.
+  router.post("/api/admin/events/:id/approve-all", guard(async (_req, { id }, s) => {
+    const e = await env.DB.prepare("SELECT * FROM events WHERE id = ?").bind(id).first<EventRow>();
+    if (!e) throw new HttpError(404, "Event not found.");
+    const { results } = await env.DB.prepare("SELECT * FROM event_registrations WHERE event_id = ? AND status = 'pending' ORDER BY created_at").bind(id).all<RegRow>();
+    const now = new Date().toISOString();
+    for (const r of results) {
+      await env.DB.prepare("UPDATE event_registrations SET status = 'confirmed', reviewed_at = ? WHERE id = ?").bind(now, r.id).run();
+      await notifyRegistration(env, e, { ...r, status: "confirmed" });
+    }
+    await audit(env, s, "approve_all", "event", id, { count: results.length });
+    return json({ ok: true, approved: results.length });
   }));
 
   router.get("/api/admin/events/:id/registrations.csv", guard(async (_req, { id }) => {
@@ -350,10 +369,10 @@ export function adminRoutes(router: Router, env: Env): void {
     if (!e) throw new HttpError(404, "Event not found.");
     const fields = parseSchema(e.form_schema).filter((f) => f.type !== "statement");
     const { results } = await env.DB.prepare("SELECT * FROM event_registrations WHERE event_id = ? ORDER BY created_at").bind(id).all<Record<string, string>>();
-    const header = ["Ref", "Status", "Name", "Email", "Phone", "Guests", "Checked in", "Registered", ...fields.map((f) => f.label)];
+    const header = ["Ref", "Status", "Name", "Email", "Phone", "Guests", "Amount (R)", "Proof of payment", "Reviewed", "Checked in", "Registered", ...fields.map((f) => f.label)];
     const rows = results.map((r) => {
       const a = JSON.parse(r.answers || "{}") as Record<string, unknown>;
-      return [r.ref_code, r.status, r.name, r.email, r.phone, r.guests, r.checked_in_at, r.created_at, ...fields.map((f) => Array.isArray(a[f.id]) ? (a[f.id] as string[]).join("; ") : a[f.id])];
+      return [r.ref_code, r.status, r.name, r.email, r.phone, r.guests, r.amount_due, r.pop_attachment_id ? `${siteUrl(env)}/api/admin/files/${r.pop_attachment_id}` : "", r.reviewed_at, r.checked_in_at, r.created_at, ...fields.map((f) => Array.isArray(a[f.id]) ? (a[f.id] as string[]).join("; ") : a[f.id])];
     });
     return csv(`registrations-${e.slug}`, header, rows);
   }));
@@ -366,9 +385,9 @@ export function adminRoutes(router: Router, env: Env): void {
   router.put("/api/admin/settings", guard(async (req, _p, s) => {
     const body = await readJson(req);
     const now = new Date().toISOString();
-    const stmts = PUBLIC_SETTINGS.filter((k) => k in body).map((k) => env.DB.prepare(
+    const stmts = [...PUBLIC_SETTINGS, ...ADMIN_ONLY_SETTINGS].filter((k) => k in body).map((k) => env.DB.prepare(
       "INSERT INTO settings (key, value, updated_at) VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
-    ).bind(k, String(body[k] ?? "").slice(0, 500), now));
+    ).bind(k, String(body[k] ?? "").slice(0, 2000), now));
     if (stmts.length) await env.DB.batch(stmts);
     await audit(env, s, "update", "settings");
     return json({ ok: true });

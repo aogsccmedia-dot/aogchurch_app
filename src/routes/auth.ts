@@ -9,7 +9,7 @@ import {
 import { sendMail } from "../lib/email.ts";
 import { subscribe } from "../lib/newsletter.ts";
 import * as T from "../emails/templates.ts";
-import { promoteWaitlist } from "./admin.ts";
+import { promoteWaitlist } from "../lib/registrations.ts";
 
 async function sendAdminCode(env: Env, userId: string | null) {
   const email = adminEmail(env);
@@ -94,7 +94,7 @@ export function authRoutes(router: Router, env: Env): void {
          FROM members WHERE user_id = ? OR email = ? ORDER BY created_at LIMIT 1`).bind(s.user.id, s.user.email).first();
     const { results: registrations } = await env.DB.prepare(
       `SELECT r.ref_code, r.status, r.created_at, e.title, e.slug, e.starts_at, e.ends_at, e.location FROM event_registrations r
-         JOIN events e ON e.id = r.event_id WHERE (r.user_id = ? OR r.email = ?) AND r.status != 'cancelled' ORDER BY e.starts_at DESC LIMIT 50`,
+         JOIN events e ON e.id = r.event_id WHERE (r.user_id = ? OR r.email = ?) AND r.status NOT IN ('cancelled') ORDER BY e.starts_at DESC LIMIT 50`,
     ).bind(s.user.id, s.user.email).all();
     const sub = await env.DB.prepare("SELECT status FROM subscribers WHERE email = ?").bind(s.user.email).first<{ status: string }>();
     return json({ ok: true, user: s.user, member, registrations, subscribed: sub?.status === "active", is_admin: s.kind === "admin" });

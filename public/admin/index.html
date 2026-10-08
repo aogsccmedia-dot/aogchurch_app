@@ -43,7 +43,7 @@
       <nav id="nav">
         <button data-tab="overview" class="active">Overview</button>
         <button data-tab="members">Members <span class="badge" data-count="new_members"></span></button>
-        <button data-tab="events">Events &amp; forms</button>
+        <button data-tab="events">Events &amp; forms <span class="badge" data-count="pending_payments"></span></button>
         <button data-tab="letters">Weekly letter</button>
         <button data-tab="subscribers">Subscribers</button>
         <button data-tab="prayers">Prayer <span class="badge" data-count="new_prayers"></span></button>
@@ -111,13 +111,20 @@
               <h3>Registration</h3>
               <div class="grid-2">
                 <div class="field"><label>Capacity (people)</label><input class="input" name="capacity" type="number" min="1" placeholder="Unlimited"></div>
-                <div class="field"><label>Ticket price</label><input class="input" name="price_label" maxlength="60" placeholder="e.g. R150 per person (blank = free)"></div>
+                <div class="field"><label>Ticket price (R per person)</label><input class="input" name="ticket_price" type="number" min="0" step="1" inputmode="numeric" placeholder="Blank = free"></div>
               </div>
               <div class="grid-2">
                 <div class="field"><label>Registration closes</label><input class="input" name="registration_closes_at" type="datetime-local"></div>
               </div>
               <div class="field"><label>Confirmation message</label><textarea class="input" name="confirmation_message" maxlength="1000" placeholder="Shown after registering and included in the confirmation email"></textarea></div>
               <label class="check"><input type="checkbox" name="rsvp_enabled" checked> Accept registrations</label>
+              <div class="pay-settings">
+                <label class="check"><input type="checkbox" name="requires_pop"> Paid event — people pay by EFT and must upload proof of payment</label>
+                <div class="pay-fields form-grid">
+                  <label class="check"><input type="checkbox" name="auto_approve"> Approve registrations automatically (otherwise you approve each one)</label>
+                  <div class="field"><label>Banking details for this event</label><textarea class="input" name="payment_instructions" maxlength="2000" placeholder="Leave blank to use the default banking details from Site settings"></textarea></div>
+                </div>
+              </div>
               <label class="check"><input type="checkbox" name="collect_phone" checked> Ask for a phone number</label>
               <label class="check"><input type="checkbox" name="is_published"> Published on the website</label>
             </div>
@@ -149,7 +156,7 @@
         </div>
         <div id="eb-responses" hidden>
           <div class="toolbar" style="justify-content:space-between"><div id="resp-summary" class="muted"></div>
-            <div style="display:flex;gap:8px"><input class="input" id="resp-q" type="search" placeholder="Search…" style="min-width:200px"><a class="btn btn-sm" id="resp-csv">Export CSV</a></div></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" id="resp-q" type="search" placeholder="Search…" style="min-width:200px"><select class="input" id="resp-filter" style="width:auto"><option value="">All</option><option value="pending">Awaiting approval</option><option value="confirmed">Confirmed</option><option value="waitlist">Waitlist</option><option value="rejected">Declined</option><option value="cancelled">Cancelled</option></select><button class="btn btn-sm btn-gold" id="approve-all" hidden>Approve all pending</button><a class="btn btn-sm" id="resp-csv">Export CSV</a></div></div>
           <div class="table-wrap"><table class="table" id="resp-table"></table></div>
         </div>
       </section>

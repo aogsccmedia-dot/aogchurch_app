@@ -13,9 +13,9 @@ const KIND_TYPES: Record<PendingFile["kind"], string[]> = {
 };
 
 /** Read, size-check and magic-byte-check an uploaded file. */
-export async function readUpload(env: Env, file: File, kind: PendingFile["kind"], field?: string): Promise<PendingFile> {
+export async function readUpload(env: Env, file: File, kind: PendingFile["kind"], field?: string, errKeyOverride?: string): Promise<PendingFile> {
   const maxBytes = Number(env.MAX_UPLOAD_MB || "10") * 1024 * 1024;
-  const errKey = field ? (field.startsWith("f_") ? field : `f_${field}`) : kind;
+  const errKey = errKeyOverride ?? (field ? (field.startsWith("f_") ? field : `f_${field}`) : kind);
   if (file.size > maxBytes) throw new HttpError(413, `"${file.name}" is larger than ${env.MAX_UPLOAD_MB || 10} MB.`, { [errKey]: "File too large." });
   const data = await file.arrayBuffer();
   const type = sniffType(data);

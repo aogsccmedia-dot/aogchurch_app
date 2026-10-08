@@ -27,7 +27,7 @@ async function render() {
   $("me-letter").checked = !!d.subscribed;
   $("me-events").innerHTML = d.registrations.length ? d.registrations.map((r) => `
     <article class="event-card"><div class="body">
-      <span class="eyebrow">${r.status === "waitlist" ? "Waitlist" : "Registered"} · ${esc(r.ref_code)}</span>
+      <span class="eyebrow">${{ waitlist: "Waitlist", pending: "Awaiting payment approval", confirmed: "Confirmed", rejected: "Payment not approved" }[r.status] || r.status} · ${esc(r.ref_code)}</span>
       <h3><a href="/event?e=${encodeURIComponent(r.slug)}">${esc(r.title)}</a></h3>
       <p class="meta">${esc(fmt(r.starts_at))}${r.location ? " · " + esc(r.location) : ""}</p>
       ${new Date(r.starts_at) > new Date() ? `<div class="foot"><span></span><button class="btn btn-sm" data-cancel="${esc(r.ref_code)}">Can't make it</button></div>` : ""}

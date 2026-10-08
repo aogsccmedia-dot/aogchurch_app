@@ -275,6 +275,81 @@ describe("events & form builder", () => {
   });
 });
 
+describe("paid events: EFT + proof of payment + admin approval", () => {
+  let cookie = "", id = "", slug = "";
+  before(async () => { cookie = await adminCookie(); });
+  const reg = (name: string, email: string, pop: boolean, guests = "0") => {
+    const fd = new FormData();
+    Object.entries({ name, email, phone: "0821234567", guests }).forEach(([k, v]) => fd.append(k, v));
+    if (pop) fd.append("pop", new File([PDF], "pop.pdf", { type: "application/pdf" }));
+    return call(`/api/events/${slug}/register`, { method: "POST", body: fd });
+  };
+
+  test("paid event without banking details can't take payments yet", async () => {
+    const r = await post("/api/admin/events", { title: "Worship Night", starts_at: "2030-11-27T16:30:00Z", is_published: true, rsvp_enabled: true,
+      collect_phone: true, ticket_price: 150, requires_pop: true, auto_approve: false, capacity: 4 }, A(cookie));
+    ({ id, slug } = await r.json() as { id: string; slug: string });
+    const ev = await (await call(`/api/events/${slug}`)).json() as { event: { price_label: string; ticket_price: number; requires_pop: boolean; payment_instructions: string } };
+    assert.equal(ev.event.price_label, "R150 per person");
+    assert.equal(ev.event.ticket_price, 150);
+    assert.equal(ev.event.requires_pop, true);
+    assert.equal(ev.event.payment_instructions, "");
+    assert.equal((await reg("Early Bird", "early@example.com", true)).status, 409);
+  });
+
+  test("POP is required; registration waits for approval and holds the seat", async () => {
+    await call("/api/admin/settings", { method: "PUT", headers: { ...A(cookie), ...JSONH }, body: JSON.stringify({ banking_details: "AOG Sandton City Church\nFNB · 123456789\nRef: your name" }) });
+    const ev = await (await call(`/api/events/${slug}`)).json() as { event: { payment_instructions: string } };
+    assert.match(ev.event.payment_instructions, /FNB/);
+    const noPop = await reg("Sipho Ndlovu", "sipho@example.com", false);
+    assert.equal(noPop.status, 422);
+    assert.ok((await noPop.json() as { details: Record<string, string> }).details.pop);
+
+    const r = await (await reg("Sipho Ndlovu", "sipho@example.com", true, "1")).json() as { status: string; amount_due: number };
+    assert.equal(r.status, "pending");
+    assert.equal(r.amount_due, 300);
+    assert.match(mails("sipho@example.com").at(-1)!.subject, /Payment received/);
+    assert.match(mails("aogsccmedia@gmail.com").at(-1)!.subject, /Payment to approve: Sipho Ndlovu/);
+    const list = await (await call("/api/events")).json() as { events: { slug: string; spots_left: number }[] };
+    assert.equal(list.events.find((e) => e.slug === slug)!.spots_left, 2, "pending registrations hold their seats");
+  });
+
+  test("approve one-by-one, decline with a note, and approve all", async () => {
+    await reg("Lindo Mthembu", "lindo@example.com", true);
+    await reg("Zama Khumalo", "zama@example.com", true); // capacity 4: 2 + 1 + 1 = full
+    const w = await (await reg("Late Comer", "late@example.com", true)).json() as { status: string };
+    assert.equal(w.status, "waitlist");
+
+    const { registrations } = await (await call(`/api/admin/events/${id}/registrations`, { headers: { cookie } })).json() as { registrations: { id: string; email: string; pop_attachment_id: string }[] };
+    const byEmail = (e: string) => registrations.find((r) => r.email === e)!;
+    const pop = await call(`/api/admin/files/${byEmail("sipho@example.com").pop_attachment_id}`, { headers: { cookie } });
+    assert.equal(pop.status, 200);
+
+    const patch = (rid: string, body: unknown) => call(`/api/admin/registrations/${rid}`, { method: "PATCH", headers: { ...A(cookie), ...JSONH }, body: JSON.stringify(body) });
+    await patch(byEmail("sipho@example.com").id, { status: "confirmed" });
+    const ticket = mails("sipho@example.com").at(-1)! as { subject: string; attachments?: { type: string }[]; html?: string };
+    assert.match(ticket.subject, /You're registered/);
+    assert.equal(ticket.attachments?.[0].type, "text/calendar");
+    assert.ok(ticket.html!.includes("Your payment has been approved"));
+
+    await patch(byEmail("lindo@example.com").id, { status: "rejected", note: "The amount on the POP was R100, not R150." });
+    const declined = mails("lindo@example.com").at(-1)!;
+    assert.match(declined.subject, /About your registration/);
+    assert.ok(declined.html!.includes("R100, not R150"));
+    // Declining freed a seat → the waitlisted person moves up to "awaiting approval".
+    assert.match(mails("late@example.com").at(-1)!.subject, /Payment received/);
+
+    const all = await (await post(`/api/admin/events/${id}/approve-all`, {}, A(cookie))).json() as { approved: number };
+    assert.equal(all.approved, 2);
+    assert.match(mails("zama@example.com").at(-1)!.subject, /You're registered/);
+    assert.match(mails("late@example.com").at(-1)!.subject, /You're registered/);
+    // A declined person can register again.
+    assert.equal((await reg("Lindo Mthembu", "lindo@example.com", true)).status, 201);
+    const csv = await (await call(`/api/admin/events/${id}/registrations.csv`, { headers: { cookie } })).text();
+    assert.ok(csv.includes("Amount (R)") && csv.includes("Proof of payment") && csv.includes("300"));
+  });
+});
+
 describe("weekly announcement letter", () => {
   test("compose → test → schedule → cron delivers to active subscribers only", async () => {
     const cookie = await adminCookie();

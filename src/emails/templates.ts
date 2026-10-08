@@ -181,6 +181,47 @@ export function eventConfirmation(b: Brand, o: { name: string; status: string; r
   };
 }
 
+function eventBox(o: { title: string; when: string; location: string | null; ref: string; cover?: string | null; extra?: string }) {
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:8px 0 18px;background:${C.goldSoft};border-radius:14px;overflow:hidden"><tr>
+    ${o.cover ? `<td width="120" valign="top" style="padding:0"><img src="${esc(o.cover)}" width="120" height="120" alt="" style="display:block;width:120px;height:120px;object-fit:cover;border:0"></td>` : ""}
+    <td valign="middle" style="padding:16px 20px;font:15px/1.65 ${SANS};color:${C.ink}">
+    <span style="font:500 18px/1.3 ${SERIF};color:${C.ink}">${esc(o.title)}</span><br>${esc(o.when)}${o.location ? `<br>${esc(o.location)}` : ""}
+    ${o.extra || ""}<br><span style="color:${C.muted};font-size:13px">Ref ${esc(o.ref)}</span></td></tr></table>`;
+}
+
+export function eventPending(b: Brand, o: { name: string; ref: string; title: string; when: string; location: string | null; eventUrl: string; cover?: string | null; amount: string; people: number }) {
+  return {
+    subject: `Payment received — ${o.title}`,
+    html: layout(b, {
+      preheader: "We've got your proof of payment. Your ticket is on its way once it's approved.",
+      eyebrow: "Awaiting approval",
+      heading: `Thank you, ${esc(o.name)}!`,
+      content: p(`We've received your registration and proof of payment for <strong>${esc(o.title)}</strong>. Our team will check it and confirm your seat shortly — usually within a day or two.`) +
+        eventBox({ ...o, extra: o.amount ? `<br><span style="color:${C.gold};font-weight:600">${esc(o.amount)} · ${o.people} ${o.people === 1 ? "person" : "people"}</span>` : "" }) +
+        p("As soon as it's approved we'll email your ticket with a calendar invite. You don't need to do anything else.") +
+        button(o.eventUrl, "View event"),
+    }),
+    text: `Thank you, ${o.name}! We've received your proof of payment for ${o.title} (${o.when}). Ref ${o.ref}. We'll email your ticket once it's approved.` + textFooter(b),
+  };
+}
+
+export function eventDeclined(b: Brand, o: { name: string; ref: string; title: string; when: string; location: string | null; eventUrl: string; cover?: string | null; note: string | null }) {
+  return {
+    subject: `About your registration for ${o.title}`,
+    html: layout(b, {
+      preheader: "We couldn't confirm your payment yet — here's what to do next.",
+      eyebrow: "Registration update",
+      heading: `Hi ${esc(o.name)}, a quick update`,
+      content: p(`We weren't able to confirm the proof of payment for your registration to <strong>${esc(o.title)}</strong>.`) +
+        (o.note ? `<p style="margin:0 0 16px;padding:14px 16px;border-left:3px solid ${C.gold};background:#faf4ea;font:15px/1.6 ${SANS};color:${C.ink}">${esc(o.note)}</p>` : "") +
+        eventBox(o) +
+        p("No stress — simply reply to this email and we'll sort it out together, or register again with the correct proof of payment. We'd love to see you there.") +
+        button(o.eventUrl, "Register again"),
+    }),
+    text: `Hi ${o.name}, we weren't able to confirm the proof of payment for ${o.title}.${o.note ? `\n${o.note}` : ""}\nReply to this email and we'll help. ${o.eventUrl}` + textFooter(b),
+  };
+}
+
 export function prayerReceived(b: Brand, name: string) {
   return {
     subject: "We're praying with you",
@@ -247,6 +288,20 @@ export function announcement(b: Brand, a: AnnouncementData, firstName: string | 
     text: `${firstName ? `Dear ${firstName},` : "Dear friend,"}\n\n${a.body}\n\n${a.scripture_text ? `"${a.scripture_text}" — ${a.scripture_ref || ""}\n\n` : ""}` +
       (items.length ? "THIS WEEK AT CHURCH\n" + [...a.services.map((s) => `• ${s.title} — ${s.when}${s.location ? ` — ${s.location}` : ""}`), ...a.events.map((e) => `• ${e.title} — ${e.when} — ${e.url}`)].join("\n") : "") +
       textFooter(b, unsub),
+  };
+}
+
+export function adminPaymentToReview(b: Brand, o: { name: string; title: string; ref: string; amount: string; eventId: string }) {
+  return {
+    subject: `Payment to approve: ${o.name} · ${o.title}`,
+    html: layout(b, {
+      preheader: `${o.name} uploaded proof of payment${o.amount ? ` (${o.amount})` : ""}.`,
+      eyebrow: "Payment to review",
+      heading: `${esc(o.name)} is waiting for approval`,
+      content: p(`${esc(o.name)} registered for <strong>${esc(o.title)}</strong> and uploaded proof of payment${o.amount ? ` for <strong>${esc(o.amount)}</strong>` : ""}. Ref ${esc(o.ref)}.`) +
+        button(`${b.site}/admin/#event:${o.eventId}`, "Review & approve"),
+    }),
+    text: `${o.name} registered for ${o.title} and uploaded proof of payment${o.amount ? ` (${o.amount})` : ""}. Ref ${o.ref}. Review: ${b.site}/admin/#event:${o.eventId}`,
   };
 }
 

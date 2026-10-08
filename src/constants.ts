@@ -23,3 +23,6 @@ export const PUBLIC_SETTINGS = [
   "church_name", "youth_name", "tagline", "address", "map_url", "service_summary",
   "contact_email", "whatsapp_number", "instagram_url", "youtube_url", "facebook_url", "tiktok_url",
 ] as const;
+
+/** Settings only the admin can change (not exposed by /api/settings). */
+export const ADMIN_ONLY_SETTINGS = ["banking_details"] as const;

@@ -3,15 +3,16 @@ import { adminEmail, siteUrl } from "../env.ts";
 import { HttpError, Router, clientIp, json, readJson } from "../lib/http.ts";
 import { Validator, ageOn, formToRaw } from "../lib/validate.ts";
 import { rateLimit, ipHash } from "../lib/ratelimit.ts";
-import { b64, refCode, uuid } from "../lib/crypto.ts";
+import { refCode, uuid } from "../lib/crypto.ts";
 import { activeDriver, getFile } from "../lib/storage.ts";
 import { readUpload, storeFiles, type PendingFile } from "../lib/uploads.ts";
 import { getSession, isAdminEmail } from "../lib/auth.ts";
 import { parseSchema, validateAnswers } from "../lib/forms.ts";
 import { sendMail } from "../lib/email.ts";
 import { confirmSubscription, subscribe, unsubscribe } from "../lib/newsletter.ts";
-import { calendarUrl, formatWhen, icsFile, outlookUrl } from "../lib/time.ts";
+import { calendarUrl, icsFile, outlookUrl } from "../lib/time.ts";
 import * as T from "../emails/templates.ts";
+import { bankingDetails, notifyRegistration, seatsTaken, type EventRow } from "../lib/registrations.ts";
 import {
   AVAILABILITY, GENDERS, HEARD_ABOUT, MEMBERSHIP_TYPES, MINISTRIES, OCCUPATION,
   PUBLIC_SETTINGS, SALVATION, YES_NO_WANT,
@@ -19,26 +20,17 @@ import {
 
 const redirect = (url: string) => new Response(null, { status: 303, headers: { Location: url } });
 
-interface EventRow {
-  id: string; slug: string; title: string; category: string; description: string | null; starts_at: string; ends_at: string | null;
-  location: string | null; is_published: number; rsvp_enabled: number; cover_attachment_id: string | null; form_schema: string;
-  capacity: number | null; registration_closes_at: string | null; confirmation_message: string | null; collect_phone: number;
-  cover_image: string | null; price_label: string | null;
-}
-
 async function eventCounts(env: Env, id: string) {
-  const r = await env.DB.prepare(
-    "SELECT COUNT(*) AS n, COALESCE(SUM(1 + guests), 0) AS people FROM event_registrations WHERE event_id = ? AND status = 'confirmed'",
-  ).bind(id).first<{ n: number; people: number }>();
-  return { registered: r?.n ?? 0, people: r?.people ?? 0 };
+  return { people: await seatsTaken(env, id) };
 }
 
-function publicEvent(e: EventRow, counts: { registered: number }) {
+function publicEvent(e: EventRow, counts: { people: number }) {
   const closed = !e.rsvp_enabled || (e.registration_closes_at ? e.registration_closes_at < new Date().toISOString() : false) || e.starts_at < new Date(Date.now() - 3 * 3600_000).toISOString();
   return {
     id: e.id, slug: e.slug, title: e.title, category: e.category, description: e.description, starts_at: e.starts_at, ends_at: e.ends_at,
     location: e.location, cover_url: e.cover_attachment_id ? `/api/media/${e.cover_attachment_id}` : e.cover_image || null, price_label: e.price_label,
-    registration_open: !closed, capacity: e.capacity, spots_left: e.capacity ? Math.max(0, e.capacity - counts.registered) : null,
+    ticket_price: e.ticket_price || null, requires_pop: !!e.requires_pop, auto_approve: !!e.auto_approve,
+    registration_open: !closed, capacity: e.capacity, spots_left: e.capacity ? Math.max(0, e.capacity - counts.people) : null,
     collect_phone: !!e.collect_phone,
   };
 }
@@ -82,10 +74,11 @@ export function publicRoutes(router: Router, env: Env): void {
     const session = await getSession(env, req);
     let mine = null;
     if (session) {
-      mine = await env.DB.prepare("SELECT ref_code, status FROM event_registrations WHERE event_id = ? AND email = ? AND status != 'cancelled'")
+      mine = await env.DB.prepare("SELECT ref_code, status FROM event_registrations WHERE event_id = ? AND email = ? AND status NOT IN ('cancelled','rejected')")
         .bind(e.id, session.user.email).first();
     }
     return json({ ok: true, event: { ...publicEvent(e, await eventCounts(env, e.id)), form: parseSchema(e.form_schema), calendar_url: calendarUrl(e), outlook_url: outlookUrl(e),
+      payment_instructions: e.requires_pop ? await bankingDetails(env, e) : null,
       ics_url: `/api/events/${encodeURIComponent(e.slug)}/calendar.ics` }, mine });
   });
 
@@ -116,36 +109,44 @@ export function publicRoutes(router: Router, env: Env): void {
     let fileAnswers: { field: string; file: File }[] = [];
     try { ({ answers, files: fileAnswers } = validateAnswers(parseSchema(e.form_schema), fd)); }
     catch (err) { if (err instanceof HttpError) Object.assign(v.errors, err.details as object); else throw err; }
+    const popFile = fd.get("pop");
+    if (e.requires_pop && (!popFile || typeof popFile === "string" || popFile.size === 0)) v.errors.pop = "Please upload your proof of payment.";
     v.assert();
 
-    const dupe = await env.DB.prepare("SELECT ref_code, status FROM event_registrations WHERE event_id = ? AND email = ? AND status != 'cancelled'")
+    const dupe = await env.DB.prepare("SELECT ref_code, status FROM event_registrations WHERE event_id = ? AND email = ? AND status NOT IN ('cancelled','rejected')")
       .bind(e.id, email).first<{ ref_code: string; status: string }>();
     if (dupe) return json({ ok: true, status: dupe.status, ref: dupe.ref_code, already: true });
 
-    const status = e.capacity && counts.people + 1 + guests > e.capacity ? "waitlist" : "confirmed";
+    // Paid events: proof of payment is required and the admin approves (unless auto-approve is on).
+    const pending: PendingFile[] = [];
+    if (e.requires_pop) {
+      if (!(await bankingDetails(env, e))) throw new HttpError(409, "Payment details for this event aren't available yet. Please check back soon.");
+      const pop = fd.get("pop");
+      if (!pop || typeof pop === "string" || pop.size === 0) throw new HttpError(422, "Please upload your proof of payment.", { pop: "Proof of payment is required." });
+      pending.push(await readUpload(env, pop, "document", "pop", "pop"));
+    }
+    const full = !!e.capacity && counts.people + 1 + guests > e.capacity;
+    const status = full ? "waitlist" : e.requires_pop && !e.auto_approve ? "pending" : "confirmed";
+    const amountDue = e.ticket_price ? e.ticket_price * (1 + guests) : null;
     const id = uuid();
     const ref = refCode().replace("SCCY", "EVT");
-    const pending: PendingFile[] = [];
     for (const fa of fileAnswers) pending.push(await readUpload(env, fa.file, "answer", fa.field));
-    const stored = pending.length ? await storeFiles(env, "registration", id, pending) : { stmts: [], rollback: async () => [] };
+    const stored = pending.length ? await storeFiles(env, "registration", id, pending) : { stmts: [], ids: [] as string[], rollback: async () => [] };
+    const popId = e.requires_pop ? stored.ids[0] : null;
     try {
       await env.DB.batch([
-        env.DB.prepare(`INSERT INTO event_registrations (id, event_id, user_id, ref_code, name, email, phone, guests, answers, status, ip_hash)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?)`).bind(id, e.id, session?.user.id ?? null, ref, name, email, phone, guests, JSON.stringify(answers), status, await ipHash(ip)),
+        env.DB.prepare(`INSERT INTO event_registrations (id, event_id, user_id, ref_code, name, email, phone, guests, answers, status, ip_hash, pop_attachment_id, amount_due)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id, e.id, session?.user.id ?? null, ref, name, email, phone, guests, JSON.stringify(answers), status,
+            await ipHash(ip), popId, amountDue),
         ...stored.stmts,
       ]);
     } catch (err) { await stored.rollback(); throw err; }
 
-    const m = T.eventConfirmation({ site: siteUrl(env) }, {
-      name: name!.split(" ")[0], status, ref, title: e.title, when: formatWhen(e.starts_at, e.ends_at), location: e.location,
-      message: e.confirmation_message, calendarUrl: calendarUrl(e), eventUrl: `${siteUrl(env)}/event?e=${encodeURIComponent(e.slug)}`,
-      price: e.price_label, cover: e.cover_image ? `${siteUrl(env)}${e.cover_image}` : null, outlookUrl: outlookUrl(e),
-      icsUrl: `${siteUrl(env)}/api/events/${encodeURIComponent(e.slug)}/calendar.ics`,
-    });
-    const eventUrl = `${siteUrl(env)}/event?e=${encodeURIComponent(e.slug)}`;
-    await sendMail(env, { to: email!, toName: name!, ...m, template: "event_confirmation",
-      attachments: status === "confirmed" ? [{ filename: `${e.slug}.ics`, type: "text/calendar", disposition: "attachment", content: b64(new TextEncoder().encode(icsFile({ ...e, url: eventUrl }))) }] : undefined });
-    return json({ ok: true, status, ref, message: e.confirmation_message }, 201);
+    await notifyRegistration(env, e, { id, event_id: e.id, ref_code: ref, name: name!, email: email!, guests, status, amount_due: amountDue });
+    if (status === "pending") {
+      await sendMail(env, { to: adminEmail(env), ...T.adminPaymentToReview({ site: siteUrl(env) }, { name: name!, title: e.title, ref, amount: amountDue ? `R${amountDue}` : "", eventId: e.id }), template: "admin_payment_review" });
+    }
+    return json({ ok: true, status, ref, message: e.confirmation_message, amount_due: amountDue }, 201);
   });
 
   // ---------------- join (membership onboarding)
