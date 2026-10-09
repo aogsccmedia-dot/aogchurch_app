@@ -68,6 +68,8 @@ export async function confirmMembership(env: Env, m: MemberRow, now = new Date()
 export async function revokeMembership(env: Env, m: MemberRow, reason: string | null, via: string, now = new Date()) {
   if (m.status === "revoked") return { already: true };
   const why = reason ? reason.trim().slice(0, 500) || null : null;
+  // Admin access depends on membership: revoking membership removes any admin role too.
+  await env.DB.prepare("DELETE FROM admin_roles WHERE user_id IN (SELECT user_id FROM members WHERE id = ? AND user_id IS NOT NULL) OR lower(email) = lower(?)").bind(m.id, m.email || "").run();
   await env.DB.prepare("UPDATE members SET status = 'revoked', revoked_at = ?, revoke_reason = ?, checkin_token_hash = NULL, next_checkin_at = NULL, updated_at = ? WHERE id = ?")
     .bind(now.toISOString(), why, now.toISOString(), m.id).run();
   const note = `[${now.toISOString().slice(0, 10)}] Membership revoked by the member (${via})${why ? `: “${why}”` : ""}.`;

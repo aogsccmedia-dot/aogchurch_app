@@ -457,13 +457,14 @@ export function memberVerified(b: Brand, o: { name: string; ref: string }) {
 
 export function adminGranted(b: Brand, o: { name: string }) {
   return {
-    subject: "You've been given admin access 🔑",
+    subject: "Welcome to the AOG SCC admin team 🔑",
     html: layout(b, {
       preheader: "You can now help approve registrations, verify members and send tickets.",
-      eyebrow: "Admin access",
-      heading: `Welcome to the team, ${esc(o.name)}`,
-      content: p("The main church admin has given you admin access to the AOG Sandton City Church website. You can now approve event registrations and payments, verify members, send and scan tickets, and help with prayer requests and complaints.") +
-        p("To open the dashboard: sign in with Google on the website, then choose <strong>Admin dashboard</strong> from your account menu. Each time, we'll email you a 6-digit code to confirm it's you.") +
+      eyebrow: "Admin role assigned",
+      heading: `Welcome to the admin team, ${esc(o.name)}`,
+      content: p("The leaders of AOG Sandton City Church have assigned you an <strong>admin role</strong> on the church website. You can now approve event registrations and payments, verify members, send and scan tickets, and help with prayer requests and complaints.") +
+        `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 18px"><tr><td style="padding:16px 18px;border-radius:14px;background:#f3ead9;font:15px/1.7 ${SANS};color:${C.ink}">
+          <strong>How to sign in</strong><br>1. Go to aogsccyouth.com/admin<br>2. Continue with Google using <strong>this email address</strong><br>3. Enter the 6-digit code we email you. It's sent every time, for security.</td></tr></table>` +
         button(b.site + "/admin/", "Open the admin dashboard") +
         p(`<span style="font-size:13px;color:${C.muted}">You can switch back to your normal member profile at any time. Please keep members' information confidential and follow our code of conduct.</span>`),
     }),

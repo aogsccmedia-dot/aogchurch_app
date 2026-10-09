@@ -4,7 +4,7 @@ import { HttpError, Router, json, readJson } from "../lib/http.ts";
 import { randomToken, uuid } from "../lib/crypto.ts";
 import { Validator } from "../lib/validate.ts";
 import { getFile } from "../lib/storage.ts";
-import { requireAdmin, type Session } from "../lib/auth.ts";
+import { isAdminEmail, requireAdmin, type Session } from "../lib/auth.ts";
 import { deleteOwnerFiles, readUpload, storeFiles } from "../lib/uploads.ts";
 import { parseSchema, sanitizeSchema, slugify } from "../lib/forms.ts";
 import { emailHealth, resendFailed, sendMail } from "../lib/email.ts";
@@ -128,7 +128,10 @@ export function adminRoutes(router: Router, env: Env): void {
       .first<{ status: string; first_name: string; preferred_name: string | null; last_name: string; email: string | null; ref_code: string }>() : null;
     if (status) {
       sets.push("status = ?"); args.push(status);
-      if (status === "revoked") { sets.push("revoked_at = COALESCE(revoked_at, ?)", "next_checkin_at = NULL", "checkin_token_hash = NULL"); args.push(new Date().toISOString()); }
+      if (status === "revoked") {
+        sets.push("revoked_at = COALESCE(revoked_at, ?)", "next_checkin_at = NULL", "checkin_token_hash = NULL"); args.push(new Date().toISOString());
+        await env.DB.prepare("DELETE FROM admin_roles WHERE user_id IN (SELECT user_id FROM members WHERE id = ? AND user_id IS NOT NULL) OR lower(email) = lower(?)").bind(id, prev?.email || "").run();
+      }
       else { // restoring someone: resume check-ins four months from now
         sets.push("revoked_at = NULL", "next_checkin_at = COALESCE(next_checkin_at, ?)"); args.push(addMonths(new Date(), CHECKIN_MONTHS).toISOString());
       }
@@ -147,6 +150,8 @@ export function adminRoutes(router: Router, env: Env): void {
   }));
 
   router.delete("/api/admin/members/:id", superOnly(async (_req, { id }, s) => {
+    const gone = await env.DB.prepare("SELECT user_id, email FROM members WHERE id = ?").bind(id).first<{ user_id: string | null; email: string | null }>();
+    if (gone) await env.DB.prepare("DELETE FROM admin_roles WHERE user_id = ? OR lower(email) = lower(?)").bind(gone.user_id || "", gone.email || "").run();
     await env.DB.batch([await deleteOwnerFiles(env, "member", id), env.DB.prepare("DELETE FROM members WHERE id = ?").bind(id)]);
     await audit(env, s, "delete", "member", id);
     return json({ ok: true });
@@ -569,6 +574,8 @@ export function adminRoutes(router: Router, env: Env): void {
     if (!u) throw new HttpError(404, "That person needs to sign in with Google on the website once before they can be made an admin.");
     const member = await env.DB.prepare("SELECT status FROM members WHERE (user_id = ? OR email = ?) AND status != 'revoked' LIMIT 1").bind(u.id, u.email).first<{ status: string }>();
     if (!member) throw new HttpError(422, "Only registered members can be given admin access. Ask them to join the church first.");
+    if (isAdminEmail(env, u.email)) throw new HttpError(422, "That's the main admin account already.");
+    if (await env.DB.prepare("SELECT 1 FROM admin_roles WHERE user_id = ?").bind(u.id).first()) return json({ ok: true, already: true });
     await env.DB.prepare("INSERT OR IGNORE INTO admin_roles (user_id, email, granted_by) VALUES (?, ?, ?)").bind(u.id, u.email.toLowerCase(), s.user.email).run();
     await audit(env, s, "grant_admin", "user", u.id, { email: u.email });
     await sendMail(env, { to: u.email, toName: u.name || undefined, ...T.adminGranted({ site: siteUrl(env) }, { name: u.given_name || (u.name || "").split(" ")[0] || "friend" }), template: "admin_granted" });

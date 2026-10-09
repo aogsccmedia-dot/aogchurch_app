@@ -21,7 +21,8 @@ export function __setJwksForTests(keys: Jwk[] | null) { jwksOverride = keys; }
 async function googleKeys(): Promise<Jwk[]> {
   if (jwksOverride) return jwksOverride;
   if (jwksCache && jwksCache.exp > Date.now()) return jwksCache.keys;
-  const res = await fetch("https://www.googleapis.com/oauth2/v3/certs");
+  // Cached at Cloudflare's edge too, so a cold Worker doesn't wait on Google for every sign-in.
+  const res = await fetch("https://www.googleapis.com/oauth2/v3/certs", { cf: { cacheTtl: 3600, cacheEverything: true } } as RequestInit);
   if (!res.ok) throw new HttpError(502, "Couldn't reach Google. Please try again.");
   const maxAge = Number(/max-age=(\d+)/.exec(res.headers.get("cache-control") || "")?.[1] || 3600);
   const { keys } = await res.json() as { keys: Jwk[] };

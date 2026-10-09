@@ -631,7 +631,7 @@ describe("delegated admins (team & roles)", () => {
     const team = await (await call("/api/admin/team?q=lebo", { headers: { cookie: sup } }, g)).json() as { people: { user_id: string; email: string }[] };
     const lebo = team.people.find((p) => p.email === "lebo@gmail.com")!;
     assert.equal((await call("/api/admin/team", { method: "POST", headers: { ...A(sup), ...JSONH }, body: JSON.stringify({ user_id: lebo.user_id }) }, g)).status, 200);
-    assert.ok(g.EMAIL.outbox.some((m) => JSON.stringify(m.to).includes("lebo@gmail.com") && m.subject.includes("admin access")));
+    assert.ok(g.EMAIL.outbox.some((m) => JSON.stringify(m.to).includes("lebo@gmail.com") && /admin team/.test(m.subject) && /leaders of AOG Sandton City Church/.test(m.html || "")));
 
     // Lebo: still a normal session, can now request a code, which goes to HER inbox.
     const me = await (await call("/api/auth/me", { headers: { cookie: leboUser } }, g)).json() as { can_admin: boolean; is_admin: boolean };
@@ -652,6 +652,12 @@ describe("delegated admins (team & roles)", () => {
     // Removing the role takes effect straight away.
     assert.equal((await call(`/api/admin/team/${lebo.user_id}`, { method: "DELETE", headers: A(sup) }, g)).status, 200);
     assert.equal((await call("/api/admin/stats", { headers: { cookie: staff } }, g)).status, 401);
+    // Re-granting is safe (idempotent), and revoking the membership removes admin access automatically.
+    const grant = () => call("/api/admin/team", { method: "POST", headers: { ...A(sup), ...JSONH }, body: JSON.stringify({ user_id: lebo.user_id }) }, g);
+    assert.equal((await grant()).status, 200);
+    assert.equal(((await (await grant()).json()) as { already?: boolean }).already, true);
+    assert.equal((await call(`/api/admin/members/${mid}`, { method: "PATCH", headers: { ...A(sup), ...JSONH }, body: JSON.stringify({ status: "revoked" }) }, g)).status, 200);
+    assert.equal((g.DB._db.prepare("SELECT COUNT(*) n FROM admin_roles").get() as { n: number }).n, 0, "no membership → no admin role");
   });
 });
 

@@ -662,7 +662,12 @@ let teamT;
 $("#team-q").addEventListener("input", () => { clearTimeout(teamT); teamT = setTimeout(() => safe(loadTeam)(), 250); });
 $("[data-view=team]").addEventListener("click", safe(async (e) => {
   const g = e.target.closest("[data-grant]"), r = e.target.closest("[data-revoke]");
-  if (g) { await api("/api/admin/team", { method: "POST", body: { user_id: g.dataset.grant } }); toast("Admin access given. We've emailed them."); loadTeam(); }
+  if (g) {
+    const who = g.closest(".team-row").querySelector("b").textContent;
+    if (!confirm(`Give ${who} admin access?\n\nThey'll be able to approve registrations, verify members, send and scan tickets, and handle prayer requests and complaints. They can't delete people or change roles.\n\nWe'll email them a welcome with sign-in steps.`)) return;
+    const r = await api("/api/admin/team", { method: "POST", body: { user_id: g.dataset.grant } });
+    toast(r.already ? "They're already an admin" : `${who} is now an admin. Welcome email sent.`); loadTeam();
+  }
   if (r && confirm("Remove this person's admin access? They'll keep their normal member profile.")) { await api(`/api/admin/team/${r.dataset.revoke}`, { method: "DELETE" }); toast("Admin access removed"); loadTeam(); }
 }));
 

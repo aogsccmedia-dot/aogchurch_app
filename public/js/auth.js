@@ -21,6 +21,7 @@ function loadGsi() {
 }
 
 let onSignedIn = [];
+let gsiReady = false;
 /** Register a callback for when someone finishes signing in on this page. */
 export function whenSignedIn(cb) { onSignedIn.push(cb); }
 
@@ -46,7 +47,7 @@ export async function googleButton(el, { text = "continue_with", width } = {}) {
   const clientId = me.google_client_id;
   if (!clientId || !el) { if (el) el.hidden = true; return false; }
   try { await loadGsi(); } catch { el.hidden = true; return false; }
-  google.accounts.id.initialize({ client_id: clientId, callback: handleCredential, ux_mode: "popup", auto_select: false, itp_support: true });
+  if (!gsiReady) { google.accounts.id.initialize({ client_id: clientId, callback: handleCredential, ux_mode: "popup", auto_select: false, itp_support: true }); gsiReady = true; }
   google.accounts.id.renderButton(el, { theme: document.body.classList.contains("admin") ? "filled_black" : "outline", size: "large", shape: "pill", text, logo_alignment: "left", width: width || Math.min(360, el.clientWidth || 320) });
   el.hidden = false;
   return true;
@@ -142,4 +143,11 @@ export async function openSignIn() {
   await googleButton(dlg.querySelector(".gbtn"), { text: "signin_with", width: 300 });
 }
 
-getMe().then(renderHeaderUser);
+getMe().then((me) => {
+  renderHeaderUser(me);
+  // Warm up Google sign-in in the background for signed-out visitors, so the button appears instantly.
+  if (!me.user && me.google_client_id) (window.requestIdleCallback || ((f) => setTimeout(f, 1200)))(() => loadGsi().then(() => {
+    google.accounts.id.initialize({ client_id: me.google_client_id, callback: handleCredential, ux_mode: "popup", auto_select: false, itp_support: true });
+    gsiReady = true;
+  }).catch(() => {}));
+});
