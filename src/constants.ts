@@ -14,7 +14,7 @@ export const MINISTRIES = [
 
 export const AVAILABILITY = ["sunday_morning", "sunday_evening", "weekday_evening", "saturday", "school_holidays"] as const;
 
-export const MEMBER_STATUSES = ["new", "contacted", "welcomed", "member", "inactive"] as const;
+export const MEMBER_STATUSES = ["new", "contacted", "welcomed", "member", "inactive", "revoked"] as const;
 export const PRAYER_STATUSES = ["new", "praying", "answered", "archived"] as const;
 export const MESSAGE_STATUSES = ["new", "replied", "archived"] as const;
 export const EVENT_CATEGORIES = ["service", "night", "camp", "outreach", "conference", "other"] as const;

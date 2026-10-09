@@ -9,6 +9,7 @@ import { deleteOwnerFiles, readUpload, storeFiles } from "../lib/uploads.ts";
 import { parseSchema, sanitizeSchema, slugify } from "../lib/forms.ts";
 import { emailHealth, resendFailed, sendMail } from "../lib/email.ts";
 import { SAMPLES } from "../emails/samples.ts";
+import { CHECKIN_MONTHS, addMonths } from "../lib/membership.ts";
 import { buildAnnouncement, processAnnouncements, renderAnnouncement, type AnnouncementRow } from "../lib/newsletter.ts";
 import { calendarUrl, formatWhen, nextSundayAfternoon } from "../lib/time.ts";
 import * as T from "../emails/templates.ts";
@@ -109,7 +110,13 @@ export function adminRoutes(router: Router, env: Env): void {
     const assigned = "assigned_to" in body ? v.text("assigned_to", { max: 120 }) : undefined;
     v.assert();
     const sets: string[] = []; const args: unknown[] = [];
-    if (status) { sets.push("status = ?"); args.push(status); }
+    if (status) {
+      sets.push("status = ?"); args.push(status);
+      if (status === "revoked") { sets.push("revoked_at = COALESCE(revoked_at, ?)", "next_checkin_at = NULL", "checkin_token_hash = NULL"); args.push(new Date().toISOString()); }
+      else { // restoring someone: resume check-ins four months from now
+        sets.push("revoked_at = NULL", "next_checkin_at = COALESCE(next_checkin_at, ?)"); args.push(addMonths(new Date(), CHECKIN_MONTHS).toISOString());
+      }
+    }
     if (notes !== undefined) { sets.push("admin_notes = ?"); args.push(notes); }
     if (assigned !== undefined) { sets.push("assigned_to = ?"); args.push(assigned); }
     if (!sets.length) throw new HttpError(400, "Nothing to update.");

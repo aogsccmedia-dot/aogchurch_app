@@ -420,3 +420,55 @@ describe("email delivery tools & consent", () => {
     assert.equal((await post("/api/consent", { visitor_id: "x", functional: true })).status, 422);
   });
 });
+
+describe("membership check-ins (every 4 months)", () => {
+  test("check-in email → still a member; revoke from the email; reminder after 14 days", async () => {
+    const join = async (email: string, first: string) => {
+      const r = await call("/api/join", { method: "POST", body: joinForm({ email, first_name: first }) });
+      assert.equal(r.status, 201, await r.clone().text());
+      return (await r.json() as { ref: string }).ref;
+    };
+    const refA = await join("stay@example.com", "Sipho");
+    const refB = await join("leave@example.com", "Zanele");
+    const refC = await join("quiet@example.com", "Lwazi");
+    const row = (ref: string) => env.DB._db.prepare("SELECT * FROM members WHERE ref_code = ?").get(ref) as Record<string, string | null>;
+    const created = new Date(row(refA).created_at!);
+    const firstCheckin = new Date(row(refA).next_checkin_at!);
+    const months = (firstCheckin.getUTCFullYear() - created.getUTCFullYear()) * 12 + firstCheckin.getUTCMonth() - created.getUTCMonth();
+    assert.equal(months, 4, "first check-in is 4 months after joining");
+
+    // Nothing before it's due; then one email each at 10:00 SAST on the due day.
+    await runCron(env, created.getTime() + 86400_000);
+    assert.equal(mails("stay@example.com").filter((m) => /still part of the family/.test(m.subject)).length, 0);
+    const due = new Date(firstCheckin); due.setUTCHours(8, 0, 0, 0); due.setUTCDate(due.getUTCDate() + 1);
+    await runCron(env, due.getTime());
+    await runCron(env, due.getTime() + 600_000);   // no duplicates on the next run
+    const checkin = mails("stay@example.com").filter((m) => /still part of the family/.test(m.subject));
+    assert.equal(checkin.length, 1);
+    const link = (html: string, a: string) => new URL(new RegExp(`href="([^"]+a=${a})"`).exec(html)![1].replace(/&amp;/g, "&"));
+    const tokenA = link(checkin[0].html!, "stay").searchParams.get("t")!;
+
+    // "Still a member" → confirmed, next check-in moves 4 months on, link can't be reused.
+    const ok = await post("/api/membership/confirm", { token: tokenA });
+    assert.equal(ok.status, 200);
+    assert.ok(row(refA).last_confirmed_at);
+    assert.ok(new Date(row(refA).next_checkin_at!) > new Date(Date.now() + 100 * 86400_000), "next check-in ~4 months after confirming");
+    assert.equal((await post("/api/membership/confirm", { token: tokenA })).status, 404);
+
+    // Revoke from the email (with a reason) → status revoked, member + admin emailed.
+    const mailB = mails("leave@example.com").filter((m) => /still part of the family/.test(m.subject)).at(-1)!;
+    const tokenB = link(mailB.html!, "revoke").searchParams.get("t")!;
+    assert.equal((await post("/api/membership/lookup", { token: tokenB })).status, 200);
+    assert.equal((await post("/api/membership/revoke", { token: tokenB, reason: "Moved to Cape Town" })).status, 200);
+    assert.equal(row(refB).status, "revoked");
+    assert.match(row(refB).admin_notes || "", /Moved to Cape Town/);
+    assert.ok(mails("leave@example.com").some((m) => m.subject === "Your membership has been revoked"));
+    assert.ok(mails("aogsccmedia@gmail.com").some((m) => m.subject === "Membership revoked: Zanele Dlamini" || m.subject.startsWith("Membership revoked: Zanele")));
+
+    // No answer → one reminder after 14 days, then nothing more.
+    await runCron(env, due.getTime() + 15 * 86400_000);
+    await runCron(env, due.getTime() + 16 * 86400_000);
+    assert.equal(mails("quiet@example.com").filter((m) => /reminder/.test(m.subject)).length, 1);
+    assert.equal(mails("leave@example.com").filter((m) => /reminder/.test(m.subject)).length, 0, "revoked members aren't chased");
+  });
+});

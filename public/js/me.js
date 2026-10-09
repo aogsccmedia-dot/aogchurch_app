@@ -6,24 +6,38 @@ const $ = (id) => document.getElementById(id);
 const TZ = "Africa/Johannesburg";
 const fmt = (s) => new Intl.DateTimeFormat("en-ZA", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: TZ }).format(new Date(s));
 
+const day = (iso) => new Date(iso).toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" });
+
+function memberCard(m) {
+  if (!m) return `<div class="notice">You haven't joined the church family yet. <a href="/join" style="color:var(--gold-2)">Complete joining</a>. It's mostly pre-filled for you.</div>`;
+  if (m.status === "revoked") return `<div class="ms-card"><div class="row"><span>Membership</span><b>Revoked</b></div>
+    <div class="row"><span>Revoked on</span><b>${esc(day(m.revoked_at))}</b></div><div class="actions"><a class="btn btn-sm btn-gold" href="/join">Rejoin</a></div></div>`;
+  const due = m.next_checkin_at && new Date(m.next_checkin_at) <= new Date(Date.now() + 30 * 864e5);
+  return `<div class="ms-card">
+    <div class="row"><span>Membership</span><b>Active · ${esc(m.ref_code)}</b></div>
+    <div class="row"><span>Member since</span><b>${esc(day(m.created_at))}</b></div>
+    ${m.last_confirmed_at ? `<div class="row"><span>Last confirmed</span><b>${esc(day(m.last_confirmed_at))}</b></div>` : ""}
+    ${m.next_checkin_at ? `<div class="row"><span>Next check-in</span><b>${esc(day(m.next_checkin_at))}</b></div>` : ""}
+    <div class="actions">${due ? `<button class="btn btn-sm btn-gold" type="button" data-ms-confirm>I'm still a member</button>` : ""}<button class="btn btn-sm btn-ghost danger" type="button" data-ms-revoke>Revoke membership</button></div>
+  </div>`;
+}
+
 async function render() {
-  const me = await getMe(true);
-  if (!me.user) {
+  // Session + profile in parallel so the page fills in quickly after Google sign-in.
+  const [me, d] = await Promise.all([getMe(true), api("/api/me").catch(() => null)]);
+  if (!me.user || !d) {
     $("me-signin").hidden = false; $("me-view").hidden = true;
     const ok = await googleButton($("me-google"), { text: "signin_with" });
     if (!ok) $("me-google").outerHTML = `<p class="muted-text">Google sign-in is being set up. In the meantime, <a href="/join" style="color:var(--gold-2)">join here</a>.</p>`;
     return;
   }
   if (me.admin_account) { location.href = "/admin/"; return; }
-  const d = await api("/api/me");
   $("me-signin").hidden = true; $("me-view").hidden = false;
   const u = d.user;
   $("me-avatar").innerHTML = u.picture ? `<img src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : esc((u.given_name || u.email)[0].toUpperCase());
   $("me-name").textContent = u.name || u.email;
   $("me-email").textContent = u.email;
-  $("me-member").innerHTML = d.member
-    ? `<p class="tag">Member · ${esc(d.member.ref_code)}</p><p class="muted-text" style="font-size:13px">Joined ${new Date(d.member.created_at).toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" })}</p>`
-    : `<div class="notice">You haven't joined the church family yet. <a href="/join" style="color:var(--gold-2)">Complete joining</a>. It's mostly pre-filled for you.</div>`;
+  $("me-member").innerHTML = memberCard(d.member);
   $("me-letter").checked = !!d.subscribed;
   $("me-events").innerHTML = d.registrations.length ? d.registrations.map((r) => `
     <article class="event-card"><div class="body">
@@ -44,6 +58,16 @@ $("me-events").addEventListener("click", async (e) => {
   if (!b || !confirm("Cancel this registration? Your spot will go to someone on the waitlist.")) return;
   await api(`/api/me/registrations/${encodeURIComponent(b.dataset.cancel)}/cancel`, { method: "POST" });
   toast("Registration cancelled"); render();
+});
+$("me-member").addEventListener("click", async (e) => {
+  if (e.target.closest("[data-ms-confirm]")) {
+    try { await api("/api/me/membership/confirm", { method: "POST" }); toast("Thank you! Your membership is confirmed 💛"); render(); } catch (err) { toast(err.message); }
+  }
+  if (e.target.closest("[data-ms-revoke]")) {
+    if (!confirm("Revoke your membership? We'll remove you from the member list and stop check-ins. You can rejoin anytime.")) return;
+    const reason = prompt("Would you like to tell us why? (optional)") || "";
+    try { await api("/api/me/membership/revoke", { method: "POST", body: { reason } }); toast("Your membership has been revoked"); render(); } catch (err) { toast(err.message); }
+  }
 });
 $("me-signout").addEventListener("click", signOut);
 whenSignedIn(render);

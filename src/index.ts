@@ -11,6 +11,7 @@ import { publicRoutes } from "./routes/public.ts";
 import { adminRoutes } from "./routes/admin.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { processAnnouncements } from "./lib/newsletter.ts";
+import { processCheckins } from "./lib/membership.ts";
 import { nextSundayAfternoon } from "./lib/time.ts";
 import { sendMail } from "./lib/email.ts";
 import { adminLetterReminder } from "./emails/templates.ts";
@@ -56,6 +57,7 @@ export default {
     const now = new Date((controller as unknown as { scheduledTime?: number }).scheduledTime ?? Date.now());
     ctx.waitUntil((async () => {
       await processAnnouncements(env, now);
+      await processCheckins(env, now);
 
       const h = now.getUTCHours(), m = now.getUTCMinutes();
       if (now.getUTCDay() === 6 && h === 8 && m < 10) {

@@ -3,6 +3,7 @@ import { adminEmail, siteUrl } from "../env.ts";
 import { HttpError, Router, clientIp, json, readJson } from "../lib/http.ts";
 import { Validator, ageOn, formToRaw } from "../lib/validate.ts";
 import { rateLimit, ipHash } from "../lib/ratelimit.ts";
+import { confirmMembership, memberByToken, revokeMembership } from "../lib/membership.ts";
 import { refCode, uuid } from "../lib/crypto.ts";
 import { activeDriver, getFile } from "../lib/storage.ts";
 import { readUpload, storeFiles, type PendingFile } from "../lib/uploads.ts";
@@ -222,7 +223,7 @@ export function publicRoutes(router: Router, env: Env): void {
     v.assert();
 
     if (session) {
-      const existing = await env.DB.prepare("SELECT ref_code FROM members WHERE user_id = ?").bind(session.user.id).first<{ ref_code: string }>();
+      const existing = await env.DB.prepare("SELECT ref_code FROM members WHERE user_id = ? AND status != 'revoked'").bind(session.user.id).first<{ ref_code: string }>();
       if (existing) return json({ ok: true, ref: existing.ref_code, first_name: m.preferred_name || m.first_name, already: true });
     }
 
@@ -293,6 +294,27 @@ export function publicRoutes(router: Router, env: Env): void {
     ).bind(uuid(), is_anonymous ? null : name, email, phone, request, is_anonymous ? 1 : 0, v.bool("pastors_only") ? 1 : 0, wants_contact ? 1 : 0, await ipHash(ip)).run();
     if (email) await sendMail(env, { to: email, ...T.prayerReceived({ site: siteUrl(env) }, (!is_anonymous && name) ? name.split(" ")[0] : "Friend"), template: "prayer_received" });
     return json({ ok: true, message: "We've received your request and we're standing with you in prayer." }, 201);
+  });
+
+  // Membership check-in links from the email (/membership?t=…). POST only, so link scanners can't act.
+  router.post("/api/membership/lookup", async (req) => {
+    await rateLimit(env, "membership", clientIp(req), 30, 3600);
+    const { token } = await readJson<{ token?: string }>(req);
+    const m = await memberByToken(env, token);
+    return json({ ok: true, first_name: m.preferred_name || m.first_name, status: m.status, since: m.created_at });
+  });
+  router.post("/api/membership/confirm", async (req) => {
+    await rateLimit(env, "membership", clientIp(req), 30, 3600);
+    const { token } = await readJson<{ token?: string }>(req);
+    const m = await memberByToken(env, token);
+    return json({ ok: true, first_name: m.preferred_name || m.first_name, ...(await confirmMembership(env, m)) });
+  });
+  router.post("/api/membership/revoke", async (req) => {
+    await rateLimit(env, "membership", clientIp(req), 30, 3600);
+    const { token, reason } = await readJson<{ token?: string; reason?: string }>(req);
+    const m = await memberByToken(env, token);
+    await revokeMembership(env, m, reason ?? null, "email check-in");
+    return json({ ok: true, first_name: m.preferred_name || m.first_name });
   });
 
   // Cookie consent: store the visitor's choice (anonymous id, no IP) so we can show what was agreed.

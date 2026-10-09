@@ -319,3 +319,64 @@ export function adminLetterReminder(b: Brand) {
     text: `There's no announcement letter scheduled for this Sunday yet. ${b.site}/admin/#letters`,
   };
 }
+
+// ---------- membership check-ins ----------
+const since = (iso: string) => new Date(iso).toLocaleDateString("en-ZA", { month: "long", year: "numeric", timeZone: "Africa/Johannesburg" });
+
+function twoButtons(yes: { href: string; label: string }, no: { href: string; label: string }) {
+  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:26px 0 8px"><tr>
+    <td style="border-radius:10px;background:${C.gold}"><a href="${esc(yes.href)}" style="display:inline-block;padding:14px 24px;font:600 15px/1 ${SANS};color:#1a1206;text-decoration:none;border-radius:10px">${esc(yes.label)}</a></td>
+    <td width="12"></td>
+    <td style="border-radius:10px;border:1px solid ${C.line};background:#ffffff"><a href="${esc(no.href)}" style="display:inline-block;padding:13px 20px;font:600 14px/1 ${SANS};color:${C.body};text-decoration:none;border-radius:10px">${esc(no.label)}</a></td>
+  </tr></table>`;
+}
+
+export function membershipCheckin(b: Brand, o: { name: string; ref: string; since: string; stayUrl: string; revokeUrl: string; reminder?: boolean }) {
+  return {
+    subject: o.reminder ? `${o.name}, a quick reminder: are you still part of the family?` : `${o.name}, are you still part of the family? 💛`,
+    html: layout(b, {
+      preheader: "One tap to confirm your membership at AOG Sandton City Church.",
+      eyebrow: o.reminder ? "Gentle reminder" : "Membership check-in",
+      heading: `Still with us, ${esc(o.name)}?`,
+      heroImage: `${b.site}/assets/photos/congregation-1200.jpg`,
+      content: p(`You've been part of AOG Sandton City Church since ${esc(since(o.since))}, and we're so grateful for you. Every few months we check in, so our family list stays current and our leaders can care for you well.`) +
+        p("Please let us know with one tap:") +
+        twoButtons({ href: o.stayUrl, label: "Yes, I'm still a member" }, { href: o.revokeUrl, label: "Revoke my membership" }) +
+        p(`<span style="font-size:13px;color:${C.muted}">If life has moved you on, that's okay. Revoking simply removes you from our member list, and you're always welcome back. Your reference is ${esc(o.ref)}.</span>`) +
+        scripture("I thank my God every time I remember you.", "Philippians 1:3"),
+    }),
+    text: `Hi ${o.name},\n\nAre you still part of AOG Sandton City Church?\n\nYes, I'm still a member: ${o.stayUrl}\nRevoke my membership: ${o.revokeUrl}\n\nReference ${o.ref}.` + textFooter(b),
+  };
+}
+
+export function membershipRevoked(b: Brand, o: { name: string }) {
+  return {
+    subject: "Your membership has been revoked",
+    html: layout(b, {
+      preheader: "Thank you for being part of the family. You're always welcome back.",
+      eyebrow: "Membership",
+      heading: `Thank you, ${esc(o.name)}`,
+      content: p("As you asked, we've revoked your membership and removed you from our member check-ins. Thank you for every Sunday, every prayer and every moment you shared with us.") +
+        p("You're always welcome at 17 Humber Street, and if you'd like to come back, rejoining takes a few minutes.") +
+        scripture("The Lord bless you and keep you; the Lord make his face shine on you.", "Numbers 6:24–25") +
+        button(b.site + "/join", "Rejoin anytime") +
+        p(`<span style="font-size:13px;color:${C.muted}">This doesn't change the weekly letter. You can manage that from any letter or your profile. Didn't ask for this? Simply reply to this email and we'll restore it.</span>`),
+    }),
+    text: `Thank you, ${o.name}. As you asked, we've revoked your membership. You're always welcome back: ${b.site}/join` + textFooter(b),
+  };
+}
+
+export function adminMemberRevoked(b: Brand, o: { name: string; ref: string; reason: string | null; via: string }) {
+  return {
+    subject: `Membership revoked: ${o.name}`,
+    html: layout(b, {
+      preheader: `${o.name} revoked their membership (${o.via}).`,
+      eyebrow: "Member update",
+      heading: `${esc(o.name)} revoked their membership`,
+      content: p(`Reference <strong>${esc(o.ref)}</strong>, via ${esc(o.via)}.`) +
+        (o.reason ? `<p style="margin:0 0 16px;padding:14px 16px;border-left:3px solid ${C.gold};background:#faf4ea;font:15px/1.6 ${SANS};color:${C.ink}">“${esc(o.reason)}”</p>` : "") +
+        p("A short, kind follow-up from a leader can mean a lot.") + button(b.site + "/admin/#members", "Open members"),
+    }),
+    text: `${o.name} (${o.ref}) revoked their membership via ${o.via}.${o.reason ? ` Reason: ${o.reason}` : ""}`,
+  };
+}

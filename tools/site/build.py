@@ -216,6 +216,7 @@ PAGES = {
     "payments": dict(title="Event payments & refunds" + T, crumb="Event payments & refunds", desc="How EFT payments, proof of payment, verification and refunds work for Sandton City Church events.", canonical="/payments", scripts=["site.js", "auth.js"]),
     "cookies": dict(title="Cookie policy" + T, crumb="Cookie policy", desc="The cookies and on-device storage the Sandton City Church website uses, and how to change your choices.", canonical="/cookies", scripts=["site.js", "auth.js"]),
     "app": dict(title="Get the app" + T, crumb="Get the app", desc="Add Sandton City Church to your phone's home screen — iPhone, Android or computer.", canonical="/app", scripts=["site.js", "auth.js"]),
+    "membership": dict(title="Your membership" + T, desc="Confirm or manage your membership at Sandton City Church.", noindex=True, scripts=["site.js", "membership.js"]),
     "offline": dict(title="You're offline" + T, desc="You're offline.", noindex=True, scripts=["site.js"]),
     "404": dict(title="Page not found" + T, desc="Page not found.", noindex=True, scripts=["site.js", "auth.js"]),
 }

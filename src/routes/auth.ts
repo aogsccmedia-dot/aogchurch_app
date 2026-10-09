@@ -1,5 +1,6 @@
 import type { Env } from "../env.ts";
 import { adminEmail, siteUrl } from "../env.ts";
+import { confirmMembership, revokeMembership, type MemberRow } from "../lib/membership.ts";
 import { HttpError, Router, clientIp, json, readJson } from "../lib/http.ts";
 import { rateLimit } from "../lib/ratelimit.ts";
 import {
@@ -24,7 +25,7 @@ export function authRoutes(router: Router, env: Env): void {
   router.get("/api/auth/me", async (req) => {
     const s = await getSession(env, req);
     if (!s) return json({ ok: true, user: null, google_client_id: env.GOOGLE_CLIENT_ID || null });
-    const member = await env.DB.prepare("SELECT ref_code, status, first_name, preferred_name, created_at FROM members WHERE user_id = ? OR email = ? ORDER BY created_at LIMIT 1")
+    const member = await env.DB.prepare("SELECT ref_code, status, first_name, preferred_name, created_at FROM members WHERE (user_id = ? OR email = ?) AND status != 'revoked' ORDER BY created_at DESC LIMIT 1")
       .bind(s.user.id, s.user.email).first();
     const sub = await env.DB.prepare("SELECT status FROM subscribers WHERE email = ?").bind(s.user.email).first<{ status: string }>();
     return json({ ok: true, user: s.user, is_admin: s.kind === "admin", admin_account: isAdminEmail(env, s.user.email),
@@ -90,14 +91,29 @@ export function authRoutes(router: Router, env: Env): void {
     const s = await getSession(env, req);
     if (!s) throw new HttpError(401, "Please sign in.");
     const member = await env.DB.prepare(
-      `SELECT ref_code, status, membership_type, first_name, last_name, preferred_name, phone, email, suburb, interests, created_at
-         FROM members WHERE user_id = ? OR email = ? ORDER BY created_at LIMIT 1`).bind(s.user.id, s.user.email).first();
+      `SELECT ref_code, status, membership_type, first_name, last_name, preferred_name, phone, email, suburb, interests, created_at,
+              last_confirmed_at, next_checkin_at, revoked_at
+         FROM members WHERE user_id = ? OR email = ? ORDER BY created_at DESC LIMIT 1`).bind(s.user.id, s.user.email).first();
     const { results: registrations } = await env.DB.prepare(
       `SELECT r.ref_code, r.status, r.created_at, e.title, e.slug, e.starts_at, e.ends_at, e.location FROM event_registrations r
          JOIN events e ON e.id = r.event_id WHERE (r.user_id = ? OR r.email = ?) AND r.status NOT IN ('cancelled') ORDER BY e.starts_at DESC LIMIT 50`,
     ).bind(s.user.id, s.user.email).all();
     const sub = await env.DB.prepare("SELECT status FROM subscribers WHERE email = ?").bind(s.user.email).first<{ status: string }>();
     return json({ ok: true, user: s.user, member, registrations, subscribed: sub?.status === "active", is_admin: s.kind === "admin" });
+  });
+
+  // Membership: confirm "still a member" or revoke, from the profile page.
+  const myMember = async (req: Request) => {
+    const s = await getSession(env, req);
+    if (!s) throw new HttpError(401, "Please sign in.");
+    const m = await env.DB.prepare("SELECT * FROM members WHERE user_id = ? OR email = ? ORDER BY created_at DESC LIMIT 1").bind(s.user.id, s.user.email).first<MemberRow>();
+    if (!m) throw new HttpError(404, "We couldn't find a membership for this account.");
+    return m;
+  };
+  router.post("/api/me/membership/confirm", async (req) => json({ ok: true, ...(await confirmMembership(env, await myMember(req))) }));
+  router.post("/api/me/membership/revoke", async (req) => {
+    const { reason } = await readJson<{ reason?: string }>(req);
+    return json({ ok: true, ...(await revokeMembership(env, await myMember(req), reason ?? null, "profile")) });
   });
 
   router.post("/api/me/letter", async (req) => {

@@ -579,3 +579,25 @@ section.block.slim { padding: clamp(36px, 5vw, 64px) 0; }
 @media (max-width: 420px) { .consent-actions { justify-content: stretch; } .consent-actions .btn { flex: 1 1 auto; } }
 .link-btn { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .link-btn:hover { color: var(--text); }
+
+/* ---------- membership check-in page + profile card ---------- */
+.membership-page { min-height: 62vh; display: grid; place-items: center; padding: clamp(40px, 8vw, 90px) 0; }
+.membership-card { width: min(100%, 560px); display: grid; justify-items: center; text-align: center; gap: 14px; padding: clamp(24px, 4vw, 40px); border: 1px solid var(--line-strong); border-radius: 22px; background: var(--bg-2); }
+.membership-card img { border-radius: 50%; }
+.membership-card h1 { font-size: clamp(28px, 4vw, 38px); font-weight: 400; }
+.membership-card .lede { text-align: center; }
+.ms-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; width: 100%; text-align: left; }
+.ms-card { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--bg); }
+.ms-card .row { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; color: var(--text-2); }
+.ms-card .row b { color: var(--text); font-weight: 500; }
+.ms-card .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ms-card .danger { color: var(--danger); }
+.bank-row[data-i] { cursor: pointer; transition: background .15s; }
+.bank-row[data-i]:hover { background: var(--hover); }
+.bank-row.copied { background: color-mix(in srgb, var(--gold-btn) 18%, transparent); }
+.bank-row.copied dd .icon-btn { color: var(--gold-2); }
+.ref-row { cursor: pointer; }
+.btn.locked, .btn[disabled].btn-gold { opacity: .55; cursor: not-allowed; filter: grayscale(.3); }
+.reg-left { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: 13.5px; color: var(--text-2); }
+.reg-left .i { width: 16px; height: 16px; flex: none; margin-top: 2px; color: var(--gold-2); }
+.reg-left.ready { color: var(--text); }

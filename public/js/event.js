@@ -38,6 +38,7 @@ function prefill(me) {
   form.email.required = false;
   $("reg-heading").textContent = `Hi ${me.user.given_name || "there"} — save your seat`;
   $("reg-google").hidden = true;
+  form.dispatchEvent(new Event("input"));   // refresh the payment reference + Register lock
 }
 
 async function load() {
@@ -133,17 +134,25 @@ function setupPayment() {
   const rows = details.split(/\n+/).map((l) => l.trim()).filter(Boolean).map((l) => { const i = l.indexOf(":"); return i > 0 ? [l.slice(0, i).trim(), l.slice(i + 1).trim()] : ["", l]; });
   const bankRows = rows.filter(([k]) => !/reference/i.test(k));
   const copy = async (text, label) => { try { await navigator.clipboard.writeText(text); toast(`${label} copied`); } catch { toast("Couldn't copy — please copy it manually"); } };
-  $("bank-rows").innerHTML = bankRows.map(([k, v], i) => `<div class="bank-row"><dt>${esc(k)}</dt><dd><span>${esc(v)}</span>${k ? `<button type="button" class="icon-btn copy" data-i="${i}" aria-label="Copy ${esc(k)}">${icon("copy")}</button>` : ""}</dd></div>`).join("");
-  $("bank-rows").addEventListener("click", (e) => { const b = e.target.closest("[data-i]"); if (b) { const [k, v] = bankRows[+b.dataset.i]; copy(v.replace(/\s+/g, k.toLowerCase().includes("number") ? "" : " "), k); } });
+  $("bank-rows").innerHTML = bankRows.map(([k, v], i) => `<div class="bank-row"${k ? ` data-i="${i}" role="button" tabindex="0" title="Tap to copy"` : ""}><dt>${esc(k)}</dt><dd><span>${esc(v)}</span>${k ? `<button type="button" class="icon-btn copy" tabindex="-1" aria-label="Copy ${esc(k)}">${icon("copy")}</button>` : ""}</dd></div>`).join("");
+  const copyRow = (row) => {
+    const [k, v] = bankRows[+row.dataset.i];
+    copy(v.replace(/\s+/g, k.toLowerCase().includes("number") ? "" : " "), k);
+    row.classList.add("copied"); setTimeout(() => row.classList.remove("copied"), 1200);
+  };
+  $("bank-rows").addEventListener("click", (e) => { const r = e.target.closest(".bank-row[data-i]"); if (r) copyRow(r); });
+  $("bank-rows").addEventListener("keydown", (e) => { const r = e.target.closest(".bank-row[data-i]"); if (r && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); copyRow(r); } });
   const refText = () => form.elements.name.value.trim().replace(/\s+/g, " ");
   const showRef = () => { const r = refText(); $("pay-ref").textContent = r || "Type your full name above"; $("pay-ref").classList.toggle("empty", !r); };
   form.elements.name.addEventListener("input", showRef); showRef();
+  document.querySelector(".ref-row").addEventListener("click", (e) => { if (!e.target.closest("#copy-ref")) $("copy-ref").click(); });
   $("copy-ref").addEventListener("click", () => { const r = refText(); if (!r) { form.elements.name.focus(); toast("Type your full name first"); return; } copy(r, "Reference"); });
   $("copy-bank").addEventListener("click", () => copy(bankRows.map(([k, v]) => (k ? `${k}: ${v}` : v)).join("\n") + `\nReference: ${refText() || "your full names"}`, "Banking details"));
   const update = () => { $("amount-due").textContent = price ? rand(price * (1 + Number(guests.value || 0))) : "See details above"; };
   guests.addEventListener("change", update); update();
   $("pop").required = true;
   $("pop").addEventListener("change", () => { const f = $("pop").files[0]; $("pop-name").textContent = f ? `✓ ${f.name}` : "Tap to upload a PDF, photo or screenshot"; $("pop").closest(".pop-drop, .field").querySelector(".pop-drop").classList.toggle("has-file", !!f); $("pop").closest(".field").classList.remove("invalid"); });
+  lockUntilComplete();
   $("approval-note").textContent = event.auto_approve ? "Your ticket is emailed straight away." : "You'll get an email straight away saying we've received your details. Once our team has verified your payment, a second email confirms your seat with your ticket and a calendar invite.";
 }
 
@@ -166,4 +175,33 @@ function addEventSchema(e) {
     const canon = document.createElement("link"); canon.rel = "canonical"; canon.href = url; document.head.append(canon);
     document.querySelector('meta[name="description"]')?.setAttribute("content", (e.description || e.title).slice(0, 160));
   } catch { /* never block the page */ }
+}
+
+// Paid events: keep "Register" locked until every required field (and the proof of payment) is in.
+function lockUntilComplete() {
+  const btn = form.querySelector('[type="submit"]');
+  let hint = document.getElementById("reg-left");
+  if (!hint) { hint = document.createElement("p"); hint.id = "reg-left"; hint.className = "hint reg-left"; btn.after(hint); }
+  const labelFor = (el) => (el.closest(".field")?.querySelector("label, .label")?.textContent || el.name || "").replace(/\s*\*$/, "").trim();
+  const missing = () => {
+    const seen = new Set(); const out = [];
+    for (const el of form.elements) {
+      if (!el.required || el.disabled || !el.name || seen.has(el.name) || el.closest("[hidden]")) continue;
+      seen.add(el.name);
+      const ok = el.type === "radio" || el.type === "checkbox" ? !!form.querySelector(`[name="${CSS.escape(el.name)}"]:checked`)
+        : el.type === "file" ? el.files.length > 0 : el.value.trim() !== "" && el.checkValidity();
+      if (!ok) out.push(el.type === "file" ? "Proof of payment" : labelFor(el));
+    }
+    return out;
+  };
+  const update = () => {
+    const left = missing();
+    btn.disabled = left.length > 0;
+    btn.classList.toggle("locked", left.length > 0);
+    hint.innerHTML = left.length ? `${icon("hourglass")} Still needed: ${left.map(esc).join(", ")}` : `${icon("check")} All set. You can register now.`;
+    hint.classList.toggle("ready", !left.length);
+  };
+  form.addEventListener("input", update);
+  form.addEventListener("change", update);
+  update();
 }

@@ -31,6 +31,9 @@ async function handleCredential(resp) {
     toast(`Welcome${me.user?.given_name ? ", " + me.user.given_name : ""}!`);
     renderHeaderUser(me);
     onSignedIn.forEach((cb) => cb(me));
+    // Members go straight to their profile (events, tickets, membership), unless they're mid-task here.
+    const busy = /^\/(join|event|me|membership)(\.html)?$/.test(location.pathname);
+    if (me.member && !busy) location.href = "/me";
   } catch (e) { toast(e.message); }
 }
 

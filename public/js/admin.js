@@ -178,6 +178,8 @@ async function openMember(id) {
     ["Guardian", m.guardian_name ? `${m.guardian_name} · ${m.guardian_phone || ""} ${m.guardian_email || ""} · consent: ${yn(m.guardian_consent)}` : ""],
     ["Care notes", m.care_notes], ["Prayer request", m.prayer_request], ["Contact via", [m.comm_whatsapp && "WhatsApp", m.comm_email && "Email", m.comm_sms && "SMS"].filter(Boolean).join(", ")],
     ["Photo consent", yn(m.photo_consent)], ["POPIA consent", yn(m.popia_consent)], ["Signed", m.signature_name], ["Submitted", fmtDate(m.created_at)],
+    ["Last confirmed membership", m.last_confirmed_at ? fmtDate(m.last_confirmed_at) : ""], ["Next check-in email", m.next_checkin_at ? fmtDate(m.next_checkin_at) : ""],
+    ["Revoked", m.revoked_at ? `${fmtDate(m.revoked_at)}${m.revoke_reason ? ` · “${m.revoke_reason}”` : ""}` : ""],
   ].filter(([, v]) => v);
   const wa = (m.whatsapp || m.phone || "").replace(/\D/g, "");
   $("#member-body").innerHTML = `
@@ -185,7 +187,7 @@ async function openMember(id) {
     <div style="display:flex;gap:8px;flex-wrap:wrap">${wa ? `<a class="btn btn-sm" target="_blank" rel="noopener" href="https://wa.me/${wa}?text=${encodeURIComponent(`Hi ${m.preferred_name || m.first_name}! It's Sandton City Church — welcome to the family 💛`)}">WhatsApp</a>` : ""}
       <a class="btn btn-sm" href="mailto:${esc(m.email)}">Email</a><a class="btn btn-sm" href="tel:${esc(m.phone)}">Call</a></div>
     <div class="card form-grid">
-      <div class="grid-2"><div class="field"><label>Status</label><select class="input" id="md-status">${["new", "contacted", "welcomed", "member", "inactive"].map((s) => `<option ${s === m.status ? "selected" : ""}>${s}</option>`).join("")}</select></div>
+      <div class="grid-2"><div class="field"><label>Status</label><select class="input" id="md-status">${["new", "contacted", "welcomed", "member", "inactive", "revoked"].map((s) => `<option ${s === m.status ? "selected" : ""}>${s}</option>`).join("")}</select></div>
         <div class="field"><label>Assigned leader</label><input class="input" id="md-assigned" value="${esc(m.assigned_to || "")}"></div></div>
       <div class="field"><label>Leader notes</label><textarea class="input" id="md-notes">${esc(m.admin_notes || "")}</textarea></div>
       <button class="btn btn-gold btn-sm" id="md-save" style="justify-self:start">Save</button></div>
