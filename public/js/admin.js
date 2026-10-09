@@ -590,7 +590,7 @@ function flash(result, t) {
   const [label, cls] = SCAN_MSG[result] || ["Not found", "bad"];
   const el = $("#scan-flash");
   el.className = `scan-flash ${cls}`;
-  el.innerHTML = `<b>${label}</b>${t ? `<span>${esc(t.holder)}</span><small>Ticket ${t.seq} of ${t.quantity} · ${esc(t.ref)}</small>${result === "already_used" ? `<small>First scanned ${fmtDate(t.checked_in_at)}. This may be a copy: check ID.</small>` : result === "wrong_event" ? `<small>This ticket is for ${esc(t.event.title)}</small>` : ""}` : `<small>Not a valid church ticket</small>`}`;
+  el.innerHTML = `<div class="sf" role="status"><i class="sf-ico">${icon(cls === "ok" ? "check" : "x")}</i><b>${label}</b>${t ? `<span>${esc(t.holder)}</span><small>Ticket ${t.seq} of ${t.quantity} · ${esc(t.ref)}</small>${result === "already_used" ? `<small class="warn">First scanned ${fmtDate(t.checked_in_at)}. This may be a copy: check ID.</small>` : result === "wrong_event" ? `<small class="warn">This ticket is for ${esc(t.event.title)}</small>` : ""}` : `<small>Not a valid church ticket</small>`}</div>`;
   el.hidden = false;
   beep(result === "ok");
   setTimeout(() => { el.hidden = true; scan.busy = false; }, result === "ok" ? 1600 : 2600);
@@ -804,7 +804,25 @@ $("#tpl-test").addEventListener("click", safe(async (e) => {
 
 addEventListener("hashchange", () => { if (me) openTab(location.hash.slice(1) || "overview"); });
 // Phone/tablet: menu drawer + quick bar
-$("#m-menu").addEventListener("click", () => { const open = !document.body.classList.contains("side-open"); document.body.classList.toggle("side-open", open); $("#m-menu").setAttribute("aria-expanded", String(open)); });
-$("#nav").addEventListener("click", () => document.body.classList.remove("side-open"));
+// ---- Menus: one tap anywhere outside closes them and stays on the current screen ----
+const setSide = (open) => { document.body.classList.toggle("side-open", open); $("#m-menu").setAttribute("aria-expanded", String(open)); };
+$("#m-menu").addEventListener("click", () => setSide(!document.body.classList.contains("side-open")));
+$("#nav").addEventListener("click", (e) => { if (e.target.closest("button")) setSide(false); });
+function closeMenusFrom(target) {
+  let closed = false;
+  if (document.body.classList.contains("side-open") && !target.closest("#side, #m-menu")) { setSide(false); closed = true; }
+  $$("details[open]").forEach((d) => { if (!d.contains(target) && d.dataset.keepOpen === undefined && !d.classList.contains("card")) { d.open = false; closed = true; } });
+  return closed;
+}
+// Capture phase: the tap that closes a menu is swallowed, so it never presses whatever sits underneath.
+let swallowUntil = 0;
+document.addEventListener("pointerdown", (e) => { if (closeMenusFrom(e.target)) { swallowUntil = Date.now() + 700; e.preventDefault(); } }, true);
+document.addEventListener("click", (e) => {
+  if (Date.now() < swallowUntil) { swallowUntil = 0; e.preventDefault(); e.stopPropagation(); return; }
+  closeMenusFrom(e.target);   // keyboard / assistive "clicks" without a pointer
+}, true);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("side-open")) { setSide(false); $("#m-menu").focus(); } });
+addEventListener("hashchange", () => setSide(false));
+addEventListener("resize", () => { if (innerWidth > 860) setSide(false); });
 $$("[data-go-tab]").forEach((b) => { if (b.dataset.ico) b.insertAdjacentHTML("afterbegin", icon(b.dataset.ico)); b.addEventListener("click", () => { location.hash = b.dataset.goTab; }); });
 boot();
