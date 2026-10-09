@@ -11,12 +11,36 @@
         <figure class="photo page-hero-photo" tabindex="0"><picture><source type="image/webp" srcset="/assets/photos/prayer-800.webp 800w, /assets/photos/prayer-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 45vw"><img src="/assets/photos/prayer-1200.jpg" alt="Church leaders with heads bowed in prayer" fetchpriority="high"></picture></figure>
       </div>
     </section>
+    <!-- PRAYER WALL -->
+    <section class="block" id="wall">
+      <div class="wrap">
+        <div class="section-head reveal"><p class="eyebrow gold">Prayer Wall</p><h2>Carry each other <span class="serif">in prayer.</span></h2>
+          <p class="lede">Share a request with the church family, and tap <b>I prayed</b> when you've prayed for someone. When God answers, mark it answered so we can celebrate together. <span id="wall-total"></span></p>
+          <p class="scripture">“Bear ye one another's burdens, and so fulfil the law of Christ.” Galatians 6:2</p></div>
+        <div class="wall-layout">
+          <div id="wall-list" class="wall-grid" aria-live="polite"></div>
+          <aside class="wall-side">
+            <form id="wall-form" class="panel" novalidate><div id="wall-compose" class="wall-compose" hidden>
+              <h3>Share a request</h3>
+              <div class="field"><label for="wall-req" class="req">What can we pray for?</label><textarea class="input" id="wall-req" name="request" maxlength="600" required placeholder="e.g. Exams start Monday. Pray for peace and focus."></textarea></div>
+              <label class="check"><input type="checkbox" name="anonymous"> Post as “Someone” (hide my name)</label>
+              <p class="hint">A leader checks each request before it appears. For something private, use the form below instead.</p>
+              <button class="btn btn-lilac" type="submit">Add to the wall</button>
+              <div class="notice" data-status hidden></div></div>
+              <div id="wall-signin" class="wall-compose"><h3>Join in</h3><p class="muted-text">Sign in with Google to share a request and pray for others.</p><button class="btn btn-green" type="button">Sign in to pray</button></div>
+            </form>
+            <div id="wall-mine" class="wall-mine"></div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
     <!-- PRAYER -->
     <section class="block" id="prayer">
       <div class="wrap two-col">
         <div class="section-head reveal" style="margin:0">
           <p class="eyebrow gold">We're listening</p>
-          <h2>Send a prayer request</h2>
+          <h2>Send a private prayer request</h2>
           <p class="lede">Share as much or as little as you like. Our prayer team will stand with you — you can stay anonymous or keep it to the pastors only.</p>
           <p class="scripture">“Cast all your anxiety on him because he cares for you.” — 1 Peter 5:7</p>
         </div>

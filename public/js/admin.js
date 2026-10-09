@@ -123,7 +123,11 @@ const EMAIL_SETUP = `<b>Emails to members aren't being delivered yet.</b> Cloudf
   <li>Choose <b>Onboard domain</b> → <b>aogsccyouth.com</b> and accept the DNS records it adds (they're added automatically).</li>
   <li>Wait until the domain shows <b>Verified</b> (usually a few minutes), then come back to <a href="#emails">Email log</a> and press <b>Resend failed emails</b>.</li></ol>`;
 loaders.overview = async () => {
-  const { stats, interests, next_letter, email_enabled, google_enabled, email_health } = await api("/api/admin/stats");
+  const { stats, interests, next_letter, email_enabled, google_enabled, email_health, attention = [] } = await api("/api/admin/stats");
+  const KIND = { complaint: ["Complaint", "complaints", "new"], prayer: ["Prayer request", "prayers", "pending"], wall: ["Prayer Wall: approve", "prayers", "pending"], message: ["Message", "messages", ""] };
+  $("#attention").innerHTML = attention.length ? attention.map((a) => `<a class="att" href="#${KIND[a.kind][1]}"><span class="pill ${KIND[a.kind][2]}">${KIND[a.kind][0]}</span>
+      <span class="att-body"><b>${esc(a.title || "")}</b><span class="meta">${esc(a.who || "")} · ${fmtDate(a.created_at)}${a.flag ? " · pastors only" : ""}</span></span><span aria-hidden="true">→</span></a>`).join("")
+    : `<p class="muted">All caught up. Nothing waiting. 🙏</p>`;
   const notes = [];
   if (email_enabled && email_health?.needs_setup) notes.push(EMAIL_SETUP);
   if (!email_enabled) notes.push("<b>Email sending is off.</b> Onboard aogsccyouth.com in Cloudflare → Email Service so confirmations, codes and letters are delivered.");
@@ -132,6 +136,7 @@ loaders.overview = async () => {
   const cards = [["pending_payments", "Payments to approve"], ["open_complaints", "Open complaints"], ["members", "Members"], ["new_members", "Awaiting follow-up"], ["this_week", "Joined this week"], ["subscribers", "Letter subscribers"],
     ["upcoming_events", "Upcoming events"], ["registrations_week", "Registrations this week"], ["new_prayers", "New prayer requests"]];
   $("#stats").innerHTML = cards.map(([k, l]) => `<div class="stat"><b>${stats[k]}</b><span>${l}</span></div>`).join("");
+  stats.prayer_total = (stats.new_prayers || 0) + (stats.wall_pending || 0);
   $$("[data-count]").forEach((b) => { b.textContent = stats[b.dataset.count] || ""; });
   const max = Math.max(1, ...interests.map((i) => i.n));
   $("#interest-bars").innerHTML = interests.length ? interests.map((i) => `<div class="bar"><span>${esc(ministryLabel(i.slug))}</span><span class="track"><i style="width:${(i.n / max) * 100}%"></i></span><b>${i.n}</b></div>`).join("") : `<p class="muted">No sign-ups yet.</p>`;
@@ -490,6 +495,7 @@ $("#sub-add").addEventListener("submit", safe(async (e) => { e.preventDefault();
 
 // ================================================================ prayer & messages
 loaders.prayers = async () => {
+  safe(loadWall)();
   const s = $("#p-status").value;
   const { prayers } = await api("/api/admin/prayers?limit=100" + (s ? `&status=${s}` : ""));
   $("#p-list").innerHTML = prayers.length ? prayers.map((p) => `<article class="item">
@@ -497,6 +503,20 @@ loaders.prayers = async () => {
     <p>${esc(p.request)}</p><div class="actions">${["praying", "answered", "archived"].map((st) => `<button class="btn btn-sm" data-prayer="${esc(p.id)}" data-st="${st}">Mark ${st}</button>`).join("")}</div></article>`).join("") : `<div class="empty">No prayer requests here.</div>`;
 };
 $("#p-status").addEventListener("change", () => safe(loaders.prayers)());
+async function loadWall() {
+  const { posts } = await api("/api/admin/wall");
+  const LBL = { pending: ["Waiting for approval", "new"], approved: ["On the wall", "member"], hidden: ["Hidden", ""] };
+  $("#wall-mod").innerHTML = posts.length ? posts.map((w) => `<article class="item" data-wall="${esc(w.id)}">
+      <header><div><b style="font-weight:450">${esc(w.display_name || "Someone")}</b> <span class="meta">· ${esc(w.name || "")} ${esc(w.email || "")} · ${fmtDate(w.created_at)}</span></div><span class="pill ${LBL[w.status]?.[1] || ""}">${esc(LBL[w.status]?.[0] || w.status)}</span></header>
+      <p style="white-space:pre-wrap">${esc(w.request)}</p>${w.answered ? `<p class="meta">🙌 Answered${w.answered_note ? `: “${esc(w.answered_note)}”` : ""}</p>` : ""}
+      <div class="actions"><span class="meta">🙏 ${w.prayed_count} prayed</span>${w.status !== "approved" ? `<button class="btn btn-sm btn-gold" data-st="approved">Approve</button>` : ""}${w.status !== "hidden" ? `<button class="btn btn-sm" data-st="hidden">Hide</button>` : ""}</div></article>`).join("")
+    : `<div class="empty">Nothing on the wall yet.</div>`;
+}
+$("#wall-mod").addEventListener("click", safe(async (e) => {
+  const b = e.target.closest("[data-st]"); if (!b) return;
+  await api(`/api/admin/wall/${b.closest("[data-wall]").dataset.wall}`, { method: "PATCH", body: { status: b.dataset.st } });
+  toast(b.dataset.st === "approved" ? "Approved. It's on the wall 🙏" : "Hidden"); loadWall();
+}));
 $("#p-list").addEventListener("click", safe(async (e) => { const b = e.target.closest("[data-prayer]"); if (!b) return; await api(`/api/admin/prayers/${b.dataset.prayer}`, { method: "PATCH", body: { status: b.dataset.st } }); toast("Updated"); loaders.prayers(); }));
 loaders.messages = async () => {
   const { messages } = await api("/api/admin/messages?limit=100");

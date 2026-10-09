@@ -514,3 +514,57 @@ describe("complaints (approved members only)", () => {
     assert.match(mine.complaints[0].response, /marshals/);
   });
 });
+
+describe("Daily Word & Prayer Wall", () => {
+  test("daily word: same verse for everyone, check-in builds a streak and a community count", async () => {
+    const g = await makeEnv({ GOOGLE_CLIENT_ID: CLIENT_ID });
+    const anon = await (await call("/api/word/today", {}, g)).json() as { word: { ref: string; text: string; read_url: string }; me: null; readers_today: number };
+    assert.ok(anon.word.text.length > 20 && anon.word.read_url.startsWith("https://www.bible.com/"));
+    assert.equal(anon.me, null);
+    assert.equal((await post("/api/word/today", {}, {}, g)).status, 401);
+    const s = cookieOf(await post("/api/auth/google", { credential: await googleToken({ sub: "g-w1", email: "reader@gmail.com", given_name: "Kago" }) }, {}, g));
+    const r1 = await (await post("/api/word/today", {}, { cookie: s }, g)).json() as { me: { done: boolean; streak: number; last7: { done: boolean }[] }; readers_today: number };
+    assert.equal(r1.me.done, true); assert.equal(r1.me.streak, 1); assert.equal(r1.readers_today, 1);
+    assert.equal(r1.me.last7.at(-1)!.done, true);
+    // Twice in one day doesn't double count; a streak continues from yesterday.
+    await post("/api/word/today", {}, { cookie: s }, g);
+    const uid = (g.DB._db.prepare("SELECT id FROM users WHERE email = ?").get("reader@gmail.com") as { id: string }).id;
+    const { saDay } = await import("../src/lib/word.ts");
+    for (const n of [1, 2]) g.DB._db.prepare("INSERT INTO word_checkins (user_id, day) VALUES (?, ?)").run(uid, saDay(new Date(Date.now() - n * 86400_000)));
+    const r2 = await (await call("/api/word/today", { headers: { cookie: s } }, g)).json() as { me: { streak: number }; readers_today: number };
+    assert.equal(r2.me.streak, 3); assert.equal(r2.readers_today, 1);
+  });
+
+  test("prayer wall: approved before public, one 'I prayed' per person, owner marks answered", async () => {
+    const g = await makeEnv({ GOOGLE_CLIENT_ID: CLIENT_ID });
+    const sign = async (sub: string, email: string, given: string) => cookieOf(await post("/api/auth/google", { credential: await googleToken({ sub, email, given_name: given }) }, {}, g));
+    const amo = await sign("g-a", "amo@gmail.com", "Amo"), ben = await sign("g-b", "ben@gmail.com", "Ben");
+    assert.equal((await post("/api/wall", { request: "short" }, { cookie: amo }, g)).status, 422);
+    const created = await post("/api/wall", { request: "Please pray for my matric exams next week.", show_name: true }, { cookie: amo }, g);
+    assert.equal(created.status, 201);
+    const { id } = await created.json() as { id: string };
+    let wall = await (await call("/api/wall", { headers: { cookie: ben } }, g)).json() as { posts: { id: string }[] };
+    assert.equal(wall.posts.length, 0, "not public until a leader approves");
+    assert.equal((await post(`/api/wall/${id}/pray`, {}, { cookie: ben }, g)).status, 404);
+
+    // Admin approves.
+    const a = await post("/api/auth/google", { credential: await googleToken({ sub: "g-admin", email: "aogsccmedia@gmail.com" }) }, {}, g);
+    const code = /code is (\d{6})/.exec(g.EMAIL.outbox.at(-1)!.text!)![1];
+    const admin = cookieOf(await post("/api/auth/admin/verify", { challenge: (await a.json() as { challenge: string }).challenge, code }, { cookie: cookieOf(a) }, g));
+    const stats = await (await call("/api/admin/stats", { headers: { cookie: admin } }, g)).json() as { stats: { wall_pending: number }; attention: { kind: string }[] };
+    assert.equal(stats.stats.wall_pending, 1);
+    assert.ok(stats.attention.some((x) => x.kind === "wall"));
+    assert.equal((await call(`/api/admin/wall/${id}`, { method: "PATCH", headers: { ...A(admin), ...JSONH }, body: JSON.stringify({ status: "approved" }) }, g)).status, 200);
+
+    wall = await (await call("/api/wall", { headers: { cookie: ben } }, g)).json() as { posts: { id: string; display_name: string; prayed: number }[] };
+    assert.equal(wall.posts[0].display_name, "Amo");
+    const p1 = await (await post(`/api/wall/${id}/pray`, {}, { cookie: ben }, g)).json() as { prayed_count: number };
+    const p2 = await (await post(`/api/wall/${id}/pray`, {}, { cookie: ben }, g)).json() as { prayed_count: number };
+    assert.equal(p1.prayed_count, 1); assert.equal(p2.prayed_count, 1, "one prayer tap per person");
+    assert.equal((await post(`/api/wall/${id}/pray`, {}, {}, g)).status, 401);
+    assert.equal((await post(`/api/wall/${id}/answered`, { note: "Passed!" }, { cookie: ben }, g)).status, 404, "only the owner");
+    assert.equal((await post(`/api/wall/${id}/answered`, { note: "Passed with distinction!" }, { cookie: amo }, g)).status, 200);
+    const after = await (await call("/api/wall", {}, g)).json() as { posts: { answered: number; answered_note: string }[]; prayers_total: number };
+    assert.equal(after.posts[0].answered, 1); assert.match(after.posts[0].answered_note, /distinction/); assert.equal(after.prayers_total, 1);
+  });
+});

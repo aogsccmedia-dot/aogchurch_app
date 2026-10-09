@@ -240,6 +240,11 @@ async function submit() {
     document.getElementById("success-ref").textContent = res.ref;
     saveState.textContent = "";
     ok.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!res.already) import("./welcome.js").then(({ showWelcome }) => showWelcome({
+      title: `to the family, ${res.first_name || "friend"}`,
+      line: "A leader will reach out personally within the week. We've emailed you a copy of your welcome.",
+      actions: [{ label: "See what's coming up", href: "/events" }],
+    }));
   } catch (err) {
     const details = err.details || {};
     const names = Object.keys(details);

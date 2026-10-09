@@ -67,14 +67,22 @@ export function adminRoutes(router: Router, env: Env): void {
       q("SELECT COUNT(*) AS n FROM users"),
       q("SELECT COUNT(*) AS n FROM event_registrations WHERE status = 'pending'"),
       q("SELECT COUNT(*) AS n FROM complaints WHERE status IN ('received','in_review')"),
+      q("SELECT COUNT(*) AS n FROM prayer_wall WHERE status = 'pending'"),
     ]);
     const n = (i: number) => (rs[i].results[0] as { n: number }).n;
     const interests = await env.DB.prepare("SELECT j.value AS slug, COUNT(*) AS n FROM members, json_each(members.interests) j GROUP BY j.value ORDER BY n DESC").all();
     const next = await env.DB.prepare("SELECT id, subject, status, scheduled_for FROM announcements WHERE status IN ('scheduled','sending') ORDER BY scheduled_for LIMIT 1").first();
+    // "Needs attention": newest open complaints, new prayer requests and new messages in one feed.
+    const { results: attention } = await env.DB.prepare(`SELECT * FROM (
+        SELECT 'complaint' AS kind, c.id, c.subject AS title, m.first_name || ' ' || m.last_name AS who, c.created_at, c.confidential AS flag FROM complaints c JOIN members m ON m.id = c.member_id WHERE c.status IN ('received','in_review')
+        UNION ALL SELECT 'prayer', id, substr(request, 1, 140), CASE WHEN is_anonymous THEN 'Anonymous' ELSE COALESCE(name, 'Someone') END, created_at, pastors_only FROM prayer_requests WHERE status = 'new'
+        UNION ALL SELECT 'wall', id, substr(request, 1, 140), COALESCE(display_name, 'Someone'), created_at, 0 FROM prayer_wall WHERE status = 'pending'
+        UNION ALL SELECT 'message', id, COALESCE(subject, substr(message, 1, 100)), name, created_at, 0 FROM contact_messages WHERE status = 'new'
+      ) ORDER BY created_at DESC LIMIT 12`).all();
     return json({ ok: true, stats: {
       members: n(0), new_members: n(1), this_week: n(2), new_prayers: n(3), new_messages: n(4), upcoming_events: n(5),
-      subscribers: n(6), registrations_week: n(7), accounts: n(8), pending_payments: n(9), open_complaints: n(10),
-    }, interests: interests.results, next_letter: next, email_enabled: !!env.EMAIL, email_health: await emailHealth(env), google_enabled: !!env.GOOGLE_CLIENT_ID });
+      subscribers: n(6), registrations_week: n(7), accounts: n(8), pending_payments: n(9), open_complaints: n(10), wall_pending: n(11),
+    }, interests: interests.results, next_letter: next, attention, email_enabled: !!env.EMAIL, email_health: await emailHealth(env), google_enabled: !!env.GOOGLE_CLIENT_ID });
   }));
 
   // ---------- members ----------
@@ -111,6 +119,8 @@ export function adminRoutes(router: Router, env: Env): void {
     const assigned = "assigned_to" in body ? v.text("assigned_to", { max: 120 }) : undefined;
     v.assert();
     const sets: string[] = []; const args: unknown[] = [];
+    const prev = status ? await env.DB.prepare("SELECT status, first_name, preferred_name, last_name, email, ref_code FROM members WHERE id = ?").bind(id)
+      .first<{ status: string; first_name: string; preferred_name: string | null; last_name: string; email: string | null; ref_code: string }>() : null;
     if (status) {
       sets.push("status = ?"); args.push(status);
       if (status === "revoked") { sets.push("revoked_at = COALESCE(revoked_at, ?)", "next_checkin_at = NULL", "checkin_token_hash = NULL"); args.push(new Date().toISOString()); }
@@ -124,6 +134,9 @@ export function adminRoutes(router: Router, env: Env): void {
     sets.push("updated_at = ?"); args.push(new Date().toISOString());
     const res = await env.DB.prepare(`UPDATE members SET ${sets.join(", ")} WHERE id = ?`).bind(...args, id).run();
     if (!res.meta.changes) throw new HttpError(404, "Member not found.");
+    if (status === "member" && prev && prev.status !== "member" && prev.email) {
+      await sendMail(env, { to: prev.email, toName: `${prev.first_name} ${prev.last_name}`, ...T.memberVerified({ site: siteUrl(env) }, { name: prev.preferred_name || prev.first_name, ref: prev.ref_code }), template: "member_verified" });
+    }
     await audit(env, s, "update", "member", id, { status, assigned });
     return json({ ok: true });
   }));

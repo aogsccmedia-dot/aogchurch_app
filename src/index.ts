@@ -10,8 +10,9 @@ import { HttpError, Router, errorResponse, json } from "./lib/http.ts";
 import { publicRoutes } from "./routes/public.ts";
 import { adminRoutes } from "./routes/admin.ts";
 import { authRoutes } from "./routes/auth.ts";
+import { faithRoutes } from "./routes/faith.ts";
 import { processAnnouncements } from "./lib/newsletter.ts";
-import { processCheckins } from "./lib/membership.ts";
+import { processCheckins, processWelcomes } from "./lib/membership.ts";
 import { nextSundayAfternoon } from "./lib/time.ts";
 import { sendMail } from "./lib/email.ts";
 import { adminLetterReminder } from "./emails/templates.ts";
@@ -40,6 +41,7 @@ export default {
       authRoutes(router, env);
       publicRoutes(router, env);
       adminRoutes(router, env);
+      faithRoutes(router, env);
       const res = await router.handle(req);
       return res ?? json({ ok: false, error: "Not found." }, 404);
     } catch (err) {
@@ -58,6 +60,7 @@ export default {
     ctx.waitUntil((async () => {
       await processAnnouncements(env, now);
       await processCheckins(env, now);
+      await processWelcomes(env, now);
 
       const h = now.getUTCHours(), m = now.getUTCMinutes();
       if (now.getUTCDay() === 6 && h === 8 && m < 10) {

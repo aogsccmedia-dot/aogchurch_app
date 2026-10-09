@@ -36,6 +36,8 @@ export const SAMPLES: Sample[] = [
       services: [{ title: "Sunday service", when: "Sunday · 09:30", location: "17 Humber Street" }, { title: "Prayer & Bible study", when: "Wednesday · 18:30" }],
       events: [{ title: "Youth Worship Night", when: "Fri 27 Nov · 18:30", location: "17 Humber Street", url: `${s}/event?e=youth-worship-night-2026` }],
       cta_label: null, cta_url: null }, "Thandi", `${s}/api/newsletter/unsubscribe?t=sample`) },
+  { key: "member_verified", group: "Welcome", when: "You set a member's status to “member” (verified): the animated welcome.",
+    render: (s) => T.memberVerified({ site: s }, { name: "Thandi", ref: "SCC-2M8D" }) },
   { key: "membership_checkin", group: "Welcome", when: "Every 4 months after joining: “Still a member?” with Yes / Revoke buttons (one reminder after 14 days).",
     render: (s) => T.membershipCheckin({ site: s }, { name: "Thandi", ref: "SCC-2M8D", since: "2026-06-07T09:00:00Z", stayUrl: `${s}/membership?t=sample&a=stay`, revokeUrl: `${s}/membership?t=sample&a=revoke` }) },
   { key: "membership_revoked", group: "Welcome", when: "A member revokes their membership (from the email or their profile).",

@@ -78,3 +78,17 @@ export async function revokeMembership(env: Env, m: MemberRow, reason: string | 
   await sendMail(env, { to: adminEmail(env), ...T.adminMemberRevoked({ site }, { name: `${m.first_name} ${m.last_name}`, ref: m.ref_code, reason: why, via }), template: "admin_member_revoked" });
   return { already: false };
 }
+
+/** Cron: members who joined in the last 30 days but never received their welcome email get it now. */
+export async function processWelcomes(env: Env, now = new Date()) {
+  const since = new Date(now.getTime() - 30 * 86400_000).toISOString();
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM members WHERE welcome_sent_at IS NULL AND status != 'revoked' AND email IS NOT NULL AND email != '' AND created_at >= ? ORDER BY created_at LIMIT 20`)
+    .bind(since).all<MemberRow>();
+  let sent = 0;
+  for (const m of results) {
+    const ok = await sendMail(env, { to: m.email!, toName: `${m.first_name} ${m.last_name}`, ...T.joinWelcome({ site: siteUrl(env) }, firstName(m), m.ref_code), template: "join_welcome" });
+    if (ok) { sent++; await env.DB.prepare("UPDATE members SET welcome_sent_at = ? WHERE id = ?").bind(now.toISOString(), m.id).run(); }
+  }
+  return { sent };
+}

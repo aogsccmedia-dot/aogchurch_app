@@ -263,7 +263,8 @@ export function publicRoutes(router: Router, env: Env): void {
 
     const b = { site: siteUrl(env) };
     const first = m.preferred_name || m.first_name!;
-    await sendMail(env, { to: m.email!, toName: `${m.first_name} ${m.last_name}`, ...T.joinWelcome(b, first, ref), template: "join_welcome" });
+    if (await sendMail(env, { to: m.email!, toName: `${m.first_name} ${m.last_name}`, ...T.joinWelcome(b, first, ref), template: "join_welcome" }))
+      await env.DB.prepare("UPDATE members SET welcome_sent_at = ? WHERE ref_code = ?").bind(new Date().toISOString(), ref).run();
     await sendMail(env, { to: adminEmail(env), ...T.adminNewMember(b, {
       name: `${m.first_name} ${m.last_name}`, ref, phone: m.phone!, email: m.email!, age,
       type: m.membership_type!, interests: m.interests.join(", "),

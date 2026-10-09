@@ -34,8 +34,10 @@ export const p = (html: string) => `<p style="margin:0 0 16px;font:16px/1.7 ${SA
 export const paragraphs = (text: string) => text.split(/\n\s*\n/).map((t) => p(esc(t.trim()).replace(/\n/g, "<br>"))).join("");
 
 /** Wrap content in the church layout. */
-export function layout(b: Brand, o: { preheader: string; eyebrow?: string; heading: string; content: string; heroImage?: string; footerNote?: string; unsubscribeUrl?: string }): string {
-  const hero = o.heroImage ? `<tr><td style="padding:0"><img src="${esc(o.heroImage)}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>` : "";
+export function layout(b: Brand, o: { preheader: string; eyebrow?: string; heading: string; content: string; heroImage?: string; welcome?: boolean; footerNote?: string; unsubscribeUrl?: string }): string {
+  const hero = o.welcome
+    ? `<tr><td align="center" style="padding:26px 24px 0;background:${C.card}"><img src="${esc(b.site)}/assets/email/welcome.gif" width="480" alt="Welcome" style="display:block;width:100%;max-width:480px;height:auto;border:0"></td></tr>`
+    : o.heroImage ? `<tr><td style="padding:0"><img src="${esc(o.heroImage)}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>` : "";
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><title>${esc(o.heading)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap');</style></head>
@@ -109,7 +111,7 @@ export function subscribeWelcome(b: Brand, name: string | null, unsub: string) {
       preheader: "Every Sunday afternoon, a little encouragement and the week ahead.",
       eyebrow: "Welcome",
       heading: `${name ? `${esc(name)}, you're` : "You're"} part of the circle`,
-      heroImage: `${b.site}/assets/photos/congregation-1200.jpg`,
+      welcome: true,
       content: p("We're so glad you're here. Every Sunday afternoon you'll receive a short letter with the services for the week ahead, upcoming events, and a word to carry with you.") +
         scripture("Let us not give up meeting together, but let us encourage one another.", "Hebrews 10:25") +
         p("Until then, know that you are loved, you are seen, and there's always a seat saved for you at 17 Humber Street.") + button(b.site + "/events", "See what's coming up"),
@@ -126,7 +128,7 @@ export function joinWelcome(b: Brand, name: string, ref: string) {
       preheader: "We've received your details — a leader will reach out personally this week.",
       eyebrow: "Welcome home",
       heading: `Welcome to the family, ${esc(name)}`,
-      heroImage: `${b.site}/assets/photos/hospitality-1200.jpg`,
+      welcome: true,
       content: p("Thank you for taking the step to join AOG Sandton City Church. It genuinely made our day.") +
         p("One of our leaders will reach out to you personally within the week to say hello, answer any questions, and help you find your place. You don't have to have it all figured out — just come as you are.") +
         scripture("So then you are no longer strangers and aliens, but you are fellow citizens with the saints and members of the household of God.", "Ephesians 2:19") +
@@ -425,5 +427,25 @@ export function adminNewComplaint(b: Brand, o: { name: string; ref: string; cate
         p("Please acknowledge and respond within 7 working days.") + button(b.site + "/admin/#complaints", "Open complaints"),
     }),
     text: `New complaint ${o.ref} from ${o.name}: ${o.subject} (${o.category}). ${b.site}/admin/#complaints`,
+  };
+}
+
+export function memberVerified(b: Brand, o: { name: string; ref: string }) {
+  return {
+    subject: `${o.name}, you're officially a member 🎉`,
+    html: layout(b, {
+      preheader: "Your membership is verified. Welcome to the family of AOG Sandton City Church!",
+      eyebrow: "Membership verified",
+      heading: `You're officially part of the family, ${esc(o.name)}!`,
+      welcome: true,
+      content: p("Our leaders have verified your membership. We're so glad you're here, and we can't wait to grow, serve and worship together.") +
+        `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 18px">
+          <tr><td style="padding:12px 16px;background:#eef5ec;border-radius:12px;font:15px/1.6 ${SANS};color:${C.ink}">✓ &nbsp;Your profile shows your events, tickets and membership</td></tr><tr><td height="8"></td></tr>
+          <tr><td style="padding:12px 16px;background:#f1edfb;border-radius:12px;font:15px/1.6 ${SANS};color:${C.ink}">✓ &nbsp;You can raise a concern confidentially if anything isn't right</td></tr><tr><td height="8"></td></tr>
+          <tr><td style="padding:12px 16px;background:#eaf7ed;border-radius:12px;font:15px/1.6 ${SANS};color:${C.ink}">✓ &nbsp;Every four months we'll check in so our family list stays current</td></tr></table>` +
+        scripture("So in Christ Jesus you are all children of God through faith.", "Galatians 3:26") +
+        p(`Your member reference is <strong style="letter-spacing:.06em">${esc(o.ref)}</strong>.`) + button(b.site + "/me?welcome=1", "Open my profile"),
+    }),
+    text: `${o.name}, you're officially a member of AOG Sandton City Church! Your reference: ${o.ref}. ${b.site}/me` + textFooter(b),
   };
 }

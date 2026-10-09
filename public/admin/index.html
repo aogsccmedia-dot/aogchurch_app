@@ -10,9 +10,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/base.css">
-  <link rel="stylesheet" href="/css/pages.css">
-  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/base.css?v=a2f30c2cb0">
+  <link rel="stylesheet" href="/css/pages.css?v=5ba944aef2">
+  <link rel="stylesheet" href="/css/admin.css?v=6a52698707">
 </head>
 <body class="admin">
   <!-- Sign in -->
@@ -46,7 +46,7 @@
         <button data-tab="events">Events &amp; forms <span class="badge" data-count="pending_payments"></span></button>
         <button data-tab="letters">Weekly letter</button>
         <button data-tab="subscribers">Subscribers</button>
-        <button data-tab="prayers">Prayer <span class="badge" data-count="new_prayers"></span></button>
+        <button data-tab="prayers">Prayer <span class="badge" data-count="prayer_total"></span></button>
         <button data-tab="messages">Messages <span class="badge" data-count="new_messages"></span></button>
         <button data-tab="complaints">Complaints <span class="badge" data-count="open_complaints"></span></button>
         <button data-tab="settings">Site settings</button>
@@ -62,6 +62,7 @@
           <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm btn-gold" data-go="events-new">+ New event</button><button class="btn btn-sm" data-go="letters-new">Write this week's letter</button></div></header>
         <div id="setup-notes"></div>
         <div class="stats" id="stats"></div>
+        <div class="card attention"><div class="vh" style="align-items:center"><h3>Needs attention</h3><span class="muted" style="font-size:13px">Complaints, prayer requests and messages</span></div><div id="attention" class="att-list"></div></div>
         <div class="grid-2" style="align-items:start">
           <div class="card"><h3>Ministry interest</h3><div id="interest-bars" class="bars"></div></div>
           <div class="card"><h3>Weekly letter</h3><div id="next-letter"></div></div>
@@ -223,6 +224,8 @@
       <section data-view="prayers" hidden>
         <header class="vh"><div><p class="eyebrow gold">Care</p><h1>Prayer requests</h1></div>
           <select class="input" id="p-status" style="max-width:200px"><option value="">All</option><option>new</option><option>praying</option><option>answered</option><option>archived</option></select></header>
+        <div class="card" style="margin-bottom:18px"><div class="vh" style="align-items:center"><h3>Prayer Wall <span class="muted" style="font-size:13px;font-weight:400">· shared publicly once approved</span></h3><a class="btn btn-sm" href="/prayer#wall" target="_blank" rel="noopener">View the wall ↗</a></div><div id="wall-mod" class="list"></div></div>
+        <h3 style="margin:6px 0 10px">Private prayer requests</h3>
         <div id="p-list" class="list"></div>
       </section>
 
@@ -257,6 +260,6 @@
   </div>
 
   <dialog class="drawer" id="member-drawer"><div class="drawer-body" id="member-body"></div></dialog>
-  <script type="module" src="/js/admin.js"></script>
+  <script type="module" src="/js/admin.js?v=a070c1138c"></script>
 </body>
 </html>

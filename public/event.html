@@ -28,8 +28,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/base.css">
-  <link rel="stylesheet" href="/css/pages.css">
+  <link rel="stylesheet" href="/css/base.css?v=a2f30c2cb0">
+  <link rel="stylesheet" href="/css/pages.css?v=5ba944aef2">
   <script type="speculationrules">{"prerender": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/admin/*"}}, {"not": {"href_matches": "/api/*"}}]}, "eagerness": "moderate"}]}</script>
 </head>
 <body>
@@ -96,9 +96,9 @@
             <div class="pay-head"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 18v-7"/><path d="M11.12 2.198a2 2 0 0 1 1.76.006l7.866 3.847c.476.233.31.949-.22.949H3.474c-.53 0-.695-.716-.22-.949z"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M3 22h18"/><path d="M6 18v-7"/></svg><div><b>Secure EFT payment</b><span>Three quick steps. Your seat is held while we verify.</span></div><div class="amount-due"><span>Amount due</span><b id="amount-due"></b></div></div>
             <div class="pay-step" id="bank-wrap">
               <p class="step-label"><span class="n">1</span>Pay by EFT to this account</p>
+              <p class="hint" style="margin:-4px 0 0">Tap any line to copy it.</p>
               <dl class="bank-rows" id="bank-rows"></dl>
               <div class="ref-row"><div><span class="k">Payment reference <em>Mandatory</em></span><b id="pay-ref">Type your full name above</b><small>Use your full names exactly as above so we can match your payment.</small></div><button type="button" class="icon-btn copy" id="copy-ref" aria-label="Copy reference"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button></div>
-              <button type="button" class="btn btn-sm" id="copy-bank"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg> Copy all details</button>
             </div>
             <div class="pay-step">
               <p class="step-label"><span class="n">2</span>Upload your proof of payment</p>
@@ -153,8 +153,8 @@
     <a href="/prayer"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16"/><path d="m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 15 6 6"/><path d="M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z"/></svg><span>Prayer</span></a>
     <button type="button" data-menu-open-tab aria-controls="menu"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg><span>More</span></button>
   </nav>
-  <script type="module" src="/js/site.js"></script>
-  <script type="module" src="/js/auth.js"></script>
-  <script type="module" src="/js/event.js"></script>
+  <script type="module" src="/js/site.js?v=b41756e390"></script>
+  <script type="module" src="/js/auth.js?v=d9da82f606"></script>
+  <script type="module" src="/js/event.js?v=4933da2d73"></script>
 </body>
 </html>

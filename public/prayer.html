@@ -30,8 +30,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/base.css">
-  <link rel="stylesheet" href="/css/pages.css">
+  <link rel="stylesheet" href="/css/base.css?v=a2f30c2cb0">
+  <link rel="stylesheet" href="/css/pages.css?v=5ba944aef2">
   <script type="speculationrules">{"prerender": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/admin/*"}}, {"not": {"href_matches": "/api/*"}}]}, "eagerness": "moderate"}]}</script>
   <script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": "https://aogsccyouth.com/"}, {"@type": "ListItem", "position": 2, "name": "Prayer", "item": "https://aogsccyouth.com/prayer"}]}]}</script>
 </head>
@@ -76,12 +76,36 @@
         <figure class="photo page-hero-photo" tabindex="0"><picture><source type="image/webp" srcset="/assets/photos/prayer-800.webp 800w, /assets/photos/prayer-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 45vw"><img src="/assets/photos/prayer-1200.jpg" alt="Church leaders with heads bowed in prayer" fetchpriority="high"></picture></figure>
       </div>
     </section>
+    <!-- PRAYER WALL -->
+    <section class="block" id="wall">
+      <div class="wrap">
+        <div class="section-head reveal"><p class="eyebrow gold">Prayer Wall</p><h2>Carry each other <span class="serif">in prayer.</span></h2>
+          <p class="lede">Share a request with the church family, and tap <b>I prayed</b> when you've prayed for someone. When God answers, mark it answered so we can celebrate together. <span id="wall-total"></span></p>
+          <p class="scripture">“Bear ye one another's burdens, and so fulfil the law of Christ.” Galatians 6:2</p></div>
+        <div class="wall-layout">
+          <div id="wall-list" class="wall-grid" aria-live="polite"></div>
+          <aside class="wall-side">
+            <form id="wall-form" class="panel" novalidate><div id="wall-compose" class="wall-compose" hidden>
+              <h3>Share a request</h3>
+              <div class="field"><label for="wall-req" class="req">What can we pray for?</label><textarea class="input" id="wall-req" name="request" maxlength="600" required placeholder="e.g. Exams start Monday. Pray for peace and focus."></textarea></div>
+              <label class="check"><input type="checkbox" name="anonymous"> Post as “Someone” (hide my name)</label>
+              <p class="hint">A leader checks each request before it appears. For something private, use the form below instead.</p>
+              <button class="btn btn-lilac" type="submit">Add to the wall</button>
+              <div class="notice" data-status hidden></div></div>
+              <div id="wall-signin" class="wall-compose"><h3>Join in</h3><p class="muted-text">Sign in with Google to share a request and pray for others.</p><button class="btn btn-green" type="button">Sign in to pray</button></div>
+            </form>
+            <div id="wall-mine" class="wall-mine"></div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
     <!-- PRAYER -->
     <section class="block" id="prayer">
       <div class="wrap two-col">
         <div class="section-head reveal" style="margin:0">
           <p class="eyebrow gold">We're listening</p>
-          <h2>Send a prayer request</h2>
+          <h2>Send a private prayer request</h2>
           <p class="lede">Share as much or as little as you like. Our prayer team will stand with you — you can stay anonymous or keep it to the pastors only.</p>
           <p class="scripture">“Cast all your anxiety on him because he cares for you.” — 1 Peter 5:7</p>
         </div>
@@ -140,8 +164,9 @@
     <a href="/prayer"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16"/><path d="m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 15 6 6"/><path d="M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z"/></svg><span>Prayer</span></a>
     <button type="button" data-menu-open-tab aria-controls="menu"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg><span>More</span></button>
   </nav>
-  <script type="module" src="/js/site.js"></script>
-  <script type="module" src="/js/auth.js"></script>
-  <script type="module" src="/js/pages.js"></script>
+  <script type="module" src="/js/site.js?v=b41756e390"></script>
+  <script type="module" src="/js/auth.js?v=d9da82f606"></script>
+  <script type="module" src="/js/pages.js?v=747cff6793"></script>
+  <script type="module" src="/js/wall.js?v=632a8c9a55"></script>
 </body>
 </html>

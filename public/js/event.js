@@ -147,7 +147,6 @@ function setupPayment() {
   form.elements.name.addEventListener("input", showRef); showRef();
   document.querySelector(".ref-row").addEventListener("click", (e) => { if (!e.target.closest("#copy-ref")) $("copy-ref").click(); });
   $("copy-ref").addEventListener("click", () => { const r = refText(); if (!r) { form.elements.name.focus(); toast("Type your full name first"); return; } copy(r, "Reference"); });
-  $("copy-bank").addEventListener("click", () => copy(bankRows.map(([k, v]) => (k ? `${k}: ${v}` : v)).join("\n") + `\nReference: ${refText() || "your full names"}`, "Banking details"));
   const update = () => { $("amount-due").textContent = price ? rand(price * (1 + Number(guests.value || 0))) : "See details above"; };
   guests.addEventListener("change", update); update();
   $("pop").required = true;

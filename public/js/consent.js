@@ -1,6 +1,7 @@
 // Cookie consent: a calm, on-brand banner with "Accept all", "Essential only" and "Customise".
 // Essential = the sign-in cookie (always on). Functional = remembering things on this device
 // (join-form drafts, dismissed tips). We run no advertising or tracking cookies.
+import { icon } from "./icons.js";
 const COOKIE = "scc_consent";
 const VERSION = "2026-10";
 
@@ -34,8 +35,8 @@ export function openConsent(customise = false) {
   box.className = "consent";
   box.setAttribute("role", "dialog");
   box.setAttribute("aria-labelledby", "consent-title");
-  box.innerHTML = `<div class="consent-head"><b id="consent-title">Your privacy, your choice</b>
-      <p>We use one essential cookie to keep you signed in, and (with your OK) your device remembers form drafts and tips you've dismissed. No ads, no tracking. <a href="/cookies">Cookie policy</a></p></div>
+  box.innerHTML = `<div class="consent-head"><span class="consent-badge" aria-hidden="true">${icon("cookie")}</span><div><b id="consent-title">Your privacy, your choice</b>
+      <p>We use one essential cookie to keep you signed in, and (with your OK) your device remembers form drafts and tips you've dismissed. No ads, no tracking. <a href="/cookies">Cookie policy</a></p></div></div>
     <div class="consent-prefs" ${customise ? "" : "hidden"}>
       <label class="consent-row"><span><b>Essential</b><small>Signing in and keeping the site secure. Always on.</small></span><input type="checkbox" checked disabled></label>
       <label class="consent-row"><span><b>Functional</b><small>Remember join-form drafts, your app tip and choices on this device.</small></span><input type="checkbox" data-functional ${current?.functional !== false ? "checked" : ""}></label>

@@ -39,6 +39,7 @@ async function render() {
   $("me-email").textContent = u.email;
   $("me-member").innerHTML = memberCard(d.member);
   loadComplaints(d.member);
+  maybeWelcome(d.member, u);
   $("me-letter").checked = !!d.subscribed;
   $("me-events").innerHTML = d.registrations.length ? d.registrations.map((r) => `
     <article class="event-card"><div class="body">
@@ -70,6 +71,22 @@ $("me-member").addEventListener("click", async (e) => {
     try { await api("/api/me/membership/revoke", { method: "POST", body: { reason } }); toast("Your membership has been revoked"); render(); } catch (err) { toast(err.message); }
   }
 });
+// Newly verified members get the animated welcome once (or whenever they open /me?welcome=1 from the email).
+function maybeWelcome(m, u) {
+  if (!m || m.status !== "member") return;
+  const key = `scc-welcomed-${m.ref_code}`;
+  const asked = new URLSearchParams(location.search).has("welcome");
+  let seen = false;
+  try { seen = localStorage.getItem(key) === "1"; } catch { seen = true; }
+  if (!asked && seen) return;
+  try { localStorage.setItem(key, "1"); } catch { /* ignore */ }
+  if (asked) history.replaceState(null, "", "/me");
+  import("./welcome.js").then(({ showWelcome }) => showWelcome({
+    title: `you're officially a member, ${m.preferred_name || m.first_name || u.given_name || "friend"}`,
+    line: "Your membership is verified. Your events, tickets and membership all live here.",
+  }));
+}
+
 // ---------- complaints (approved members) ----------
 const CMP_LABEL = { received: "Received", in_review: "Being looked into", resolved: "Resolved", closed: "Closed" };
 async function loadComplaints(member) {

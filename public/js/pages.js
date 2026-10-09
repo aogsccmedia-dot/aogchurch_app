@@ -81,7 +81,10 @@ const letterForm = $id("letter-form");
 const q = new URLSearchParams(location.search).get("letter");
 if (letterForm) {
   const showLetter = (msg, ok = true) => { letterStatus.textContent = msg; letterStatus.className = `notice ${ok ? "ok" : "err"}`; letterStatus.hidden = false; };
-  if (q === "confirmed") showLetter("You're confirmed! Look out for our letter every Sunday afternoon. 💛");
+  if (q === "confirmed") {
+    showLetter("You're confirmed! Look out for our letter every Sunday afternoon. 💛");
+    import("./welcome.js").then(({ showWelcome }) => showWelcome({ title: "to the weekly letter", line: "Every Sunday afternoon: the week's services, what's on at church and a word to carry with you." }));
+  }
   if (q === "unsubscribed") showLetter("You've been unsubscribed. We'll miss you — you're always welcome back.");
   if (q === "invalid") showLetter("That link has expired or was already used.", false);
   letterForm.addEventListener("submit", async (e) => {
