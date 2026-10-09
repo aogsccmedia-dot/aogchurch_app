@@ -971,3 +971,17 @@ body.portal { background:
 .cal-tabs button[aria-selected="true"] .lock { background: var(--lilac); }
 .cal-locked .link-btn { color: var(--gold-2); }
 .cal-locked a { color: var(--gold-2); text-decoration: underline; }
+
+/* ---------- 6-digit code boxes + busy overlay ---------- */
+.otp { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; width: 100%; max-width: 360px; margin-inline: auto; }
+.otp-box { height: 58px; display: grid; place-items: center; border-radius: 12px; border: 1.5px solid var(--line-strong); background: var(--input, var(--bg)); font: 500 26px/1 var(--font-sans); font-variant-numeric: tabular-nums; color: var(--text); transition: border-color .15s, box-shadow .15s; }
+.otp-box.filled { border-color: var(--gold); }
+.otp-box.active { border-color: var(--gold); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 25%, transparent); }
+.otp input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .01; font-size: 16px; border: 0; padding: 0; background: transparent; color: transparent; caret-color: transparent; cursor: text; }
+@media (max-width: 380px) { .otp { gap: 6px; } .otp-box { height: 50px; font-size: 22px; } }
+.busy-overlay { position: fixed; inset: 0; z-index: 95; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); opacity: 0; transition: opacity .2s; }
+.busy-overlay.show { opacity: 1; }
+.busy-card { display: grid; justify-items: center; gap: 14px; padding: 26px 30px; border-radius: 18px; background: var(--bg-2); border: 1px solid var(--line); box-shadow: 0 20px 50px -24px rgba(0,0,0,.4); }
+.busy-card p { margin: 0; color: var(--text); font-size: 15px; }
+.spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid color-mix(in srgb, var(--gold) 25%, transparent); border-top-color: var(--gold); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

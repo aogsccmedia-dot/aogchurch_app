@@ -1,5 +1,6 @@
 // Sign in with Google (Google Identity Services) + the admin's emailed verification code.
 import { api, esc, toast } from "./site.js";
+import { busy, otpField } from "./otp.js";
 
 let mePromise;
 export function getMe(force = false) {
@@ -24,8 +25,10 @@ let onSignedIn = [];
 export function whenSignedIn(cb) { onSignedIn.push(cb); }
 
 async function handleCredential(resp) {
+  const done = busy("Signing you in…");
   try {
     const r = await api("/api/auth/google", { method: "POST", body: { credential: resp.credential } });
+    done();
     if (r.needs_code) { await adminCodeDialog(r.challenge, r.sent_to); return; }
     const me = await getMe(true);
     toast(`Welcome${me.user?.given_name ? ", " + me.user.given_name : ""}!`);
@@ -34,7 +37,7 @@ async function handleCredential(resp) {
     // Members go straight to their profile (events, tickets, membership), unless they're mid-task here.
     const busy = /^\/(join|event|me|membership)(\.html)?$/.test(location.pathname);
     if (me.member && !busy) location.href = "/me";
-  } catch (e) { toast(e.message); }
+  } catch (e) { toast(e.message); } finally { done(); }
 }
 
 /** Render a Google button into `el`. Returns false if Google sign-in isn't configured. */
@@ -62,23 +65,26 @@ export function adminCodeDialog(challenge, sentTo) {
       <p class="eyebrow gold">Admin verification</p>
       <h3>Check your email</h3>
       <p class="muted-text">We sent a 6-digit code to <b>${esc(sentTo)}</b>. It expires in 10 minutes.</p>
-      <input class="input code-input" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="••••••" required>
+      <input class="input" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
       <div class="notice err" data-status hidden></div>
       <div style="display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap">
         <button type="button" class="btn btn-ghost" data-resend>Resend code</button>
         <button type="submit" class="btn btn-gold">Verify &amp; open dashboard</button>
       </div></form>`;
     const form = dlg.querySelector("form");
+    otpField(form.code, () => form.requestSubmit());
     const status = dlg.querySelector("[data-status]");
     let ch = challenge;
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       status.hidden = true;
+      const stop = busy("Checking your code…");
       try {
         await api("/api/auth/admin/verify", { method: "POST", body: { challenge: ch, code: form.code.value } });
         dlg.close(); resolve(true);
         location.href = "/admin/";
-      } catch (err) { status.textContent = err.message; status.hidden = false; form.code.select(); }
+      } catch (err) { status.textContent = err.message; status.hidden = false; form.code.value = ""; form.code.dispatchEvent(new Event("input")); form.code.focus(); }
+      finally { stop(); }
     });
     dlg.querySelector("[data-resend]").addEventListener("click", async () => {
       try { const r = await api("/api/auth/admin/request-code", { method: "POST", body: {} }); ch = r.challenge; toast("New code sent"); }

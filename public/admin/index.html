@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css?v=a2f30c2cb0">
-  <link rel="stylesheet" href="/css/pages.css?v=5775b7588e">
-  <link rel="stylesheet" href="/css/admin.css?v=68b47e401c">
+  <link rel="stylesheet" href="/css/pages.css?v=a5c9b6b5f0">
+  <link rel="stylesheet" href="/css/admin.css?v=b9351a1f22">
 </head>
 <body class="admin">
   <!-- Sign in -->
@@ -29,7 +29,7 @@
       </form>
       <form id="code-verify" class="form-grid" hidden>
         <p class="muted" id="code-sent"></p>
-        <input class="input code-input" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="••••••" required>
+        <input class="input" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
         <button class="btn btn-gold" type="submit">Verify &amp; continue</button>
       </form>
       <div class="notice err" id="login-error" hidden></div>
@@ -299,6 +299,6 @@
   </div>
 
   <dialog class="drawer" id="member-drawer"><div class="drawer-body" id="member-body"></div></dialog>
-  <script type="module" src="/js/admin.js?v=f05229ab1b"></script>
+  <script type="module" src="/js/admin.js?v=4a13af5e2a"></script>
 </body>
 </html>

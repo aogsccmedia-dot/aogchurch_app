@@ -1,3 +1,4 @@
+import { busy, otpField } from "./otp.js";
 import { AVAILABILITY, LABELS, MINISTRIES } from "./options.js";
 import { FIELD_TYPES, renderField } from "./forms.js";
 import { icon } from "./icons.js";
@@ -39,9 +40,10 @@ const loginErr = (m) => { $("#login-error").textContent = m; $("#login-error").h
 
 function showCodeStep(r) {
   challenge = r.challenge;
-  $("#code-request").hidden = true; $("#admin-google").hidden = true;
+  $("#code-request").hidden = true; $("#admin-google").hidden = true; $("#signed-in-admin").hidden = true;
   $("#code-verify").hidden = false;
   $("#code-sent").textContent = `We emailed a 6-digit code to ${r.sent_to}. It expires in 10 minutes.`;
+  otpField($("#code-verify").code, () => $("#code-verify").requestSubmit());
   $("#code-verify").code.focus();
 }
 
@@ -60,11 +62,14 @@ async function showLogin() {
     s.onload = () => {
       google.accounts.id.initialize({ client_id: cid, ux_mode: "popup", callback: safe(async (resp) => {
         loginErr("");
-        const r = await api("/api/auth/google", { method: "POST", body: { credential: resp.credential } });
-        if (r.needs_code) { showCodeStep(r); return; }
-        // Delegated admins: their Google session is a normal one; ask for a code to their own email.
-        try { showCodeStep(await api("/api/auth/admin/request-code", { method: "POST", body: {} })); }
-        catch { loginErr("That Google account doesn't have admin access. Ask the main church admin to add you under Team & roles."); }
+        const done = busy("Signing you in and emailing your code…");
+        try {
+          const r = await api("/api/auth/google", { method: "POST", body: { credential: resp.credential } });
+          if (r.needs_code) { showCodeStep(r); return; }
+          // Delegated admins: their Google session is a normal one; ask for a code to their own email.
+          try { showCodeStep(await api("/api/auth/admin/request-code", { method: "POST", body: {} })); }
+          catch { loginErr("That Google account doesn't have admin access. Ask the main church admin to add you under Team & roles."); }
+        } finally { done(); }
       }) });
       google.accounts.id.renderButton($("#admin-google"), { theme: "filled_black", size: "large", shape: "pill", text: "continue_with", width: 300 });
       $("#admin-google").hidden = false;
@@ -75,15 +80,17 @@ async function showLogin() {
   }
 }
 
-$("#send-code").addEventListener("click", safe(async () => { loginErr(""); showCodeStep(await api("/api/auth/admin/request-code", { method: "POST", body: {} })); $("#signed-in-admin").hidden = true; }));
+$("#send-code").addEventListener("click", safe(async () => { loginErr(""); const done = busy("Emailing your code…"); try { showCodeStep(await api("/api/auth/admin/request-code", { method: "POST", body: {} })); } finally { done(); } }));
 $("#code-request").addEventListener("submit", safe(async (e) => {
   e.preventDefault(); loginErr("");
   showCodeStep(await api("/api/auth/admin/request-code", { method: "POST", body: { email: e.target.email.value } }));
 }));
 $("#code-verify").addEventListener("submit", async (e) => {
   e.preventDefault(); loginErr("");
+  const done = busy("Checking your code…");
   try { await api("/api/auth/admin/verify", { method: "POST", body: { challenge, code: e.target.code.value } }); boot(); }
-  catch (err) { loginErr(err.message); e.target.code.select(); }
+  catch (err) { loginErr(err.message); e.target.code.value = ""; e.target.code.dispatchEvent(new Event("input")); e.target.code.focus(); }
+  finally { done(); }
 });
 $("#logout").addEventListener("click", async () => { await api("/api/auth/logout", { method: "POST" }).catch(() => {}); location.href = "/"; });
 
