@@ -1,0 +1,34 @@
+name: Email check
+
+# Manually sends one harmless email (a weekly-letter confirmation) to the admin inbox,
+# to prove Cloudflare Email Service is delivering. Then look at Admin → Email log.
+on:
+  workflow_dispatch:
+    inputs:
+      to:
+        description: "Send the test to"
+        default: "aogsccmedia@gmail.com"
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger a test email
+        env:
+          TO: ${{ inputs.to }}
+        run: |
+          for host in https://aogsccyouth.com https://aogchurch-app.aogsccmedia.workers.dev; do
+            code=$(curl -sS -o resp.json -w '%{http_code}' -X POST "$host/api/newsletter/subscribe" \
+              -H 'Content-Type: application/json' -H "Origin: $host" \
+              --data "{\"email\":\"$TO\",\"name\":\"Email check\"}" || true)
+            echo "$host → HTTP $code: $(cat resp.json 2>/dev/null)"
+            if [ "$code" = "200" ] || [ "$code" = "201" ]; then
+              echo "::notice title=Email check::Request accepted by $host. Check the inbox of $TO and Admin → Email log."
+              exit 0
+            fi
+          done
+          echo "::error title=Email check::The site didn't accept the request."
+          exit 1
