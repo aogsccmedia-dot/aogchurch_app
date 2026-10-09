@@ -12,6 +12,10 @@ import { formatWhen } from "../lib/time.ts";
 import { notifyRegistration, type EventRow, type RegRow } from "../lib/registrations.ts";
 import { normaliseCode, ticketPages, ticketUrl, type TicketRow } from "../lib/tickets.ts";
 
+const pdfResponse = (pdf: Uint8Array, filename: string) => new Response(pdf, { headers: {
+  "content-type": "application/pdf", "content-disposition": `attachment; filename="${filename.replace(/[^\w.-]/g, "-")}"`,
+  "cache-control": "private, no-store", "x-robots-tag": "noindex" } });
+
 interface Joined extends TicketRow { title: string; slug: string; starts_at: string; ends_at: string | null; location: string | null; ref_code: string; reg_status: string }
 
 async function lookup(env: Env, raw: string) {
@@ -27,13 +31,27 @@ const state = (t: Joined) => (t.status !== "valid" || t.reg_status !== "confirme
 const firstName = (n: string) => n.split(" ")[0];
 
 export function ticketRoutes(router: Router, env: Env): void {
+  /** QR/PDF are for the ticket holder only: an admin session gets them only for their own tickets. */
+  const holderOnly = async (req: Request, t: Joined) => {
+    const s = await getSession(env, req);
+    if (s?.kind === "admin" && s.user.email.toLowerCase() !== t.holder_email.toLowerCase()) throw new HttpError(403, "Tickets can only be opened by the person they belong to.");
+  };
+
   // Public: what the ticket holder (or anyone holding the link) sees. Limited personal detail.
   router.get("/api/tickets/:code", async (req, { code }) => {
     await rateLimit(env, "ticket-view", clientIp(req), 120, 3600);
     const t = await lookup(env, code);
     const { results: siblings } = await env.DB.prepare("SELECT code, seq FROM tickets WHERE registration_id = ? AND status = 'valid' ORDER BY seq").bind(t.registration_id).all<{ code: string; seq: number }>();
     const s = await getSession(env, req);
-    return json({ ok: true, is_admin: s?.kind === "admin", ticket: {
+    const isAdmin = s?.kind === "admin";
+    const isHolder = !!s && s.user.email.toLowerCase() === t.holder_email.toLowerCase();
+    if (isAdmin && !isHolder) {
+      // Admins only get what's needed to check someone in: never the QR code or the PDF.
+      return json({ ok: true, is_admin: true, admin_view: true, ticket: {
+        code: t.code, seq: t.seq, quantity: t.quantity, holder: t.holder_name, ref: t.ref_code, state: state(t), checked_in_at: t.checked_in_at,
+        event: { title: t.title, slug: t.slug, when: formatWhen(t.starts_at, t.ends_at), location: t.location } } });
+    }
+    return json({ ok: true, is_admin: isAdmin, ticket: {
       code: t.code, seq: t.seq, quantity: t.quantity, holder: s?.kind === "admin" ? t.holder_name : `${firstName(t.holder_name)}${t.seq > 1 ? ` · guest ${t.seq - 1}` : ""}`,
       ref: t.ref_code, state: state(t), checked_in_at: t.checked_in_at,
       event: { title: t.title, slug: t.slug, when: formatWhen(t.starts_at, t.ends_at), location: t.location },
@@ -43,16 +61,32 @@ export function ticketRoutes(router: Router, env: Env): void {
   router.get("/api/tickets/:code/qr.svg", async (req, { code }) => {
     await rateLimit(env, "ticket-view", clientIp(req), 120, 3600);
     const t = await lookup(env, code);
+    await holderOnly(req, t);
     return new Response(qrSvg(ticketUrl(env, t.code)), { headers: { "content-type": "image/svg+xml", "cache-control": "private, max-age=3600" } });
   });
   router.get("/api/tickets/:code/pdf", async (req, { code }) => {
     await rateLimit(env, "ticket-view", clientIp(req), 60, 3600);
     const t = await lookup(env, code);
+    await holderOnly(req, t);
     const e = await env.DB.prepare("SELECT * FROM events WHERE id = ?").bind(t.event_id).first<EventRow>();
     const r = await env.DB.prepare("SELECT * FROM event_registrations WHERE id = ?").bind(t.registration_id).first<RegRow>();
     if (!e || !r || state(t) === "void") throw new HttpError(410, "This ticket is no longer valid.");
-    const pdf = ticketsPdf(ticketPages(env, e, r, [t]));
-    return new Response(pdf, { headers: { "content-type": "application/pdf", "content-disposition": `inline; filename="ticket-${t.code}.pdf"`, "cache-control": "private, no-store" } });
+    const all = new URL(req.url).searchParams.has("all");
+    const list = all ? (await env.DB.prepare("SELECT * FROM tickets WHERE registration_id = ? AND status = 'valid' ORDER BY seq").bind(r.id).all<TicketRow>()).results : [t];
+    return pdfResponse(ticketsPdf(ticketPages(env, e, r, list)), all ? `tickets-${e.slug}-${r.ref_code}.pdf` : `ticket-${t.seq}-${e.slug}-${r.ref_code}.pdf`);
+  });
+
+  // Private download link from the confirmation email: all tickets in the booking, no sign-in needed.
+  router.get("/api/bookings/:ref/tickets.pdf", async (req, { ref }) => {
+    await rateLimit(env, "ticket-view", clientIp(req), 60, 3600);
+    const key = new URL(req.url).searchParams.get("k") || "";
+    const r = await env.DB.prepare("SELECT * FROM event_registrations WHERE ref_code = ? AND ticket_key = ?").bind(ref, key).first<RegRow & { ticket_key: string }>();
+    if (!key || !r) throw new HttpError(404, "This download link isn't valid. Please use the link in your latest email, or open your tickets from your profile.");
+    if (r.status !== "confirmed") throw new HttpError(410, "These tickets are no longer valid.");
+    const e = await env.DB.prepare("SELECT * FROM events WHERE id = ?").bind(r.event_id).first<EventRow>();
+    const { results } = await env.DB.prepare("SELECT * FROM tickets WHERE registration_id = ? AND status = 'valid' ORDER BY seq").bind(r.id).all<TicketRow>();
+    if (!e || !results.length) throw new HttpError(410, "These tickets are no longer valid.");
+    return pdfResponse(ticketsPdf(ticketPages(env, e, r, results)), `tickets-${e.slug}-${r.ref_code}.pdf`);
   });
 
   // ---------- admin: door check-in ----------
@@ -92,7 +126,7 @@ export function ticketRoutes(router: Router, env: Env): void {
   router.get("/api/admin/events/:id/tickets", async (req, { id }) => {
     await admin(req);
     const { results } = await env.DB.prepare(
-      `SELECT t.code, t.seq, t.quantity, t.holder_name, t.status, t.checked_in_at, r.ref_code FROM tickets t JOIN event_registrations r ON r.id = t.registration_id
+      `SELECT t.seq, t.quantity, t.holder_name, t.status, t.checked_in_at, r.ref_code FROM tickets t JOIN event_registrations r ON r.id = t.registration_id
         WHERE t.event_id = ? AND t.status = 'valid' AND r.status = 'confirmed' ORDER BY t.checked_in_at DESC, r.ref_code, t.seq`).bind(id).all();
     const inCount = results.filter((x) => (x as { checked_in_at: string | null }).checked_in_at).length;
     return json({ ok: true, tickets: results, total: results.length, checked_in: inCount });

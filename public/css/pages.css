@@ -1001,3 +1001,6 @@ body.portal { background:
 @media (max-width: 860px) { .week-wrap { grid-template-columns: 1fr; } }
 @media (max-width: 480px) { .wk-row { grid-template-columns: 1fr auto; gap: 2px 12px; } .wk-d { grid-column: 1 / -1; } }
 .wk-row.main .wk-s small { font-family: var(--font-sans); }
+.tk-admin.solo { justify-items: center; text-align: center; padding: 26px 22px; }
+.tk-admin.solo h1 { font-size: clamp(26px, 6vw, 34px); font-weight: 400; }
+.tk-admin.solo .tk-meta { text-align: left; }

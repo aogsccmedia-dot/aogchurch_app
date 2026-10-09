@@ -1,6 +1,6 @@
 /** Church programme (annual calendar + sub-region planner) and the regular weekly services. */
 export const WEEKLY_SERVICES = [
-  { day: "Monday", title: "Prayer", time: "06:00 – 15:00", note: "Come and pray any time during the day" },
+  { day: "Monday", title: "Prayer", time: "18:00 – 20:00", note: "Weekly prayer meeting" },
   { day: "Tuesday", title: "Cell groups (home cells)", time: "18:00 – 20:00", note: "Twice a month" },
   { day: "Wednesday", title: "Choir practice", time: "18:00 – 19:30", note: "Weekly" },
   { day: "Thursday", title: "Mothers', Fathers' & Daughters' services", time: "18:00 – 20:00", note: "Three services at the same time" },

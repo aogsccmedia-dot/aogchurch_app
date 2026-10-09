@@ -55,3 +55,16 @@ export async function ticketsAttachment(env: Env, e: EventRow, r: RegRow) {
   for (let i = 0; i < pdf.length; i += 0x8000) bin += String.fromCharCode(...pdf.subarray(i, i + 0x8000));
   return { tickets, attachment: { filename: `tickets-${e.slug}-${r.ref_code}.pdf`, type: "application/pdf", disposition: "attachment" as const, content: btoa(bin) } };
 }
+
+/** Private, unguessable download link for all tickets in a booking (sent only to the booking's email). */
+export async function ticketDownloadUrl(env: Env, r: RegRow): Promise<string> {
+  let row = await env.DB.prepare("SELECT ticket_key FROM event_registrations WHERE id = ?").bind(r.id).first<{ ticket_key: string | null }>();
+  let key = row?.ticket_key;
+  if (!key) {
+    key = Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) => ALPHABET[b % 32]).join("");
+    await env.DB.prepare("UPDATE event_registrations SET ticket_key = ? WHERE id = ? AND ticket_key IS NULL").bind(key, r.id).run();
+    row = await env.DB.prepare("SELECT ticket_key FROM event_registrations WHERE id = ?").bind(r.id).first<{ ticket_key: string | null }>();
+    key = row?.ticket_key || key;
+  }
+  return `${siteUrl(env)}/api/bookings/${encodeURIComponent(r.ref_code)}/tickets.pdf?k=${key}`;
+}

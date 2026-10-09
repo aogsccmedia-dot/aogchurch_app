@@ -444,7 +444,7 @@ function serviceRow(s = {}) {
 $("#add-service").addEventListener("click", () => serviceRow());
 // Our regular week: new letters start with these (edit or remove as needed).
 const WEEKLY = [
-  { title: "Prayer", when: "Monday · 06:00 – 15:00", location: "Sandton City Church" },
+  { title: "Prayer", when: "Monday · 18:00 – 20:00", location: "Sandton City Church" },
   { title: "Choir practice", when: "Wednesday · 18:00 – 19:30", location: "Sandton City Church" },
   { title: "Mothers', Fathers' & Daughters' services", when: "Thursday · 18:00 – 20:00", location: "Sandton City Church" },
   { title: "Youth service", when: "Friday · 18:00 – 20:00", location: "Sandton City Church" },

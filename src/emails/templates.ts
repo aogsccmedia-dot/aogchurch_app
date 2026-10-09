@@ -159,7 +159,7 @@ export function adminNewMember(b: Brand, m: { name: string; ref: string; phone: 
 }
 
 export function eventConfirmation(b: Brand, o: { name: string; status: string; ref: string; title: string; when: string; location: string | null; message: string | null;
-  calendarUrl: string; eventUrl: string; price?: string | null; cover?: string | null; outlookUrl?: string | null; icsUrl?: string | null; approved?: boolean; tickets?: { count: number; url: string } | null }) {
+  calendarUrl: string; eventUrl: string; price?: string | null; cover?: string | null; outlookUrl?: string | null; icsUrl?: string | null; approved?: boolean; tickets?: { count: number; url: string; pdfUrl?: string } | null }) {
   const wait = o.status === "waitlist";
   const ok = !wait && o.approved;
   const cal = (href: string, label: string) => `<a href="${esc(href)}" style="display:inline-block;margin:0 8px 8px 0;padding:10px 14px;border-radius:8px;background:#f3ead9;font:600 13px/1 ${SANS};color:${C.ink};text-decoration:none">${esc(label)}</a>`;
@@ -178,14 +178,16 @@ export function eventConfirmation(b: Brand, o: { name: string; status: string; r
         (o.message ? p(esc(o.message)) : "") +
         (o.tickets ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 16px"><tr><td style="padding:16px 18px;border-radius:14px;background:#14110e">
             <p style="margin:0 0 4px;font:600 11px/1 ${SANS};letter-spacing:.2em;text-transform:uppercase;color:#f6d28b">🎟 Your ${o.tickets.count === 1 ? "ticket" : `${o.tickets.count} tickets`}</p>
-            <p style="margin:0 0 12px;font:15px/1.6 ${SANS};color:#efe7da">${o.tickets.count === 1 ? "Your ticket is" : "Your tickets are"} attached as a PDF, one page per person, each with its own QR code. Show it at the door on your phone or printed. Each ticket can be scanned once.</p>
-            <a href="${esc(o.tickets.url)}" style="display:inline-block;padding:11px 18px;border-radius:9px;background:#d6a650;font:600 14px/1 ${SANS};color:#1a1206;text-decoration:none">View my ${o.tickets.count === 1 ? "ticket" : "tickets"}</a></td></tr></table>` : "") +
+            <p style="margin:0 0 14px;font:15px/1.6 ${SANS};color:#efe7da">${o.tickets.count === 1 ? "Your ticket has" : "Your tickets have"} been made just for you: one page per person, each with its own QR code. Save the PDF to your phone and show it at the door (or print it). Each ticket can be scanned once, so please don't share it.</p>
+            ${o.tickets.pdfUrl ? `<a href="${esc(o.tickets.pdfUrl)}" style="display:inline-block;margin:0 8px 8px 0;padding:13px 20px;border-radius:9px;background:#d6a650;font:600 15px/1 ${SANS};color:#1a1206;text-decoration:none">⬇ Download my ${o.tickets.count === 1 ? "ticket" : "tickets"} (PDF)</a>` : ""}
+            <a href="${esc(o.tickets.url)}" style="display:inline-block;margin:0 0 8px;padding:12px 18px;border-radius:9px;border:1px solid #6b5a3e;font:600 14px/1 ${SANS};color:#f6d28b;text-decoration:none">Show on my phone</a>
+            <p style="margin:6px 0 0;font:12.5px/1.5 ${SANS};color:#b9b0a3">The PDF is also attached to this email.</p></td></tr></table>` : "") +
         (wait ? "" : `<p style="margin:18px 0 8px;font:600 11px/1 ${SANS};letter-spacing:.2em;text-transform:uppercase;color:${C.gold}">Add it to your calendar</p>
           <p style="margin:0 0 6px">${cal(o.calendarUrl, "Google")}${o.icsUrl ? cal(o.icsUrl, "Apple / iPhone") : ""}${o.outlookUrl ? cal(o.outlookUrl, "Outlook") : ""}</p>
           <p style="margin:0 0 16px;font:13px/1.6 ${SANS};color:${C.muted}">A calendar invite (.ics) is also attached to this email.</p>`) +
         button(o.eventUrl, "View event details"),
     }),
-    text: `${wait ? "You're on the waitlist for" : ok ? "Congratulations! Your payment is verified and you're confirmed for" : "You're registered for"} ${o.title}\n${o.when}${o.location ? `\n${o.location}` : ""}${o.price ? `\n${o.price}` : ""}\nRef ${o.ref}\n${o.message || ""}\nAdd to Google Calendar: ${o.calendarUrl}\n${o.eventUrl}` + textFooter(b),
+    text: `${wait ? "You're on the waitlist for" : ok ? "Congratulations! Your payment is verified and you're confirmed for" : "You're registered for"} ${o.title}${o.tickets?.pdfUrl ? `\nDownload your tickets (PDF): ${o.tickets.pdfUrl}` : ""}\n${o.when}${o.location ? `\n${o.location}` : ""}${o.price ? `\n${o.price}` : ""}\nRef ${o.ref}\n${o.message || ""}\nAdd to Google Calendar: ${o.calendarUrl}\n${o.eventUrl}` + textFooter(b),
   };
 }
 

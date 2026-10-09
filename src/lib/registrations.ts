@@ -4,7 +4,7 @@ import { b64 } from "./crypto.ts";
 import { sendMail } from "./email.ts";
 import { calendarUrl, formatWhen, icsFile, outlookUrl } from "./time.ts";
 import * as T from "../emails/templates.ts";
-import { ticketUrl, ticketsAttachment, voidTickets } from "./tickets.ts";
+import { ticketDownloadUrl, ticketUrl, ticketsAttachment, voidTickets } from "./tickets.ts";
 
 export interface EventRow {
   id: string; slug: string; title: string; category: string; description: string | null; starts_at: string; ends_at: string | null;
@@ -54,7 +54,7 @@ export async function notifyRegistration(env: Env, e: EventRow, r: RegRow, opts:
   if (r.status === "confirmed" || r.status === "waitlist") {
     const tk = r.status === "confirmed" ? await ticketsAttachment(env, e, r) : null;
     const m = T.eventConfirmation({ site }, {
-      tickets: tk ? { count: tk.tickets.length, url: ticketUrl(env, tk.tickets[0].code) } : null,
+      tickets: tk ? { count: tk.tickets.length, url: ticketUrl(env, tk.tickets[0].code), pdfUrl: await ticketDownloadUrl(env, r) } : null,
       ...base, status: r.status, approved: !!e.requires_pop && r.status === "confirmed" && !opts.promoted,
       message: opts.promoted ? "Good news — a spot opened up and it's yours!" : e.requires_pop && r.status === "confirmed" ? "Your payment has been approved. This email is your ticket — show your reference at the door." : e.confirmation_message,
       calendarUrl: calendarUrl(e), outlookUrl: outlookUrl(e), icsUrl: `${site}/api/events/${encodeURIComponent(e.slug)}/calendar.ics`,

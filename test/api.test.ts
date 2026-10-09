@@ -598,6 +598,24 @@ describe("tickets: generator, PDF, door check-in", () => {
     assert.equal((await call(`/api/tickets/${rows[1].code}/pdf`)).headers.get("content-type"), "application/pdf");
     assert.equal((await call("/api/tickets/AAAAAAAAAAAAAAAA")).status, 404, "fake codes are rejected");
 
+    // The email carries a private "Download my tickets (PDF)" link that works without signing in.
+    const href = /href="([^"]*\/api\/bookings\/[^"]+)"/.exec(mail.html!)![1].replace(/&amp;/g, "&");
+    const link = new URL(href).pathname + new URL(href).search;
+    const dl = await call(link);
+    assert.equal(dl.status, 200);
+    assert.equal(dl.headers.get("content-type"), "application/pdf");
+    assert.match(dl.headers.get("content-disposition") || "", /attachment; filename="tickets-/);
+    assert.ok(Buffer.from(await dl.arrayBuffer()).toString("latin1").includes("/Count 3"));
+    assert.equal((await call(link.replace(/k=[A-Z0-9]+/, "k=WRONGKEYWRONGKEYWRONGKEY"))).status, 404, "wrong key refused");
+
+    // Admins can check people in, but never open someone else's QR code or PDF.
+    const adminView = await (await call(`/api/tickets/${rows[0].code}`, { headers: { cookie } })).json() as { admin_view: boolean; ticket: { holder: string; siblings?: unknown } };
+    assert.equal(adminView.admin_view, true); assert.equal(adminView.ticket.holder, "Neo Mokoena"); assert.equal(adminView.ticket.siblings, undefined);
+    assert.equal((await call(`/api/tickets/${rows[0].code}/pdf`, { headers: { cookie } })).status, 403);
+    assert.equal((await call(`/api/tickets/${rows[0].code}/qr.svg`, { headers: { cookie } })).status, 403);
+    const list = await (await call(`/api/admin/events/${eventId}/tickets`, { headers: { cookie } })).json() as { tickets: Record<string, unknown>[] };
+    assert.ok(list.tickets.every((t) => !("code" in t)), "admin lists never expose ticket codes");
+
     // Door: first scan admits, a copy is flagged, wrong event is flagged, non-admins can't check in.
     const scan = async (code: string, event_id?: string) => { const res = await post("/api/admin/tickets/check-in", { code, event_id }, A(cookie)); const j = await res.json() as { result: string; ticket: { holder: string }; error?: string }; if (!j.result) console.log("SCAN", res.status, j); return j; };
     const first = await scan(`https://aogsccyouth.com/ticket?c=${rows[0].code}`, eventId);
