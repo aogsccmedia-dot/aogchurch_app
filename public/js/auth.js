@@ -122,7 +122,12 @@ export function renderHeaderUser(me) {
       <button type="button" data-signout>Sign out</button></div></details>`;
   slot.querySelector("[data-signout]").addEventListener("click", signOut);
   // Hide "Join" buttons for people who've already joined (and the admin, who never needs to).
-  if (me.member || me.admin_account) document.querySelectorAll("[data-join-cta]").forEach((a) => { a.textContent = me.admin_account ? "Dashboard" : "My profile"; a.href = me.admin_account ? "/admin/" : "/me"; });
+  if (me.member || me.admin_account) document.querySelectorAll("[data-join-cta]").forEach((a) => {
+    a.href = me.admin_account ? "/admin/" : "/me";
+    // Bottom bar: keep the person icon on every device, only the short label changes.
+    if (a.hasAttribute("data-tab-me")) { const s = a.querySelector("span"); if (s) s.textContent = me.admin_account ? "Admin" : "Profile"; a.setAttribute("aria-label", me.admin_account ? "Admin dashboard" : "My profile"); }
+    else a.textContent = me.admin_account ? "Dashboard" : "My profile";
+  });
 }
 
 export async function openSignIn() {

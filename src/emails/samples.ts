@@ -24,6 +24,8 @@ export const SAMPLES: Sample[] = [
     render: (s) => T.eventConfirmation({ site: s }, { ...ev(s), status: "waitlist", price: null, message: null, calendarUrl: "#" }) },
   { key: "event_declined", group: "Events", when: "You decline a proof of payment (with your optional note).",
     render: (s) => T.eventDeclined({ site: s }, { ...ev(s), note: "The reference on the payment didn't match a registration. Please reply with your proof of payment." }) },
+  { key: "ticket_checked_in", group: "Events", when: "Their ticket is scanned at the door — “You're checked in”.",
+    render: (s) => T.checkedIn({ site: s }, { name: "Thandi", title: "Youth Worship Night", seq: 1, quantity: 2, holder: "Thandi Mokoena", time: "18:42", ref: "SCC-7Q4K" }) },
   { key: "subscribe_confirm", group: "Weekly letter", when: "Someone signs up for the weekly letter with their email (one-tap confirm).",
     render: (s) => T.subscribeConfirm({ site: s }, "Thandi", `${s}/api/newsletter/confirm?t=sample`) },
   { key: "subscribe_welcome", group: "Weekly letter", when: "They confirm (or sign up with Google) — the weekly letter welcome.",

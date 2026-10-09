@@ -120,6 +120,8 @@ function openTab(tab) {
   if (!loaders[base]) tab = "overview";
   const t = loaders[base] ? base : "overview";
   $$("#nav button").forEach((b) => b.classList.toggle("active", b.dataset.tab === t));
+  $$("[data-go-tab]").forEach((b) => b.classList.toggle("active", b.dataset.goTab === t));
+  document.body.dataset.view = t;
   $$("[data-view]").forEach((v) => { v.hidden = v.dataset.view !== t; });
   history.replaceState(null, "", "#" + t);
   safe(loaders[t])();
@@ -160,16 +162,16 @@ loaders.overview = async () => {
     ? `<p><b style="font-weight:450">${esc(next_letter.subject)}</b></p><p class="muted">${next_letter.status === "sending" ? "Sending now…" : "Scheduled for " + fmtDate(next_letter.scheduled_for)}</p><button class="btn btn-sm" data-go="letter:${esc(next_letter.id)}">Open</button>`
     : `<p class="muted">Nothing scheduled for this Sunday yet.</p><button class="btn btn-sm btn-gold" data-go="letters-new">Write this week's letter</button>`;
   const { members } = await api("/api/admin/members?limit=5");
-  $("#latest").innerHTML = members.length ? `<table class="table"><tbody>${members.map(memberRow).join("")}</tbody></table>` : `<p class="muted">No sign-ups yet. Share the Join link!</p>`;
+  $("#latest").innerHTML = members.length ? `<table class="table m-table"><tbody>${members.map(memberRow).join("")}</tbody></table>` : `<p class="muted">No sign-ups yet. Share the Join link!</p>`;
 };
 
 // ================================================================ members
 let mPage = 1;
-const memberRow = (m) => `<tr data-member="${esc(m.id)}">
-  <td><b style="font-weight:450">${esc(m.first_name)} ${esc(m.last_name)}</b>${m.preferred_name ? ` <span class="sub">(${esc(m.preferred_name)})</span>` : ""}<div class="sub">${esc(m.ref_code)}</div></td>
-  <td>${esc(LABELS.membership_type[m.membership_type]?.split(" —")[0] || m.membership_type)}</td>
-  <td>${esc(m.phone)}<div class="sub">${esc(m.email)}</div></td><td>${age(m.date_of_birth)}</td>
-  <td><span class="pill ${esc(m.status)}">${esc(m.status)}</span></td><td class="sub">${fmtDate(m.created_at)}</td></tr>`;
+const memberRow = (m) => `<tr data-member="${esc(m.id)}" class="m-row">
+  <td class="c-name"><b style="font-weight:450">${esc(m.first_name)} ${esc(m.last_name)}</b>${m.preferred_name ? ` <span class="sub">(${esc(m.preferred_name)})</span>` : ""}<div class="sub nowrap">${esc(m.ref_code)}</div></td>
+  <td class="c-type">${esc(LABELS.membership_type[m.membership_type]?.split(" —")[0] || m.membership_type)}</td>
+  <td class="c-contact">${esc(m.phone)}<div class="sub">${esc(m.email)}</div></td><td class="c-age" data-age="${age(m.date_of_birth) ? "1" : ""}">${age(m.date_of_birth)}</td>
+  <td class="c-status"><span class="pill ${esc(m.status)}">${esc(m.status)}</span></td><td class="sub c-date">${fmtDate(m.created_at)}</td></tr>`;
 loaders.members = async () => {
   const q = $("#m-q").value.trim(), status = $("#m-status").value;
   const p = new URLSearchParams({ page: String(mPage), limit: "25" }); if (q) p.set("q", q); if (status) p.set("status", status);
@@ -388,7 +390,7 @@ function drawResponses() {
       return `<span><b>${esc(fld.label)}${/[?:.]$/.test(fld.label) ? "" : ":"}</b> ${fl.length ? fl.map((x) => `<a href="/api/admin/files/${esc(x.id)}" target="_blank" style="color:var(--gold-2)">${esc(x.filename)}</a>`).join(", ") : esc(Array.isArray(v) ? v.join(", ") : v ?? "—")}</span>`; }).join("") || '<span class="sub">—</span>'}</div></td>
     <td><span class="pill ${esc(r.status)}">${esc(STATUS_LABEL[r.status] || r.status)}</span>
       <select class="input" data-reg="${esc(r.id)}" style="min-height:34px;padding:4px 30px 4px 10px;font-size:13px;margin-top:6px" aria-label="Change status">${Object.entries(STATUS_LABEL).map(([k, l]) => `<option value="${k}" ${k === r.status ? "selected" : ""}>${l}</option>`).join("")}</select></td>
-    <td><label class="check"><input type="checkbox" data-checkin="${esc(r.id)}" ${r.checked_in_at ? "checked" : ""}> In</label></td></tr>`).join("") : `<tr><td colspan="5" class="sub" style="text-align:center;padding:30px">No registrations here yet.</td></tr>`}</tbody>`;
+    <td>${r.checked_in_at ? `<span class="pill member">In · ${new Date(r.checked_in_at).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" })}</span>` : `<span class="sub">Not yet</span>`}</td></tr>`).join("") : `<tr><td colspan="5" class="sub" style="text-align:center;padding:30px">No registrations here yet.</td></tr>`}</tbody>`;
 }
 $("#resp-q").addEventListener("input", drawResponses);
 $("#resp-filter").addEventListener("change", drawResponses);
@@ -554,63 +556,117 @@ loaders.messages = async () => {
 $("#msg-list").addEventListener("click", safe(async (e) => { const b = e.target.closest("[data-msg]"); if (!b) return; await api(`/api/admin/messages/${b.dataset.msg}`, { method: "PATCH", body: { status: b.dataset.st } }); toast("Updated"); loaders.messages(); }));
 
 // ================================================================ door scanner
-let scanStream = null, scanTimer = null, lastScan = { code: "", at: 0 };
-const SCAN_MSG = { ok: ["Admit ✓", "ok"], already_used: ["Already used!", "bad"], void: ["Not valid", "bad"], wrong_event: ["Different event", "bad"] };
+// Camera-first: opens ready to scan on phones, tablets and laptops. Uses the browser's built-in
+// barcode reader where available (Chrome/Android), otherwise the bundled jsQR reader (iPhone/iPad, Firefox).
+const scan = { stream: null, track: null, raf: 0, busy: false, last: { code: "", at: 0 }, detector: null, cams: [], camIdx: 0, torch: false, jsqr: null, lastTick: 0 };
+const SCAN_MSG = { ok: ["Admitted", "ok"], already_used: ["Already used", "bad"], void: ["Not valid", "bad"], wrong_event: ["Different event", "bad"] };
+let audio;
+function beep(ok) {
+  try {
+    audio ??= new (window.AudioContext || window.webkitAudioContext)();
+    const tone = (f, t0, d) => { const o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = f; o.connect(g); g.connect(audio.destination); g.gain.setValueAtTime(.18, audio.currentTime + t0); g.gain.exponentialRampToValueAtTime(.001, audio.currentTime + t0 + d); o.start(audio.currentTime + t0); o.stop(audio.currentTime + t0 + d); };
+    if (ok) tone(1046, 0, .15); else { tone(220, 0, .18); tone(196, .22, .22); }
+  } catch { /* sound is optional */ }
+  try { navigator.vibrate?.(ok ? 80 : [120, 80, 120]); } catch { /* ignore */ }
+}
+const loadJsQR = () => scan.jsqr ??= new Promise((res, rej) => { if (window.jsQR) return res(window.jsQR); const el = document.createElement("script"); el.src = "/js/vendor/jsqr.js"; el.onload = () => res(window.jsQR); el.onerror = rej; document.head.append(el); });
 loaders.scan = async () => {
   const { events } = await api("/api/admin/events");
-  const now = Date.now() - 86400_000;
-  const list = events.filter((e) => new Date(e.ends_at || e.starts_at).getTime() > now).concat(events.filter((e) => new Date(e.ends_at || e.starts_at).getTime() <= now));
+  const soon = Date.now() - 86400_000;
+  const list = events.filter((e) => new Date(e.ends_at || e.starts_at).getTime() > soon).sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+    .concat(events.filter((e) => new Date(e.ends_at || e.starts_at).getTime() <= soon));
   const sel = $("#scan-event"), prev = sel.value;
   sel.innerHTML = list.map((e) => `<option value="${esc(e.id)}">${esc(e.title)} · ${fmtDate(e.starts_at)}</option>`).join("") || `<option value="">No events yet</option>`;
   if (prev) sel.value = prev;
   scanCount();
+  startScanner().catch(() => {});
 };
 async function scanCount() {
   const id = $("#scan-event").value; if (!id) return;
   const r = await api(`/api/admin/events/${id}/tickets`).catch(() => null);
-  if (r) $("#scan-count").textContent = `${r.checked_in} of ${r.total} tickets checked in`;
+  if (r) $("#scan-count").textContent = `${r.checked_in} / ${r.total} checked in`;
 }
-async function checkIn(raw) {
-  const code = String(raw || "").trim(); if (!code) return;
-  if (code === lastScan.code && Date.now() - lastScan.at < 4000) return;   // same QR still in view
-  lastScan = { code, at: Date.now() };
+function flash(result, t) {
+  const [label, cls] = SCAN_MSG[result] || ["Not found", "bad"];
+  const el = $("#scan-flash");
+  el.className = `scan-flash ${cls}`;
+  el.innerHTML = `<b>${label}</b>${t ? `<span>${esc(t.holder)}</span><small>Ticket ${t.seq} of ${t.quantity} · ${esc(t.ref)}</small>${result === "already_used" ? `<small>First scanned ${fmtDate(t.checked_in_at)}. This may be a copy: check ID.</small>` : result === "wrong_event" ? `<small>This ticket is for ${esc(t.event.title)}</small>` : ""}` : `<small>Not a valid church ticket</small>`}`;
+  el.hidden = false;
+  beep(result === "ok");
+  setTimeout(() => { el.hidden = true; scan.busy = false; }, result === "ok" ? 1600 : 2600);
+}
+async function onCode(raw) {
+  const code = String(raw || "").trim();
+  if (!code || scan.busy) return;
+  // Same QR still in front of the camera: ignore it until it has been out of view for 4 s (no repeated log rows).
+  if (code === scan.last.code && Date.now() - scan.last.at < 4000) { scan.last.at = Date.now(); return; }
+  scan.busy = true; scan.last = { code, at: Date.now() };
   try {
     const r = await api("/api/admin/tickets/check-in", { method: "POST", body: { code, event_id: $("#scan-event").value || undefined } });
+    flash(r.result, r.ticket);
     const [label, cls] = SCAN_MSG[r.result];
-    const t = r.ticket;
-    $("#scan-result").innerHTML = `<div class="scan-result ${cls}"><b>${label}</b><span>${esc(t.holder)} · ticket ${t.seq} of ${t.quantity} · ${esc(t.ref)}</span>
-      ${r.result === "already_used" ? `<span>First admitted ${fmtDate(t.checked_in_at)}. This may be a copy: check ID.</span>` : r.result === "wrong_event" ? `<span>This ticket is for ${esc(t.event.title)}.</span>` : ""}</div>`;
-    $("#scan-log").insertAdjacentHTML("afterbegin", `<div class="item"><span class="pill ${cls === "ok" ? "member" : "new"}">${label}</span> ${esc(t.holder)} · ${esc(t.code.slice(0, 4))}… · ${new Date().toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" })}</div>`);
-    if (navigator.vibrate) navigator.vibrate(r.result === "ok" ? 60 : [80, 60, 80]);
+    $("#scan-log .muted")?.remove();
+    $("#scan-log").insertAdjacentHTML("afterbegin", `<div class="item scan-row"><span class="pill ${cls === "ok" ? "member" : "new"}">${label}</span><span>${esc(r.ticket.holder)} · ${r.ticket.seq}/${r.ticket.quantity}</span><span class="meta">${new Date().toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" })}</span></div>`);
     scanCount();
+  } catch { flash("not_found", null); }
+}
+async function tick(ts) {
+  scan.raf = requestAnimationFrame(tick);
+  const v = $("#scan-video");
+  if (scan.busy || !v.videoWidth || ts - scan.lastTick < 140) return;
+  scan.lastTick = ts;
+  try {
+    if (scan.detector) { const codes = await scan.detector.detect(v); if (codes[0]) onCode(codes[0].rawValue); return; }
+    const jsQR = await loadJsQR();
+    const c = $("#scan-canvas"), scale = Math.min(1, 720 / v.videoWidth);
+    c.width = Math.round(v.videoWidth * scale); c.height = Math.round(v.videoHeight * scale);
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(v, 0, 0, c.width, c.height);
+    const img = ctx.getImageData(0, 0, c.width, c.height);
+    const r = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
+    if (r?.data) onCode(r.data);
+  } catch { /* next frame */ }
+}
+async function startScanner() {
+  if (scan.stream) return;
+  if (!navigator.mediaDevices?.getUserMedia) { $("#scan-msg").textContent = "This browser can't use the camera. Please open the admin on a phone, tablet or laptop with a camera."; return; }
+  $("#scan-msg").textContent = "Starting camera…"; $("#scan-msg").hidden = false;
+  try {
+    const want = scan.cams[scan.camIdx]?.deviceId;
+    scan.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: want ? { deviceId: { exact: want } } : { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } });
   } catch (e) {
-    $("#scan-result").innerHTML = `<div class="scan-result bad"><b>Not found</b><span>${esc(e.message)}</span></div>`;
-    if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
+    $("#scan-msg").textContent = e && e.name === "NotAllowedError" ? "Camera permission was blocked. Allow camera access for this site in your browser settings, then tap Start scanning." : "Couldn't start the camera. Tap Start scanning to try again.";
+    $("#scan-start").hidden = false; return;
   }
+  const v = $("#scan-video"); v.srcObject = scan.stream; await v.play().catch(() => {});
+  scan.track = scan.stream.getVideoTracks()[0];
+  if (!scan.detector && "BarcodeDetector" in window) {
+    try { const f = await BarcodeDetector.getSupportedFormats(); if (f.includes("qr_code")) scan.detector = new BarcodeDetector({ formats: ["qr_code"] }); } catch { /* use jsQR */ }
+  }
+  if (!scan.detector) loadJsQR().catch(() => {});
+  try { scan.cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput"); } catch { scan.cams = []; }
+  $("#scan-switch").hidden = scan.cams.length < 2;
+  const caps = scan.track?.getCapabilities?.() || {};
+  $("#scan-torch").hidden = !caps.torch;
+  $("#scan-msg").hidden = true; $("#scan-start").hidden = true;
+  cancelAnimationFrame(scan.raf); scan.raf = requestAnimationFrame(tick);
+}
+function stopScan() {
+  cancelAnimationFrame(scan.raf); scan.stream?.getTracks().forEach((t) => t.stop()); scan.stream = null; scan.track = null; scan.torch = false;
+  $("#scan-start").hidden = false; $("#scan-msg").hidden = false; $("#scan-msg").textContent = "Camera paused.";
 }
 $("#scan-event").addEventListener("change", scanCount);
-$("#scan-manual").addEventListener("submit", (e) => { e.preventDefault(); lastScan = { code: "", at: 0 }; checkIn(e.target.code.value); e.target.reset(); });
-$("#scan-start").addEventListener("click", safe(async () => {
-  if (!("BarcodeDetector" in window)) {
-    $("#scan-cam-note").innerHTML = "This browser can't scan inside the page. Use your phone's <b>camera app</b> instead: point it at a ticket and tap the link. You'll get a big <b>Admit</b> button. Or type the code below.";
-    return;
-  }
-  const detector = new BarcodeDetector({ formats: ["qr_code"] });
-  scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-  const v = $("#scan-video"); v.srcObject = scanStream; v.hidden = false; await v.play();
-  $("#scan-start").hidden = true; $("#scan-stop").hidden = false; $("#scan-cam-note").textContent = "Point the camera at a ticket QR code.";
-  const tick = async () => {
-    try { const codes = await detector.detect(v); if (codes[0]) await checkIn(codes[0].rawValue); } catch { /* frame not ready */ }
-    scanTimer = setTimeout(tick, 350);
-  };
-  tick();
-}));
-function stopScan() {
-  clearTimeout(scanTimer); scanStream?.getTracks().forEach((t) => t.stop()); scanStream = null;
-  $("#scan-video").hidden = true; $("#scan-start").hidden = false; $("#scan-stop").hidden = true;
-}
-$("#scan-stop").addEventListener("click", stopScan);
+$("#scan-start").addEventListener("click", () => startScanner());
+$("#scan-switch").addEventListener("click", async () => { scan.camIdx = (scan.camIdx + 1) % Math.max(1, scan.cams.length); stopScan(); await startScanner(); });
+$("#scan-torch").addEventListener("click", async () => { scan.torch = !scan.torch; try { await scan.track.applyConstraints({ advanced: [{ torch: scan.torch }] }); } catch { /* not supported */ } $("#scan-torch").classList.toggle("btn-gold", scan.torch); });
+$("#scan-full").addEventListener("click", () => {
+  const el = $("#scanner");
+  if (document.fullscreenElement) document.exitFullscreen?.();
+  else if (el.requestFullscreen) el.requestFullscreen().catch(() => el.classList.toggle("kiosk"));
+  else el.classList.toggle("kiosk");
+});
 addEventListener("hashchange", () => { if (!location.hash.startsWith("#scan")) stopScan(); });
+document.addEventListener("visibilitychange", () => { if (document.hidden && scan.stream) stopScan(); });
 
 // ================================================================ church programme
 let progEditing = null;
@@ -747,4 +803,8 @@ $("#tpl-test").addEventListener("click", safe(async (e) => {
 }));
 
 addEventListener("hashchange", () => { if (me) openTab(location.hash.slice(1) || "overview"); });
+// Phone/tablet: menu drawer + quick bar
+$("#m-menu").addEventListener("click", () => { const open = !document.body.classList.contains("side-open"); document.body.classList.toggle("side-open", open); $("#m-menu").setAttribute("aria-expanded", String(open)); });
+$("#nav").addEventListener("click", () => document.body.classList.remove("side-open"));
+$$("[data-go-tab]").forEach((b) => { if (b.dataset.ico) b.insertAdjacentHTML("afterbegin", icon(b.dataset.ico)); b.addEventListener("click", () => { location.hash = b.dataset.goTab; }); });
 boot();

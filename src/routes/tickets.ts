@@ -10,6 +10,9 @@ import { qrSvg } from "../lib/qr.ts";
 import { ticketsPdf } from "../lib/pdf.ts";
 import { formatWhen } from "../lib/time.ts";
 import { notifyRegistration, type EventRow, type RegRow } from "../lib/registrations.ts";
+import { sendMail } from "../lib/email.ts";
+import { siteUrl } from "../env.ts";
+import * as T from "../emails/templates.ts";
 import { normaliseCode, ticketPages, ticketUrl, type TicketRow } from "../lib/tickets.ts";
 
 const pdfResponse = (pdf: Uint8Array, filename: string) => new Response(pdf, { headers: {
@@ -100,7 +103,7 @@ export function ticketRoutes(router: Router, env: Env): void {
     checked_in_at: t.checked_in_at, scan_count: t.scan_count, event: { id: t.event_id, title: t.title, when: formatWhen(t.starts_at, t.ends_at) },
   });
   router.get("/api/admin/tickets/:code", async (req, { code }) => { await admin(req); return json({ ok: true, ticket: adminView(await lookup(env, code)) }); });
-  router.post("/api/admin/tickets/check-in", async (req) => {
+  router.post("/api/admin/tickets/check-in", async (req, _p, ctx) => {
     const s = await admin(req);
     const { code, event_id } = await readJson<{ code?: string; event_id?: string }>(req);
     const t = await lookup(env, code || "");
@@ -114,6 +117,11 @@ export function ticketRoutes(router: Router, env: Env): void {
     const r = await env.DB.prepare("UPDATE tickets SET checked_in_at = ?, checked_in_by = ? WHERE id = ? AND checked_in_at IS NULL").bind(now, s.user.email, t.id).run();
     if (!r.meta.changes) return json({ ok: true, result: "already_used", ticket: adminView(await lookup(env, t.code)) });
     await env.DB.prepare("UPDATE event_registrations SET checked_in_at = COALESCE(checked_in_at, ?) WHERE id = ?").bind(now, t.registration_id).run();
+    // Let the ticket holder know (also a security alert if someone used a copy of their ticket).
+    const time = new Intl.DateTimeFormat("en-ZA", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Africa/Johannesburg" }).format(new Date(now));
+    const mail = T.checkedIn({ site: siteUrl(env) }, { name: t.holder_name.split(" ")[0], title: t.title, seq: t.seq, quantity: t.quantity, holder: t.seq > 1 ? `guest ${t.seq - 1}` : t.holder_name, time, ref: t.ref_code });
+    const send = sendMail(env, { to: t.holder_email, toName: t.holder_name, ...mail, template: "ticket_checked_in" });
+    if (ctx?.waitUntil) ctx.waitUntil(send); else await send;   // respond to the door instantly
     return json({ ok: true, result: "ok", ticket: adminView({ ...t, checked_in_at: now }) });
   });
   router.post("/api/admin/tickets/undo", async (req) => {

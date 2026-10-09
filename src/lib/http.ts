@@ -55,7 +55,7 @@ export function clientIp(req: Request): string {
 }
 
 /** Tiny path router: patterns like "/api/admin/members/:id" */
-type Handler = (req: Request, params: Record<string, string>) => Promise<Response>;
+type Handler = (req: Request, params: Record<string, string>, ctx?: { waitUntil(p: Promise<unknown>): void }) => Promise<Response>;
 interface Route { method: string; parts: string[]; handler: Handler }
 
 export class Router {
@@ -70,7 +70,7 @@ export class Router {
   put(p: string, h: Handler) { return this.on("PUT", p, h); }
   delete(p: string, h: Handler) { return this.on("DELETE", p, h); }
 
-  async handle(req: Request): Promise<Response | null> {
+  async handle(req: Request, ctx?: { waitUntil(p: Promise<unknown>): void }): Promise<Response | null> {
     const url = new URL(req.url);
     const segs = url.pathname.split("/").filter(Boolean);
     let pathMatched = false;
@@ -85,7 +85,7 @@ export class Router {
       }
       if (!ok) continue;
       pathMatched = true;
-      if (r.method === req.method || (r.method === "GET" && req.method === "HEAD")) return r.handler(req, params);
+      if (r.method === req.method || (r.method === "GET" && req.method === "HEAD")) return r.handler(req, params, ctx);
     }
     if (pathMatched) throw new HttpError(405, "Method not allowed.");
     return null;

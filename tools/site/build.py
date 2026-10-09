@@ -220,7 +220,7 @@ TABBAR = """
   <nav class="tabbar" aria-label="Quick navigation">
     <a href="/">{{i:home}}<span>Home</span></a>
     <a href="/events">{{i:calendar}}<span>Events</span></a>
-    <a href="/join" class="tab-join" data-join-cta>{{i:userCheck}}<span>Join</span></a>
+    <a href="/join" class="tab-join" data-join-cta data-tab-me>{{i:user}}<span>Join</span></a>
     <a href="/prayer">{{i:handHeart}}<span>Prayer</span></a>
     <button type="button" data-menu-open-tab aria-controls="menu">{{i:menu}}<span>More</span></button>
   </nav>

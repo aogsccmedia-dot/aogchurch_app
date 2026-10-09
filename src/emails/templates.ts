@@ -473,3 +473,19 @@ export function adminGranted(b: Brand, o: { name: string }) {
     text: `Welcome to the team, ${o.name}! You now have admin access. Sign in with Google, then open ${b.site}/admin/ and enter the code we email you.` + textFooter(b),
   };
 }
+
+export function checkedIn(b: Brand, o: { name: string; title: string; seq: number; quantity: number; holder: string; time: string; ref: string }) {
+  const which = o.quantity > 1 ? `Ticket ${o.seq} of ${o.quantity}${o.seq > 1 ? ` (${o.holder})` : ""}` : "Your ticket";
+  return {
+    subject: `You're checked in: ${o.title} ✓`,
+    html: layout(b, {
+      preheader: `${which} was scanned at the door at ${o.time}. Enjoy!`,
+      eyebrow: "Checked in",
+      heading: `Welcome in, ${esc(o.name)}!`,
+      content: p(`${esc(which)} for <strong>${esc(o.title)}</strong> was scanned at the door at <strong>${esc(o.time)}</strong>. You're all checked in. We're so glad you're here!`) +
+        p(`<span style="font-size:13px;color:${C.muted}">Booking ${esc(o.ref)}. Each ticket can only be used once. If you didn't just arrive at this event, please reply to this email straight away so we can help.</span>`) +
+        scripture("I was glad when they said unto me, Let us go into the house of the LORD.", "Psalm 122:1"),
+    }),
+    text: `${which} for ${o.title} was checked in at ${o.time}. Booking ${o.ref}. If this wasn't you, reply to this email.` + textFooter(b),
+  };
+}

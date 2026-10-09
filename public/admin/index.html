@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css?v=a2f30c2cb0">
   <link rel="stylesheet" href="/css/pages.css?v=a3dbb12185">
-  <link rel="stylesheet" href="/css/admin.css?v=b9351a1f22">
+  <link rel="stylesheet" href="/css/admin.css?v=bf38afa1eb">
 </head>
 <body class="admin">
   <!-- Sign in -->
@@ -39,7 +39,16 @@
 
   <!-- App -->
   <div id="app-view" class="shell" hidden>
-    <aside class="side">
+    <header class="m-top">
+      <a class="brand" href="/" target="_blank"><img src="/assets/logo-64.png" alt="" width="30" height="30"><span>SCC Admin</span></a>
+      <button class="btn btn-sm" type="button" id="m-menu" aria-controls="side" aria-expanded="false">Menu</button>
+    </header>
+    <nav class="m-bar" aria-label="Quick actions">
+      <button data-go-tab="events" data-ico="ticket"><span>Events</span></button>
+      <button data-go-tab="scan" class="m-scan" data-ico="scan"><span>Scan</span></button>
+      <button data-go-tab="members" data-ico="users"><span>Members</span></button>
+    </nav>
+    <aside class="side" id="side">
       <a class="brand" href="/" target="_blank"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>SCC Admin</span></a>
       <nav id="nav">
         <button data-tab="overview" class="active">Overview</button>
@@ -80,7 +89,7 @@
           <input class="input" id="m-q" type="search" placeholder="Search name, email, phone or ref…">
           <select class="input" id="m-status"><option value="">All statuses</option><option>new</option><option>contacted</option><option>welcomed</option><option>member</option><option>inactive</option><option>revoked</option></select>
         </div>
-        <div class="table-wrap"><table class="table" id="m-table"><thead><tr><th>Name</th><th>Joining as</th><th>Contact</th><th>Age</th><th>Status</th><th>Joined</th></tr></thead><tbody></tbody></table></div>
+        <div class="table-wrap"><table class="table m-table" id="m-table"><thead><tr><th>Name</th><th>Joining as</th><th>Contact</th><th>Age</th><th>Status</th><th>Joined</th></tr></thead><tbody></tbody></table></div>
         <div class="pager" id="m-pager"></div>
       </section>
 
@@ -239,16 +248,25 @@
       </section>
 
       <section data-view="scan" hidden>
-        <header class="vh"><div><p class="eyebrow gold">Events</p><h1>Door scanner</h1><p class="muted">Scan tickets at the door. Each ticket can only be admitted once, so copies are caught.</p></div></header>
-        <div class="scan-grid">
-          <div class="card form-grid">
-            <div class="field"><label for="scan-event">Event</label><select class="input" id="scan-event"></select></div>
-            <p class="muted" id="scan-count"></p>
-            <div class="scan-cam"><video id="scan-video" playsinline muted hidden></video><div class="scan-frame" aria-hidden="true"></div><p class="muted" id="scan-cam-note">Tap “Start camera” and point it at a ticket QR code.</p></div>
-            <div class="actions"><button class="btn btn-gold btn-sm" type="button" id="scan-start">Start camera</button><button class="btn btn-sm" type="button" id="scan-stop" hidden>Stop</button></div>
-            <form id="scan-manual" class="toolbar"><input class="input" name="code" placeholder="Or type the 16-character code" autocomplete="off" autocapitalize="characters"><button class="btn btn-sm" type="submit">Check</button></form>
+        <div class="scanner" id="scanner">
+          <div class="scan-top">
+            <select class="input" id="scan-event" aria-label="Event"></select>
+            <span class="scan-count" id="scan-count"></span>
           </div>
-          <div class="card"><div id="scan-result" class="scan-out"><p class="muted">Results appear here.</p></div><h3 style="margin-top:16px">Recent scans</h3><div id="scan-log" class="list"></div></div>
+          <div class="scan-stage" id="scan-stage">
+            <video id="scan-video" playsinline muted autoplay></video>
+            <canvas id="scan-canvas" hidden></canvas>
+            <div class="scan-reticle" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+            <div class="scan-msg" id="scan-msg">Starting camera…</div>
+            <div class="scan-flash" id="scan-flash" hidden></div>
+          </div>
+          <div class="scan-controls">
+            <button class="btn btn-gold" type="button" id="scan-start">Start scanning</button>
+            <button class="btn" type="button" id="scan-switch" hidden>Switch camera</button>
+            <button class="btn" type="button" id="scan-torch" hidden>Torch</button>
+            <button class="btn" type="button" id="scan-full">Full screen</button>
+          </div>
+          <div class="scan-log-wrap"><h3>Recent scans</h3><div id="scan-log" class="list"><p class="muted">Scans appear here.</p></div></div>
         </div>
       </section>
 
@@ -299,6 +317,6 @@
   </div>
 
   <dialog class="drawer" id="member-drawer"><div class="drawer-body" id="member-body"></div></dialog>
-  <script type="module" src="/js/admin.js?v=1f9c01a64d"></script>
+  <script type="module" src="/js/admin.js?v=4f02e52ccc"></script>
 </body>
 </html>

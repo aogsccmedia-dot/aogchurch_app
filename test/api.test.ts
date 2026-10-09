@@ -618,9 +618,12 @@ describe("tickets: generator, PDF, door check-in", () => {
 
     // Door: first scan admits, a copy is flagged, wrong event is flagged, non-admins can't check in.
     const scan = async (code: string, event_id?: string) => { const res = await post("/api/admin/tickets/check-in", { code, event_id }, A(cookie)); const j = await res.json() as { result: string; ticket: { holder: string }; error?: string }; if (!j.result) console.log("SCAN", res.status, j); return j; };
+    const checkedMails = () => mails("neo@example.com").filter((m) => /checked in/i.test(m.subject));
     const first = await scan(`https://aogsccyouth.com/ticket?c=${rows[0].code}`, eventId);
     assert.equal(first.result, "ok"); assert.equal(first.ticket.holder, "Neo Mokoena");
+    assert.equal(checkedMails().length, 1, "the holder is emailed when their ticket is scanned in");
     assert.equal((await scan(rows[0].code, eventId)).result, "already_used");
+    assert.equal(checkedMails().length, 1, "a rejected copy sends no second email");
     assert.equal((await scan(rows[1].code, "some-other-event")).result, "wrong_event");
     assert.equal((await post("/api/admin/tickets/check-in", { code: rows[1].code })).status, 401);
     const stats = await (await call(`/api/admin/events/${eventId}/tickets`, { headers: { cookie } })).json() as { total: number; checked_in: number };

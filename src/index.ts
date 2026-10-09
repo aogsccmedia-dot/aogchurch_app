@@ -23,7 +23,7 @@ import { adminLetterReminder } from "./emails/templates.ts";
 const CROSS_SITE_OK = new Set(["/api/newsletter/unsubscribe"]);
 
 export default {
-  async fetch(req: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
+  async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
 
     if (url.hostname === "www.aogsccyouth.com") {
@@ -46,7 +46,7 @@ export default {
       faithRoutes(router, env);
       ticketRoutes(router, env);
       programmeRoutes(router, env);
-      const res = await router.handle(req);
+      const res = await router.handle(req, ctx);
       return res ?? json({ ok: false, error: "Not found." }, 404);
     } catch (err) {
       return errorResponse(err);
