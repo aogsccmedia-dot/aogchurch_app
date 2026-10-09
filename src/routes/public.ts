@@ -3,7 +3,7 @@ import { adminEmail, siteUrl } from "../env.ts";
 import { HttpError, Router, clientIp, json, readJson } from "../lib/http.ts";
 import { Validator, ageOn, formToRaw } from "../lib/validate.ts";
 import { rateLimit, ipHash } from "../lib/ratelimit.ts";
-import { confirmMembership, memberByToken, revokeMembership } from "../lib/membership.ts";
+import { confirmMembership, memberByToken, revokeMembership, revokeReason } from "../lib/membership.ts";
 import { refCode, uuid } from "../lib/crypto.ts";
 import { activeDriver, getFile } from "../lib/storage.ts";
 import { readUpload, storeFiles, type PendingFile } from "../lib/uploads.ts";
@@ -312,9 +312,10 @@ export function publicRoutes(router: Router, env: Env): void {
   });
   router.post("/api/membership/revoke", async (req) => {
     await rateLimit(env, "membership", clientIp(req), 30, 3600);
-    const { token, reason } = await readJson<{ token?: string; reason?: string }>(req);
-    const m = await memberByToken(env, token);
-    await revokeMembership(env, m, reason ?? null, "email check-in");
+    const body = await readJson<{ token?: string; reason_code?: string; reason?: string }>(req);
+    const why = revokeReason(body);
+    const m = await memberByToken(env, body.token);
+    await revokeMembership(env, m, why.text, "email check-in", new Date(), why.code);
     return json({ ok: true, first_name: m.preferred_name || m.first_name });
   });
 

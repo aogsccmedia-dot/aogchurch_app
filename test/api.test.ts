@@ -461,10 +461,16 @@ describe("membership check-ins (every 4 months)", () => {
     const mailB = mails("leave@example.com").filter((m) => /still part of the family/.test(m.subject)).at(-1)!;
     const tokenB = link(mailB.html!, "revoke").searchParams.get("t")!;
     assert.equal((await post("/api/membership/lookup", { token: tokenB })).status, 200);
-    assert.equal((await post("/api/membership/revoke", { token: tokenB, reason: "Moved to Cape Town" })).status, 200);
+    // Offboarding: a reason must be one of the list; "Other" needs their own words.
+    assert.equal((await post("/api/membership/revoke", { token: tokenB, reason_code: "bogus" })).status, 400);
+    assert.equal((await post("/api/membership/revoke", { token: tokenB, reason_code: "other", reason: "  " })).status, 400);
+    assert.equal(row(refB).status !== "revoked", true, "invalid answers don't revoke");
+    assert.equal((await post("/api/membership/revoke", { token: tokenB, reason_code: "other", reason: "Moved to Cape Town" })).status, 200);
     assert.equal(row(refB).status, "revoked");
     assert.match(row(refB).admin_notes || "", /Moved to Cape Town/);
-    assert.ok(mails("leave@example.com").some((m) => m.subject === "Your membership has been revoked"));
+    const bye = mails("leave@example.com").find((m) => /sorry to see you go/i.test(m.subject));
+    assert.ok(bye, "farewell email sent");
+    assert.match(bye!.html!, /keep you in our prayers/); assert.match(bye!.html!, /\/prayer/); assert.match(bye!.html!, /\/join/);
     assert.ok(mails("aogsccmedia@gmail.com").some((m) => m.subject === "Membership revoked: Zanele Dlamini" || m.subject.startsWith("Membership revoked: Zanele")));
 
     // No answer → one reminder after 14 days, then nothing more.

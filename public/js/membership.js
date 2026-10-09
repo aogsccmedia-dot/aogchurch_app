@@ -1,7 +1,8 @@
 // /membership?t=<token>&a=stay|revoke: the buttons in the 4-monthly check-in email land here.
-// "Still a member" confirms straight away; revoking always asks once more (and for an optional reason).
+// "Still a member" confirms straight away; revoking walks through why → confirm → goodbye (offboard.js).
 import { api, esc } from "./site.js";
 import { icon } from "./icons.js";
+import { revokeFlow } from "./offboard.js";
 
 const q = new URLSearchParams(location.search);
 const token = q.get("t");
@@ -16,16 +17,18 @@ async function stay() {
     `<a class="btn btn-gold" href="/events">See what's coming up ${icon("arrowRight", "arr")}</a><a class="btn" href="/me">My profile</a>`);
 }
 
+// Revoking: the gentle three-step flow (why → confirm → goodbye) takes over the card.
 function askRevoke(name) {
-  set(`Revoke your membership, ${esc(name)}?`, "We'll remove you from our member list and stop these check-ins. You're always welcome back, and this doesn't affect the weekly letter.",
-    `<div class="field" style="width:100%"><label for="ms-reason">Would you like to tell us why? (optional)</label><textarea class="input" id="ms-reason" maxlength="500" placeholder="Moved away, found another church home…"></textarea></div>
-     <button class="btn" type="button" id="ms-stay">Actually, I'm still a member</button><button class="btn btn-gold" type="button" id="ms-revoke">Yes, revoke my membership</button>`);
-  $("ms-stay").addEventListener("click", () => run(stay));
-  $("ms-revoke").addEventListener("click", () => run(async () => {
-    const r = await api("/api/membership/revoke", { method: "POST", body: { token, reason: $("ms-reason").value } });
-    set(`Thank you, ${esc(r.first_name)}`, "Your membership has been revoked. Thank you for being part of the family. Our doors at 17 Humber Street are always open.",
-      `<a class="btn btn-gold" href="/join">Rejoin anytime</a><a class="btn" href="/">Home</a>`);
-  }));
+  const card = $("mship"), head = card.querySelectorAll("img, .eyebrow, #ms-title, #ms-text, #ms-actions");
+  head.forEach((el) => { el.hidden = true; });
+  let host = $("ms-flow");
+  if (!host) { host = document.createElement("div"); host.id = "ms-flow"; card.append(host); }
+  host.hidden = false;
+  revokeFlow(host, {
+    name,
+    submit: (body) => api("/api/membership/revoke", { method: "POST", body: { token, ...body } }),
+    onKeep: () => { host.hidden = true; head.forEach((el) => { el.hidden = false; }); run(stay); },
+  });
 }
 
 async function run(fn) {

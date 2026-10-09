@@ -1,9 +1,11 @@
 import { icon } from "./icons.js";
 import { api, esc, toast } from "./site.js";
 import { getMe, googleButton, signOut, whenSignedIn } from "./auth.js";
+import { revokeFlow } from "./offboard.js";
 
 const $ = (id) => document.getElementById(id);
 const TZ = "Africa/Johannesburg";
+let revoked = false, firstName = "friend";   // offboarding state
 const fmt = (s) => new Intl.DateTimeFormat("en-ZA", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: TZ }).format(new Date(s));
 
 const day = (iso) => new Date(iso).toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" });
@@ -37,6 +39,7 @@ async function render() {
   $("me-avatar").innerHTML = u.picture ? `<img src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : esc((u.given_name || u.email)[0].toUpperCase());
   $("me-name").textContent = u.name || u.email;
   $("me-email").textContent = u.email;
+  firstName = d.member?.preferred_name || d.member?.first_name || (d.user?.name || "").split(" ")[0] || "friend";
   $("me-member").innerHTML = memberCard(d.member);
   loadComplaints(d.member);
   maybeWelcome(d.member, u);
@@ -66,12 +69,29 @@ $("me-member").addEventListener("click", async (e) => {
   if (e.target.closest("[data-ms-confirm]")) {
     try { await api("/api/me/membership/confirm", { method: "POST" }); toast("Thank you! Your membership is confirmed 💛"); render(); } catch (err) { toast(err.message); }
   }
-  if (e.target.closest("[data-ms-revoke]")) {
-    if (!confirm("Revoke your membership? We'll remove you from the member list and stop check-ins. You can rejoin anytime.")) return;
-    const reason = prompt("Would you like to tell us why? (optional)") || "";
-    try { await api("/api/me/membership/revoke", { method: "POST", body: { reason } }); toast("Your membership has been revoked"); render(); } catch (err) { toast(err.message); }
-  }
+  if (e.target.closest("[data-ms-revoke]")) openOffboarding();
 });
+// Revoking membership: a gentle three-step sheet (why → confirm → goodbye).
+
+function openOffboarding() {
+  let dlg = $("offboard");
+  if (!dlg) {
+    dlg = document.createElement("dialog"); dlg.id = "offboard"; dlg.className = "sheet ob-sheet";
+    dlg.setAttribute("aria-label", "Revoke membership");
+    document.body.append(dlg);
+    dlg.addEventListener("close", () => { if (revoked) { revoked = false; render(); } });
+  }
+  dlg.innerHTML = `<button class="btn btn-icon btn-ghost ob-x" type="button" aria-label="Close">${icon("x")}</button><div class="ob-host"></div>`;
+  dlg.querySelector(".ob-x").addEventListener("click", () => dlg.close());
+  revokeFlow(dlg.querySelector(".ob-host"), {
+    name: firstName,
+    submit: async (body) => { await api("/api/me/membership/revoke", { method: "POST", body }); revoked = true; },
+    onKeep: () => { dlg.close(); toast("We're so glad you're staying 💛"); },
+    onClose: () => dlg.close(),
+  });
+  dlg.showModal();
+}
+
 // Newly verified members get the animated welcome once (or whenever they open /me?welcome=1 from the email).
 function maybeWelcome(m, u) {
   if (!m || m.status !== "member") return;

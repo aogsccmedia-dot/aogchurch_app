@@ -2,7 +2,7 @@ import type { Env } from "../env.ts";
 import { adminEmail, siteUrl } from "../env.ts";
 import { voidTickets } from "../lib/tickets.ts";
 import { approvedMember, createComplaint } from "../lib/complaints.ts";
-import { confirmMembership, revokeMembership, type MemberRow } from "../lib/membership.ts";
+import { confirmMembership, revokeMembership, revokeReason, type MemberRow } from "../lib/membership.ts";
 import { HttpError, Router, clientIp, json, readJson } from "../lib/http.ts";
 import { rateLimit } from "../lib/ratelimit.ts";
 import {
@@ -116,8 +116,9 @@ export function authRoutes(router: Router, env: Env): void {
   };
   router.post("/api/me/membership/confirm", async (req) => json({ ok: true, ...(await confirmMembership(env, await myMember(req))) }));
   router.post("/api/me/membership/revoke", async (req) => {
-    const { reason } = await readJson<{ reason?: string }>(req);
-    return json({ ok: true, ...(await revokeMembership(env, await myMember(req), reason ?? null, "profile")) });
+    const why = revokeReason(await readJson<{ reason_code?: string; reason?: string }>(req));
+    const m = await myMember(req);
+    return json({ ok: true, first_name: m.preferred_name || m.first_name, ...(await revokeMembership(env, m, why.text, "profile", new Date(), why.code)) });
   });
 
   // Complaints (approved members only).

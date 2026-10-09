@@ -358,20 +358,30 @@ export function membershipCheckin(b: Brand, o: { name: string; ref: string; sinc
   };
 }
 
-export function membershipRevoked(b: Brand, o: { name: string }) {
+export function membershipRevoked(b: Brand, o: { name: string; reasonCode?: string | null }) {
+  // One gentle, reason-aware line so the goodbye feels personal rather than automated.
+  const care: Record<string, string> = {
+    moved: "If you're looking for a church family near your new home, just reply and we'll gladly help you find an Assemblies of God church close by.",
+    other_church: "We're glad you've found a church home. May God bless you and your new family richly. You're always welcome to visit us.",
+    schedule: "Life gets full. Our services are streamed on YouTube, and the weekly letter will keep you close until things settle.",
+    season: "Seasons of rest are holy too. Take all the time you need; we'll be here, and we'll be praying for you.",
+    connection: "We're truly sorry you didn't feel at home with us. If you're willing, reply and tell us more. We'd love to learn and do better.",
+  };
+  const extra = o.reasonCode && care[o.reasonCode] ? p(care[o.reasonCode]) : "";
   return {
-    subject: "Your membership has been revoked",
+    subject: `We're sorry to see you go, ${o.name}`,
     html: layout(b, {
-      preheader: "Thank you for being part of the family. You're always welcome back.",
-      eyebrow: "Membership",
-      heading: `Thank you, ${esc(o.name)}`,
-      content: p("As you asked, we've revoked your membership and removed you from our member check-ins. Thank you for every Sunday, every prayer and every moment you shared with us.") +
-        p("You're always welcome at 17 Humber Street, and if you'd like to come back, rejoining takes a few minutes.") +
-        scripture("The Lord bless you and keep you; the Lord make his face shine on you.", "Numbers 6:24–25") +
-        button(b.site + "/join", "Rejoin anytime") +
-        p(`<span style="font-size:13px;color:${C.muted}">This doesn't change the weekly letter. You can manage that from any letter or your profile. Didn't ask for this? Simply reply to this email and we'll restore it.</span>`),
+      preheader: "Your membership has been revoked. We'll keep you in our prayers, and you're always welcome back.",
+      eyebrow: "Until we meet again",
+      heading: `We're sorry to see you go, ${esc(o.name)}`,
+      content: p("As you asked, your membership of AOG Sandton City Church has been revoked and the membership check-ins have stopped. Thank you for every Sunday, every prayer and every moment you shared with us. You'll always be part of our story.") +
+        extra +
+        p("We would love to keep you in our prayers. If there's anything you're walking through, or any way we can support you, simply reply to this email or send us a prayer request. Someone from our pastoral team will gladly reach out.") +
+        scripture("The Lord bless you and keep you; the Lord make his face shine on you and be gracious to you; the Lord turn his face toward you and give you peace.", "Numbers 6:24–26") +
+        twoButtons({ href: b.site + "/prayer", label: "Send a prayer request" }, { href: b.site + "/join", label: "Rejoin anytime" }) +
+        p(`<span style="font-size:13px;color:${C.muted}">Should you ever wish to join us again, our doors at 17 Humber Street, Woodmead are always open. This doesn't change the weekly letter, which you can manage from any letter or your profile. Didn't ask for this? Simply reply and we'll restore your membership.</span>`),
     }),
-    text: `Thank you, ${o.name}. As you asked, we've revoked your membership. You're always welcome back: ${b.site}/join` + textFooter(b),
+    text: `We're sorry to see you go, ${o.name}. Your membership has been revoked. We'd love to keep you in our prayers. Reply or send a prayer request: ${b.site}/prayer. Rejoin anytime: ${b.site}/join` + textFooter(b),
   };
 }
 

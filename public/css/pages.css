@@ -1004,3 +1004,47 @@ body.portal { background:
 .tk-admin.solo { justify-items: center; text-align: center; padding: 26px 22px; }
 .tk-admin.solo h1 { font-size: clamp(26px, 6vw, 34px); font-weight: 400; }
 .tk-admin.solo .tk-meta { text-align: left; }
+
+/* ---------- Membership offboarding (why → confirm → goodbye) ---------- */
+dialog.ob-sheet { width: min(520px, calc(100% - 24px)); max-height: calc(100dvh - 24px); overflow-y: auto; }
+.ob-sheet .ob-x { position: absolute; right: 10px; top: 10px; z-index: 1; }
+.ob-host { padding: 30px 26px 26px; }
+#ms-flow { width: 100%; }
+.ob { display: grid; gap: 14px; text-align: left; }
+.ob h2 { font-family: var(--font-serif); font-weight: 400; font-size: clamp(24px, 4vw, 30px); line-height: 1.2; margin: 0; outline: none; padding-right: 28px; }
+.ob-lede { margin: 0; color: var(--text-2); font-size: 15px; line-height: 1.6; }
+.ob-step { display: flex; gap: 6px; margin: 0; }
+.ob-step span { width: 26px; height: 4px; border-radius: 4px; background: var(--line-strong); transition: background .3s; }
+.ob-step span.on { background: var(--gold); }
+.ob-reasons { display: grid; gap: 8px; }
+.ob-reason { display: flex; gap: 12px; align-items: center; padding: 13px 14px; min-height: 48px; border: 1px solid var(--line-strong); border-radius: 14px; background: var(--bg); cursor: pointer; font-size: 15px; color: var(--text); transition: border-color .15s, background .15s; }
+.ob-reason:hover { border-color: var(--gold); }
+.ob-reason input { appearance: none; -webkit-appearance: none; flex: 0 0 20px; width: 20px; height: 20px; margin: 0; border-radius: 50%; border: 1.5px solid var(--line-strong); display: grid; place-items: center; }
+.ob-reason input::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--gold); transform: scale(0); transition: transform .15s; }
+.ob-reason input:checked { border-color: var(--gold); }
+.ob-reason input:checked::after { transform: scale(1); }
+.ob-reason:has(input:checked) { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 9%, var(--bg)); }
+.ob-reason input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.ob-other { display: grid; gap: 6px; }
+.ob-other label { font-size: 14px; color: var(--text-2); }
+.ob-other textarea { width: 100%; resize: vertical; font-size: 16px; }
+.ob-err { margin: 0; color: var(--danger); font-size: 14px; }
+.ob-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+.ob-actions .btn { flex: 1 1 180px; justify-content: center; min-height: 48px; }
+.ob-actions .btn[disabled] { opacity: .45; cursor: not-allowed; }
+.ob .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+.ob .btn-danger:hover { filter: brightness(1.08); }
+.ob-list { margin: 0; padding: 0 0 0 18px; display: grid; gap: 6px; color: var(--text-2); font-size: 14.5px; line-height: 1.55; }
+.ob-said { margin: 0; padding: 12px 14px; border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; background: var(--bg); font-size: 15px; color: var(--text); }
+.ob-said small { display: block; font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted, var(--text-2)); margin-bottom: 3px; }
+.ob-stay { justify-self: center; background: none; border: 0; color: var(--text-2); font: inherit; font-size: 14px; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; padding: 8px; }
+.ob-stay:hover { color: var(--text); }
+.ob-heart { justify-self: center; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--gold) 15%, transparent); color: var(--gold-2); animation: ob-beat 2.4s ease-in-out infinite; }
+.ob-heart .i { width: 30px; height: 30px; }
+.ob:has(.ob-heart) h2, .ob:has(.ob-heart) .ob-lede, .ob:has(.ob-heart) .ob-verse { text-align: center; padding-right: 0; }
+.ob-verse { margin: 0; font-family: var(--font-serif); font-style: italic; font-size: 17px; color: var(--text); }
+.ob-verse span { display: block; font-family: var(--font-sans); font-style: normal; font-size: 12.5px; color: var(--text-2); margin-top: 2px; }
+.ob-spin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; animation: spin .8s linear infinite; vertical-align: -2px; }
+@keyframes ob-beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .ob-heart { animation: none; } }
+@media (max-width: 480px) { .ob-host { padding: 26px 18px 20px; } .ob-actions { flex-direction: column-reverse; } .ob-actions .btn { flex: 0 0 auto; width: 100%; } }

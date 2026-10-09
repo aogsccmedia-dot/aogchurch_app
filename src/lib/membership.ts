@@ -65,7 +65,27 @@ export async function confirmMembership(env: Env, m: MemberRow, now = new Date()
   return { next_checkin_at: addMonths(now, CHECKIN_MONTHS).toISOString() };
 }
 
-export async function revokeMembership(env: Env, m: MemberRow, reason: string | null, via: string, now = new Date()) {
+/** Reasons offered on the offboarding screen (codes are stored with the member's own words). */
+export const REVOKE_REASONS: Record<string, string> = {
+  moved: "I've moved to a different area",
+  other_church: "I've joined another church",
+  schedule: "My schedule doesn't allow me to attend right now",
+  season: "I'm taking a season away to rest and reflect",
+  connection: "I didn't feel connected or at home here",
+  other: "Other",
+};
+
+/** Turn the offboarding answer into one readable line; "Other" needs the member's own words. */
+export function revokeReason(input: { reason_code?: unknown; reason?: unknown }): { code: string | null; text: string | null } {
+  const code = typeof input.reason_code === "string" && input.reason_code in REVOKE_REASONS ? input.reason_code : null;
+  const detail = typeof input.reason === "string" ? input.reason.trim().slice(0, 500) : "";
+  if (input.reason_code != null && !code) throw new HttpError(400, "Please choose one of the reasons.");
+  if (code === "other" && !detail) throw new HttpError(400, "Please tell us a little about your reason.");
+  if (!code) return { code: null, text: detail || null };
+  return { code, text: code === "other" ? detail : detail ? `${REVOKE_REASONS[code]}: ${detail}` : REVOKE_REASONS[code] };
+}
+
+export async function revokeMembership(env: Env, m: MemberRow, reason: string | null, via: string, now = new Date(), reasonCode: string | null = null) {
   if (m.status === "revoked") return { already: true };
   const why = reason ? reason.trim().slice(0, 500) || null : null;
   // Admin access depends on membership: revoking membership removes any admin role too.
@@ -76,7 +96,7 @@ export async function revokeMembership(env: Env, m: MemberRow, reason: string | 
   await env.DB.prepare("UPDATE members SET admin_notes = CASE WHEN admin_notes IS NULL OR admin_notes = '' THEN ? ELSE admin_notes || char(10) || ? END WHERE id = ?")
     .bind(note, note, m.id).run();
   const site = siteUrl(env);
-  if (m.email) await sendMail(env, { to: m.email, toName: `${m.first_name} ${m.last_name}`, ...T.membershipRevoked({ site }, { name: firstName(m) }), template: "membership_revoked" });
+  if (m.email) await sendMail(env, { to: m.email, toName: `${m.first_name} ${m.last_name}`, ...T.membershipRevoked({ site }, { name: firstName(m), reasonCode }), template: "membership_revoked" });
   await sendMail(env, { to: adminEmail(env), ...T.adminMemberRevoked({ site }, { name: `${m.first_name} ${m.last_name}`, ref: m.ref_code, reason: why, via }), template: "admin_member_revoked" });
   return { already: false };
 }
