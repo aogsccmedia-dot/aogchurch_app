@@ -472,3 +472,45 @@ describe("membership check-ins (every 4 months)", () => {
     assert.equal(mails("leave@example.com").filter((m) => /reminder/.test(m.subject)).length, 0, "revoked members aren't chased");
   });
 });
+
+describe("complaints (approved members only)", () => {
+  test("member must be approved; complaint emailed; admin replies and the member is updated", async () => {
+    const g = await makeEnv({ GOOGLE_CLIENT_ID: CLIENT_ID });
+    const out = (to: string) => g.EMAIL.outbox.filter((m) => JSON.stringify(m.to).includes(to));
+    assert.equal((await call("/api/join", { method: "POST", body: joinForm({ email: "bongi@gmail.com", first_name: "Bongi" }) }, g)).status, 201);
+    const tok = await googleToken({ sub: "g-bongi", email: "bongi@gmail.com", name: "Bongi Dlamini", given_name: "Bongi" });
+    const session = cookieOf(await post("/api/auth/google", { credential: tok }, {}, g));
+    const complaint = { category: "facilities", subject: "Parking at 09:30", details: "The gate was locked for twenty minutes and nobody could get in." };
+
+    // Not approved yet → not allowed.
+    const before = await (await call("/api/me/complaints", { headers: { cookie: session } }, g)).json() as { eligible: boolean };
+    assert.equal(before.eligible, false);
+    assert.equal((await post("/api/me/complaints", complaint, { cookie: session }, g)).status, 403);
+
+    // Approved by a leader → can raise one; validation applies.
+    g.DB._db.prepare("UPDATE members SET status = 'member' WHERE email = ?").run("bongi@gmail.com");
+    assert.equal((await post("/api/me/complaints", { ...complaint, details: "short" }, { cookie: session }, g)).status, 422);
+    const r = await post("/api/me/complaints", complaint, { cookie: session }, g);
+    assert.equal(r.status, 201);
+    const { ref } = await r.json() as { ref: string };
+    assert.match(ref, /^CMP-/);
+    assert.ok(out("bongi@gmail.com").some((m) => m.subject.includes(ref)));
+    assert.ok(out("aogsccmedia@gmail.com").some((m) => m.subject.startsWith(`New complaint ${ref}`)));
+
+    // Admin (Google + code) sees it and replies → member emailed, status visible on profile.
+    const a = await post("/api/auth/google", { credential: await googleToken({ sub: "g-admin", email: "aogsccmedia@gmail.com" }) }, {}, g);
+    const aj = await a.json() as { challenge: string };
+    const code = /code is (\d{6})/.exec(g.EMAIL.outbox.at(-1)!.text!)![1];
+    const admin = cookieOf(await post("/api/auth/admin/verify", { challenge: aj.challenge, code }, { cookie: cookieOf(a) }, g));
+    const { complaints } = await (await call("/api/admin/complaints", { headers: { cookie: admin } }, g)).json() as { complaints: { id: string; ref_code: string }[] };
+    const c = complaints.find((x) => x.ref_code === ref)!;
+    const stats = await (await call("/api/admin/stats", { headers: { cookie: admin } }, g)).json() as { stats: { open_complaints: number } };
+    assert.equal(stats.stats.open_complaints, 1);
+    const upd = await call(`/api/admin/complaints/${c.id}`, { method: "PATCH", headers: { ...A(admin), ...JSONH }, body: JSON.stringify({ status: "resolved", response: "Sorry! Two extra marshals from this Sunday." }) }, g);
+    assert.equal(upd.status, 200);
+    assert.ok(out("bongi@gmail.com").some((m) => m.subject.includes("Resolved")));
+    const mine = await (await call("/api/me/complaints", { headers: { cookie: session } }, g)).json() as { complaints: { status: string; response: string }[] };
+    assert.equal(mine.complaints[0].status, "resolved");
+    assert.match(mine.complaints[0].response, /marshals/);
+  });
+});

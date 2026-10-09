@@ -40,33 +40,28 @@
   <header class="site-header">
     <div class="wrap bar">
       <div class="header-left">
-        <button class="icon-btn" data-menu-open aria-label="Open menu" aria-expanded="false" aria-controls="menu">
-          <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
-        </button>
+        <button class="icon-btn menu-btn" data-menu-open aria-label="Open menu" aria-expanded="false" aria-controls="menu"><span class="burger" aria-hidden="true"><i></i><i></i></span></button>
         <a class="brand" href="/" aria-label="AOG Sandton City Church home"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
       </div>
       <nav class="main-nav" aria-label="Primary"><a href="/about">About</a><a href="/events">Services &amp; events</a><a href="/get-involved">Get involved</a><a href="/prayer">Prayer</a><a href="/visit">Visit &amp; contact</a></nav>
       <div class="header-actions"><span data-user-slot></span><a class="btn btn-gold" href="/join" data-join-cta><span>Join<span class="long"> church</span></span></a></div>
     </div>
+    <div class="scroll-progress" aria-hidden="true"></div>
   </header>
 
   <div class="menu" id="menu" aria-hidden="true">
-    <div class="bar">
-      <a class="brand" href="/"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
-      <button class="icon-btn" data-menu-close aria-label="Close menu"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    <div class="menu-inner">
+      <div class="bar">
+        <a class="brand" href="/"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
+        <button class="icon-btn" data-menu-close aria-label="Close menu"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <nav class="menu-groups" aria-label="Main"><div class="menu-group" style="--g:0"><p class="menu-label">Explore</p><a href="/" style="--i:0">Home</a><a href="/about" style="--i:1">About us</a><a href="/our-story" style="--i:2">Our story</a><a href="/beliefs" style="--i:3">What we believe</a></div><div class="menu-group" style="--g:1"><p class="menu-label">Church life</p><a href="/events" style="--i:0">Services &amp; events</a><a href="/get-involved" style="--i:1">Get involved</a><a href="/prayer" style="--i:2">Prayer</a><a href="/visit" style="--i:3">Visit &amp; contact</a></div><div class="menu-group" style="--g:2"><p class="menu-label">For you</p><a href="/me" style="--i:0">My profile</a><a href="/me#complaints" style="--i:1">Raise a concern</a><a href="/#letter" style="--i:2">Weekly letter</a><a href="/app" style="--i:3">Get the app</a></div></nav>
+      <div class="menu-foot">
+        <a class="btn btn-gold" href="/join" data-join-cta>Join the church <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+        <div class="social-row"><a href="https://www.youtube.com/@aogsandtoncitychurchtv9989" target="_blank" rel="noopener" aria-label="YouTube"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg></a><a href="https://www.instagram.com/aogsandtoncitychurch" target="_blank" rel="noopener" aria-label="Instagram"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></svg></a><a href="https://www.facebook.com/AOGSandtonCity/" target="_blank" rel="noopener" aria-label="Facebook"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a><a href="https://www.tiktok.com/@aog.sandton.city" target="_blank" rel="noopener" aria-label="TikTok"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12a4 4 0 1 0 4 4V2a5 5 0 0 0 5 5"/></svg></a></div>
+        <span class="menu-addr"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg> 17 Humber Street, Woodmead, Sandton</span>
+      </div>
     </div>
-    <nav aria-label="Main">
-      <a href="/"><span>01</span>Home</a>
-      <a href="/about"><span>02</span>About</a>
-      <a href="/our-story"><span>03</span>Our story</a>
-      <a href="/beliefs"><span>04</span>What we believe</a>
-      <a href="/events"><span>05</span>Services &amp; events</a>
-      <a href="/get-involved"><span>06</span>Get involved</a>
-      <a href="/prayer"><span>07</span>Prayer</a>
-      <a href="/visit"><span>08</span>Visit &amp; contact</a>
-      <a href="/join"><span>09</span>Join the church</a>
-    </nav>
-    <div class="foot"><span>17 Humber Street, Woodmead, Sandton</span><div class="social-row"><a href="https://www.youtube.com/@aogsandtoncitychurchtv9989" target="_blank" rel="noopener" aria-label="YouTube"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg></a><a href="https://www.instagram.com/aogsandtoncitychurch" target="_blank" rel="noopener" aria-label="Instagram"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></svg></a><a href="https://www.facebook.com/AOGSandtonCity/" target="_blank" rel="noopener" aria-label="Facebook"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a><a href="https://www.tiktok.com/@aog.sandton.city" target="_blank" rel="noopener" aria-label="TikTok"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12a4 4 0 1 0 4 4V2a5 5 0 0 0 5 5"/></svg></a></div><a href="/app"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg> Get the app</a><a href="/me">My profile</a></div>
   </div>
 
   <main id="main">
@@ -81,7 +76,7 @@
     </section>
     <section class="block slim">
       <div class="wrap legal-layout">
-        <aside class="legal-nav"><p class="eyebrow">On this page</p><nav><a href="#how">How to pay</a><a href="#verify">Verification</a><a href="#declined">If we can't match your payment</a><a href="#refunds">Refunds and changes</a><a href="#privacy">Your proof of payment</a></nav><p class="eyebrow">Policies</p><nav class="policy-links"><a href="/privacy">Privacy policy (POPIA)</a><a href="/terms">Terms of use</a><a href="/payments">Event payments &amp; refunds</a><a href="/cookies">Cookie policy</a></nav></aside>
+        <aside class="legal-nav"><p class="eyebrow">On this page</p><nav><a href="#how">How to pay</a><a href="#verify">Verification</a><a href="#declined">If we can't match your payment</a><a href="#refunds">Refunds and changes</a><a href="#privacy">Your proof of payment</a></nav><p class="eyebrow">Policies</p><nav class="policy-links"><a href="/privacy">Privacy policy (POPIA)</a><a href="/data-protection">Data protection &amp; PAIA</a><a href="/code-of-conduct">Code of conduct</a><a href="/complaints">Complaints policy</a><a href="/payments">Event payments &amp; refunds</a><a href="/terms">Terms of use</a><a href="/cookies">Cookie policy</a></nav></aside>
         <article class="prose">
           <h2 id="how">How to pay</h2>
           <ol><li>Open the event and fill in the registration form. The amount due is shown for the number of tickets you choose.</li><li>Pay by <b>EFT</b> into the bank account shown on that event's page. The banking details can be different for each event, so always use the ones on the event page.</li><li>Use your <b>full names</b> as the payment reference. This is <b>mandatory</b>, so we can match your payment to your registration.</li><li>Upload your <b>proof of payment</b> (a PDF, photo or screenshot) on the same form and submit.</li></ol><p>We never ask for card details, and we'll never ask you to pay into a different account by phone, WhatsApp or email. If anyone does, please don't pay. Let us know through the <a href="/visit#contact">contact form</a>.</p>
@@ -101,18 +96,25 @@
 
   <footer class="site-footer">
     <div class="wrap">
+      <div class="foot-cta">
+        <div><p class="eyebrow gold">There's a seat saved for you</p><h2>Come as you are this <span class="serif">Sunday.</span></h2></div>
+        <div class="foot-cta-actions"><a class="btn btn-gold" href="/visit">Plan your visit <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a><a class="btn" href="/events">See services</a></div>
+      </div>
       <div class="cols">
         <div class="foot-brand">
           <a class="brand" href="/"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
-          <p>A community-centred, Bible-based church. Bound in fellowship by the Spirit.</p>
-          <p>17 Humber Street, Woodmead, Sandton</p>
+          <p>A community-centred, Bible-based, Spirit-filled church. Part of the Assemblies of God family.</p>
+          <address><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg> <a href="https://maps.google.com/?q=17+Humber+Street,+Woodmead,+Sandton" target="_blank" rel="noopener">17 Humber Street, Woodmead, Sandton</a></address>
           <div class="social-row"><a href="https://www.youtube.com/@aogsandtoncitychurchtv9989" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg></a><a href="https://www.instagram.com/aogsandtoncitychurch" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></svg></a><a href="https://www.facebook.com/AOGSandtonCity/" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a><a href="https://www.tiktok.com/@aog.sandton.city" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12a4 4 0 1 0 4 4V2a5 5 0 0 0 5 5"/></svg></a></div>
         </div>
-        <div><h4>Explore</h4><ul><li><a href="/">Home</a></li><li><a href="/about">About</a></li><li><a href="/our-story">Our story</a></li><li><a href="/beliefs">What we believe</a></li><li><a href="/events">Services &amp; events</a></li><li><a href="/get-involved">Get involved</a></li><li><a href="/prayer">Prayer</a></li><li><a href="/visit">Visit &amp; contact</a></li></ul></div>
-        <div><h4>Connect</h4><ul><li><a href="/join">Join the church</a></li><li><a href="/#letter">Weekly letter</a></li><li><a href="/me">My profile</a></li><li><a href="/app">Get the app</a></li><li><a href="/visit#contact">Contact us</a></li></ul></div>
-        <div><h4>Policies</h4><ul><li><a href="/privacy">Privacy policy (POPIA)</a></li><li><a href="/terms">Terms of use</a></li><li><a href="/payments">Event payments &amp; refunds</a></li><li><a href="/cookies">Cookie policy</a></li></ul></div>
+        <div><h4>Our church</h4><ul><li><a href="/about">About us</a></li><li><a href="/our-story">Our story</a></li><li><a href="/beliefs">What we believe</a></li><li><a href="/events">Services &amp; events</a></li><li><a href="/get-involved">Get involved</a></li><li><a href="/visit">Visit &amp; contact</a></li></ul></div>
+        <div><h4>Members</h4><ul><li><a href="/join">Join the church</a></li><li><a href="/me">My profile</a></li><li><a href="/prayer">Prayer requests</a></li><li><a href="/me#complaints">Raise a concern</a></li><li><a href="/#letter">Weekly letter</a></li><li><a href="/app">Get the app</a></li></ul></div>
+        <div><h4>Policies &amp; compliance</h4><ul><li><a href="/privacy">Privacy policy (POPIA)</a></li><li><a href="/data-protection">Data protection &amp; PAIA</a></li><li><a href="/code-of-conduct">Code of conduct</a></li><li><a href="/complaints">Complaints policy</a></li><li><a href="/payments">Event payments &amp; refunds</a></li><li><a href="/terms">Terms of use</a></li><li><a href="/cookies">Cookie policy</a></li></ul></div>
       </div>
-      <div class="legal"><span>© <span id="year">2026</span> AOG Sandton City Church</span><button type="button" class="link-btn" data-cookie-settings>Cookie settings</button><span>Bound in fellowship by the Spirit</span></div>
+      <div class="legal">
+        <span>© <span id="year">2026</span> AOG Sandton City Church · POPIA compliant</span>
+        <span class="legal-links"><button type="button" class="link-btn" data-cookie-settings>Cookie settings</button><a href="/data-protection#requests">Access to information (PAIA)</a><button type="button" class="link-btn" data-to-top>Back to top ↑</button></span>
+      </div>
     </div>
   </footer>
 

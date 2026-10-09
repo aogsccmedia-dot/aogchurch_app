@@ -1,5 +1,6 @@
 import type { Env } from "../env.ts";
 import { adminEmail, siteUrl } from "../env.ts";
+import { approvedMember, createComplaint } from "../lib/complaints.ts";
 import { confirmMembership, revokeMembership, type MemberRow } from "../lib/membership.ts";
 import { HttpError, Router, clientIp, json, readJson } from "../lib/http.ts";
 import { rateLimit } from "../lib/ratelimit.ts";
@@ -114,6 +115,23 @@ export function authRoutes(router: Router, env: Env): void {
   router.post("/api/me/membership/revoke", async (req) => {
     const { reason } = await readJson<{ reason?: string }>(req);
     return json({ ok: true, ...(await revokeMembership(env, await myMember(req), reason ?? null, "profile")) });
+  });
+
+  // Complaints (approved members only).
+  router.get("/api/me/complaints", async (req) => {
+    const s = await getSession(env, req);
+    if (!s) throw new HttpError(401, "Please sign in.");
+    const m = await approvedMember(env, s.user.id, s.user.email);
+    const { results } = m ? await env.DB.prepare("SELECT ref_code, category, subject, status, response, responded_at, created_at FROM complaints WHERE member_id = ? ORDER BY created_at DESC LIMIT 50").bind(m.id).all() : { results: [] };
+    return json({ ok: true, eligible: !!m, complaints: results });
+  });
+  router.post("/api/me/complaints", async (req) => {
+    const s = await getSession(env, req);
+    if (!s) throw new HttpError(401, "Please sign in.");
+    await rateLimit(env, "complaint", clientIp(req), 5, 3600);
+    const m = await approvedMember(env, s.user.id, s.user.email);
+    if (!m) throw new HttpError(403, "Complaints can be raised by approved members. If you've recently joined, a leader will approve your membership soon.");
+    return json({ ok: true, ...(await createComplaint(env, m, s.user.id, await readJson(req))) }, 201);
   });
 
   router.post("/api/me/letter", async (req) => {

@@ -129,7 +129,7 @@ loaders.overview = async () => {
   if (!email_enabled) notes.push("<b>Email sending is off.</b> Onboard aogsccyouth.com in Cloudflare → Email Service so confirmations, codes and letters are delivered.");
   if (!google_enabled) notes.push("<b>Google sign-in is off.</b> Add the Google client ID to switch on one-tap joining.");
   $("#setup-notes").innerHTML = notes.length ? `<div class="setup">${notes.map((n) => `<span>${n}</span>`).join("")}</div>` : "";
-  const cards = [["pending_payments", "Payments to approve"], ["members", "Members"], ["new_members", "Awaiting follow-up"], ["this_week", "Joined this week"], ["subscribers", "Letter subscribers"],
+  const cards = [["pending_payments", "Payments to approve"], ["open_complaints", "Open complaints"], ["members", "Members"], ["new_members", "Awaiting follow-up"], ["this_week", "Joined this week"], ["subscribers", "Letter subscribers"],
     ["upcoming_events", "Upcoming events"], ["registrations_week", "Registrations this week"], ["new_prayers", "New prayer requests"]];
   $("#stats").innerHTML = cards.map(([k, l]) => `<div class="stat"><b>${stats[k]}</b><span>${l}</span></div>`).join("");
   $$("[data-count]").forEach((b) => { b.textContent = stats[b.dataset.count] || ""; });
@@ -505,6 +505,34 @@ loaders.messages = async () => {
     <p>${esc(m.message)}</p><div class="actions"><a class="btn btn-sm" href="mailto:${esc(m.email)}?subject=${encodeURIComponent("Re: " + (m.subject || "your message to Sandton City Church"))}">Reply by email</a><button class="btn btn-sm" data-msg="${esc(m.id)}" data-st="replied">Mark replied</button><button class="btn btn-sm" data-msg="${esc(m.id)}" data-st="archived">Archive</button></div></article>`).join("") : `<div class="empty">No messages yet.</div>`;
 };
 $("#msg-list").addEventListener("click", safe(async (e) => { const b = e.target.closest("[data-msg]"); if (!b) return; await api(`/api/admin/messages/${b.dataset.msg}`, { method: "PATCH", body: { status: b.dataset.st } }); toast("Updated"); loaders.messages(); }));
+
+// ================================================================ complaints
+const CMP_LABEL = { received: "New", in_review: "In review", resolved: "Resolved", closed: "Closed" };
+const CMP_CAT = { leadership: "Leadership", ministry: "A ministry or team", event: "An event", safeguarding: "Safeguarding / safety", finance: "Finances or payments", privacy: "Privacy / my information", facilities: "Facilities & parking", other: "Something else" };
+let cmpFilter = "";
+loaders.complaints = async () => {
+  const { complaints } = await api(`/api/admin/complaints${cmpFilter ? `?status=${cmpFilter}` : ""}`);
+  $$("#cmp-filter button").forEach((b) => b.classList.toggle("on", b.dataset.st === cmpFilter));
+  $("#cmp-list").innerHTML = complaints.length ? complaints.map((c) => `<article class="item" data-cmp="${esc(c.id)}">
+    <header><div><b style="font-weight:450">${esc(c.subject)}</b> <span class="meta">· ${esc(CMP_CAT[c.category] || c.category)}${c.confidential ? " · <b style='color:var(--danger)'>Confidential: pastors only</b>" : ""}</span>
+      <div class="meta">${esc(c.ref_code)} · ${fmtDate(c.created_at)} · ${esc(c.first_name)} ${esc(c.last_name)} (${esc(c.member_ref)}) · ${esc(c.email || "")}${c.phone ? " · " + esc(c.phone) : ""}</div></div>
+      <span class="pill ${c.status === "received" ? "new" : c.status === "in_review" ? "pending" : "member"}">${esc(CMP_LABEL[c.status] || c.status)}</span></header>
+    <p style="white-space:pre-wrap">${esc(c.details)}</p>
+    ${c.desired_outcome ? `<p class="meta"><b>Hoped-for outcome:</b> ${esc(c.desired_outcome)}</p>` : ""}
+    <div class="form-grid" style="margin-top:10px">
+      <div class="field"><label>Reply to the member (emailed)</label><textarea class="input" data-resp rows="3" placeholder="Thank you for raising this…">${esc(c.response || "")}</textarea></div>
+      <div class="actions"><select class="input" data-st style="max-width:200px">${Object.entries(CMP_LABEL).map(([k, l]) => `<option value="${k}" ${k === c.status ? "selected" : ""}>${l}</option>`).join("")}</select>
+        <button class="btn btn-sm btn-gold" data-save>Save &amp; email member</button><a class="btn btn-sm" href="mailto:${esc(c.email || "")}?subject=${encodeURIComponent(`Your complaint ${c.ref_code}`)}">Email directly</a></div>
+      ${c.responded_at ? `<p class="meta">Last reply ${fmtDate(c.responded_at)}</p>` : ""}
+    </div></article>`).join("") : `<div class="empty">No complaints here. 🙏</div>`;
+};
+$("#cmp-filter").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; cmpFilter = b.dataset.st; safe(loaders.complaints)(); });
+$("#cmp-list").addEventListener("click", safe(async (e) => {
+  const b = e.target.closest("[data-save]"); if (!b) return;
+  const card = b.closest("[data-cmp]");
+  await api(`/api/admin/complaints/${card.dataset.cmp}`, { method: "PATCH", body: { status: $("[data-st]", card).value, response: $("[data-resp]", card).value.trim() || null } });
+  toast("Saved and emailed to the member"); loaders.complaints();
+}));
 
 // ================================================================ settings & email log
 const SETTINGS = [

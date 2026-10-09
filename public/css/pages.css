@@ -601,3 +601,120 @@ section.block.slim { padding: clamp(36px, 5vw, 64px) 0; }
 .reg-left { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: 13.5px; color: var(--text-2); }
 .reg-left .i { width: 16px; height: 16px; flex: none; margin-top: 2px; color: var(--gold-2); }
 .reg-left.ready { color: var(--text); }
+.cmp-mine { display: grid; gap: 10px; }
+.cmp-item { display: grid; gap: 6px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-2); }
+.cmp-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.cmp-top b { font-weight: 500; }
+.cmp-reply { margin: 4px 0 0; padding: 12px 14px; border-left: 3px solid var(--gold); background: var(--bg); border-radius: 0 10px 10px 0; color: var(--text); white-space: pre-wrap; font-size: 14.5px; }
+
+/* =====================================================================
+   Minimal menu
+   ===================================================================== */
+.menu-btn .burger { display: grid; gap: 6px; width: 22px; }
+.menu-btn .burger i { display: block; height: 1.6px; border-radius: 2px; background: currentColor; transition: transform .3s var(--ease), width .3s var(--ease); }
+.menu-btn .burger i:last-child { width: 14px; }
+.menu-btn:hover .burger i:last-child { width: 22px; }
+.menu { padding: 0; display: block; background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+.menu-inner { min-height: 100%; width: min(100% - 2 * var(--gutter), var(--max)); margin-inline: auto; display: grid; grid-template-rows: auto 1fr auto; gap: clamp(20px, 4vh, 40px); padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+.menu .menu-groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(24px, 4vw, 56px); align-content: center; max-width: none; margin: 0; flex-direction: initial; }
+.menu-group { display: grid; gap: 4px; align-content: start; }
+.menu-label { margin: 0 0 8px; font-size: 11.5px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
+.menu .menu-groups a { font-size: clamp(22px, 2.4vw, 30px); font-weight: 300; padding: 6px 0; color: var(--text-2); display: block; gap: 0; opacity: 0; transform: translateY(12px);
+  transition: color .2s, opacity .45s var(--ease), transform .45s var(--ease); transition-delay: calc(var(--g, 0) * 70ms + var(--i, 0) * 40ms); }
+.menu.open .menu-groups a { opacity: 1; transform: none; }
+.menu .menu-groups a:hover { color: var(--text); }
+.menu .menu-groups a[aria-current] { color: var(--text); text-decoration: underline; text-decoration-color: var(--gold); text-decoration-thickness: 2px; text-underline-offset: 8px; }
+.menu-foot { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; padding-top: 18px; border-top: 1px solid var(--line); }
+.menu-addr { display: inline-flex; gap: 6px; align-items: center; font-size: 13.5px; color: var(--muted); }
+.menu-addr .i { width: 15px; height: 15px; color: var(--gold); }
+@media (max-width: 760px) {
+  .menu .menu-groups { grid-template-columns: 1fr 1fr; gap: 26px 18px; align-content: start; }
+  .menu-group:first-child { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+  .menu-group:first-child .menu-label { grid-column: 1 / -1; }
+  .menu .menu-groups a { font-size: 20px; padding: 5px 0; }
+  .menu-foot .btn { flex: 1 1 100%; justify-content: center; }
+}
+
+/* scroll progress line under the navbar */
+.site-header { position: sticky; }
+.scroll-progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--gold-deep); transform-origin: 0 50%; transform: scaleX(0); pointer-events: none; }
+@supports (animation-timeline: scroll()) {
+  .scroll-progress { animation: progress linear both; animation-timeline: scroll(root block); }
+  @keyframes progress { to { transform: scaleX(1); } }
+}
+.site-header.scrolled { box-shadow: 0 10px 30px -22px rgba(43, 32, 16, .5); }
+
+/* =====================================================================
+   Footer
+   ===================================================================== */
+.foot-cta { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 22px; padding: clamp(26px, 4vw, 40px); margin-bottom: clamp(36px, 5vw, 56px); border-radius: 22px;
+  background: radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--gold-btn) 22%, transparent), transparent 60%), var(--bg-2); border: 1px solid var(--line); }
+.foot-cta h2 { font-size: clamp(26px, 3.4vw, 40px); font-weight: 300; color: var(--text); margin-top: 6px; }
+.foot-cta-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.site-footer .cols { grid-template-columns: 1.5fr 1fr 1fr 1.2fr; gap: clamp(24px, 4vw, 48px); }
+.site-footer h4 { color: var(--text); }
+.site-footer ul a { color: var(--text-2); transition: color .15s; }
+.site-footer ul a:hover { color: var(--text); text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 4px; }
+.foot-brand address { font-style: normal; display: flex; gap: 6px; align-items: flex-start; }
+.foot-brand address .i { width: 16px; height: 16px; color: var(--gold); margin-top: 3px; flex: none; }
+.foot-brand address a:hover { color: var(--text); text-decoration: underline; }
+.site-footer .legal { align-items: center; }
+.legal-links { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.legal-links a:hover { color: var(--text); }
+@media (max-width: 1080px) { .site-footer .cols { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .site-footer .cols { grid-template-columns: 1fr 1fr; } .foot-brand { grid-column: 1 / -1; } .site-footer .cols > div:last-child { grid-column: 1 / -1; } .foot-cta-actions { width: 100%; } .foot-cta-actions .btn { flex: 1; justify-content: center; } }
+
+/* =====================================================================
+   Scroll choreography: sections morph into place as they arrive and
+   dissolve upward into the navbar as they leave. Photos drift (parallax).
+   Uses CSS scroll-driven animations; older browsers keep the simple reveal.
+   ===================================================================== */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal, .reveal.in { opacity: 1; transform: none; transition: none; }
+    :is(.section-head, .pillar, .event-card, .explore-card, .belief, .chapter, .howto > div, .faq details, .panel, .letter, .feature-card,
+        .story-copy, .visit-card, .split > *, .ministries, .map-frame, .pager-link, .cta-band > *, .foot-cta, .beliefs-grid > *, .prose > h2, .app-detected, .app-perks, .event-grid > .events-empty) {
+      animation: morph linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+      will-change: transform, opacity;
+    }
+    :is(.pillar, .event-card, .explore-card, .belief, .feature-card, .panel, .letter, .howto > div, .map-frame, .pager-link, .foot-cta, .app-detected) { animation-name: morph-card; }
+    .page-hero-copy > * { animation: hero-in .9s var(--ease) both; animation-delay: calc(var(--n, 0) * 80ms); }
+    .page-hero-copy > :nth-child(2) { --n: 1; } .page-hero-copy > :nth-child(3) { --n: 2; } .page-hero-copy > :nth-child(4) { --n: 3; }
+    .page-hero-photo, .hero .mosaic { animation: morph-photo linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
+    .photo img { scale: 1.12; animation: drift linear both; animation-timeline: view(); }
+    .story .photo img { scale: 1.2; animation-name: drift-strong; }
+    .site-footer .cols > * { animation: morph linear both; animation-timeline: view(); animation-range: entry 0% cover 40%; }
+  }
+}
+@keyframes morph {
+  0%   { opacity: 0; transform: translateY(56px) scale(.97); filter: blur(6px); }
+  24%  { opacity: 1; transform: none; filter: none; }
+  80%  { opacity: 1; transform: none; filter: none; }
+  100% { opacity: 0; transform: translateY(-40px) scale(.97); filter: blur(4px); }
+}
+@keyframes morph-card {
+  0%   { opacity: 0; transform: translateY(64px) scale(.92) rotateX(8deg); clip-path: inset(10% 6% 0 6% round 28px); filter: blur(6px); }
+  26%  { opacity: 1; transform: none; clip-path: inset(0 0 0 0 round 0); filter: none; }
+  80%  { opacity: 1; transform: none; clip-path: inset(0 0 0 0 round 0); filter: none; }
+  100% { opacity: 0; transform: translateY(-44px) scale(.94); clip-path: inset(0 4% 12% 4% round 28px); filter: blur(4px); }
+}
+@keyframes morph-photo {
+  0%   { opacity: .2; transform: scale(.94); clip-path: inset(8% 8% 8% 8% round 32px); }
+  30%  { opacity: 1; transform: none; clip-path: inset(0 0 0 0 round 0); }
+  78%  { opacity: 1; transform: none; clip-path: inset(0 0 0 0 round 0); }
+  100% { opacity: 0; transform: translateY(-30px) scale(.96); }
+}
+@keyframes hero-in { from { opacity: 0; transform: translateY(22px); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes drift { from { translate: 0 -5%; } to { translate: 0 5%; } }
+@keyframes drift-strong { from { translate: 0 -10%; } to { translate: 0 10%; } }
+.event-grid, .explore-grid, .beliefs-grid, .pillars-grid, .howto { perspective: 1200px; }
+@supports (animation-timeline: view()) { .cover-square img, .feature-cover img, .event-card .photo img { scale: 1 !important; animation: none !important; } }
+.menu { background: var(--bg); }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .site-footer .cols > *, .foot-cta, .site-footer .legal { animation: morph-in linear both; animation-timeline: view(); animation-range: entry 0% entry 100%; }
+  }
+}
+@keyframes morph-in { from { opacity: 0; transform: translateY(40px) scale(.97); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }

@@ -48,6 +48,7 @@
         <button data-tab="subscribers">Subscribers</button>
         <button data-tab="prayers">Prayer <span class="badge" data-count="new_prayers"></span></button>
         <button data-tab="messages">Messages <span class="badge" data-count="new_messages"></span></button>
+        <button data-tab="complaints">Complaints <span class="badge" data-count="open_complaints"></span></button>
         <button data-tab="settings">Site settings</button>
         <button data-tab="templates">Email templates</button>
         <button data-tab="emails">Email log</button>
@@ -228,6 +229,12 @@
       <section data-view="messages" hidden>
         <header class="vh"><div><p class="eyebrow gold">Inbox</p><h1>Messages</h1></div></header>
         <div id="msg-list" class="list"></div>
+      </section>
+
+      <section data-view="complaints" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Care</p><h1>Complaints</h1><p class="muted">Raised by approved members. Aim to respond within 7 working days. Updates are emailed to the member.</p></div>
+          <div class="seg" id="cmp-filter"><button data-st="" class="on">Open &amp; all</button><button data-st="received">New</button><button data-st="in_review">In review</button><button data-st="resolved">Resolved</button><button data-st="closed">Closed</button></div></header>
+        <div id="cmp-list" class="list"></div>
       </section>
 
       <section data-view="settings" hidden>

@@ -26,3 +26,7 @@ export const PUBLIC_SETTINGS = [
 
 /** Settings only the admin can change (not exposed by /api/settings). */
 export const ADMIN_ONLY_SETTINGS = ["banking_details"] as const;
+
+/** Complaints: only approved members (status "member") can raise them. */
+export const COMPLAINT_CATEGORIES = ["leadership", "ministry", "event", "safeguarding", "finance", "privacy", "facilities", "other"] as const;
+export const COMPLAINT_STATUSES = ["received", "in_review", "resolved", "closed"] as const;

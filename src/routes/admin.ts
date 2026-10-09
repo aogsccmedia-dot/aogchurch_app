@@ -14,7 +14,7 @@ import { buildAnnouncement, processAnnouncements, renderAnnouncement, type Annou
 import { calendarUrl, formatWhen, nextSundayAfternoon } from "../lib/time.ts";
 import * as T from "../emails/templates.ts";
 import { notifyRegistration, promoteWaitlist, type EventRow, type RegRow } from "../lib/registrations.ts";
-import { ADMIN_ONLY_SETTINGS, EVENT_CATEGORIES, MEMBER_STATUSES, MESSAGE_STATUSES, PRAYER_STATUSES, PUBLIC_SETTINGS } from "../constants.ts";
+import { ADMIN_ONLY_SETTINGS, COMPLAINT_STATUSES, EVENT_CATEGORIES, MEMBER_STATUSES, MESSAGE_STATUSES, PRAYER_STATUSES, PUBLIC_SETTINGS } from "../constants.ts";
 
 type H = (req: Request, p: Record<string, string>, s: Session) => Promise<Response>;
 
@@ -66,13 +66,14 @@ export function adminRoutes(router: Router, env: Env): void {
       q("SELECT COUNT(*) AS n FROM event_registrations WHERE created_at >= ? AND status != 'cancelled'", weekAgo),
       q("SELECT COUNT(*) AS n FROM users"),
       q("SELECT COUNT(*) AS n FROM event_registrations WHERE status = 'pending'"),
+      q("SELECT COUNT(*) AS n FROM complaints WHERE status IN ('received','in_review')"),
     ]);
     const n = (i: number) => (rs[i].results[0] as { n: number }).n;
     const interests = await env.DB.prepare("SELECT j.value AS slug, COUNT(*) AS n FROM members, json_each(members.interests) j GROUP BY j.value ORDER BY n DESC").all();
     const next = await env.DB.prepare("SELECT id, subject, status, scheduled_for FROM announcements WHERE status IN ('scheduled','sending') ORDER BY scheduled_for LIMIT 1").first();
     return json({ ok: true, stats: {
       members: n(0), new_members: n(1), this_week: n(2), new_prayers: n(3), new_messages: n(4), upcoming_events: n(5),
-      subscribers: n(6), registrations_week: n(7), accounts: n(8), pending_payments: n(9),
+      subscribers: n(6), registrations_week: n(7), accounts: n(8), pending_payments: n(9), open_complaints: n(10),
     }, interests: interests.results, next_letter: next, email_enabled: !!env.EMAIL, email_health: await emailHealth(env), google_enabled: !!env.GOOGLE_CLIENT_ID });
   }));
 
@@ -525,6 +526,33 @@ export function adminRoutes(router: Router, env: Env): void {
     const r = await env.DB.prepare("UPDATE announcements SET status = 'draft', scheduled_for = NULL WHERE id = ? AND status = 'scheduled'").bind(id).run();
     if (!r.meta.changes) throw new HttpError(409, "Only scheduled letters can be unscheduled.");
     await audit(env, s, "unschedule", "announcement", id);
+    return json({ ok: true });
+  }));
+
+  // ---------- complaints ----------
+  router.get("/api/admin/complaints", guard(async (req) => {
+    const status = new URL(req.url).searchParams.get("status");
+    const where = status && (COMPLAINT_STATUSES as readonly string[]).includes(status) ? "WHERE c.status = ?" : "";
+    const stmt = env.DB.prepare(`SELECT c.*, m.first_name, m.last_name, m.email, m.phone, m.ref_code AS member_ref FROM complaints c JOIN members m ON m.id = c.member_id ${where} ORDER BY CASE c.status WHEN 'received' THEN 0 WHEN 'in_review' THEN 1 ELSE 2 END, c.created_at DESC LIMIT 200`);
+    const { results } = await (where ? stmt.bind(status) : stmt).all();
+    return json({ ok: true, complaints: results });
+  }));
+  router.patch("/api/admin/complaints/:id", guard(async (req, { id }, s) => {
+    const body = await readJson(req);
+    const v = new Validator(body);
+    const status = v.oneOf("status", COMPLAINT_STATUSES, { required: true, label: "Status" });
+    const response = v.text("response", { max: 5000 });
+    const notify = body.notify !== false;
+    v.assert();
+    const c = await env.DB.prepare("SELECT c.*, m.first_name, m.last_name, m.preferred_name, m.email FROM complaints c JOIN members m ON m.id = c.member_id WHERE c.id = ?").bind(id)
+      .first<{ ref_code: string; subject: string; first_name: string; last_name: string; preferred_name: string | null; email: string | null; response: string | null }>();
+    if (!c) throw new HttpError(404, "Complaint not found.");
+    const now = new Date().toISOString();
+    await env.DB.prepare("UPDATE complaints SET status = ?, response = COALESCE(?, response), responded_at = CASE WHEN ? IS NOT NULL THEN ? ELSE responded_at END, updated_at = ? WHERE id = ?")
+      .bind(status, response, response, now, now, id).run();
+    await audit(env, s, "complaint_update", "complaint", id, { status });
+    if (notify && c.email) await sendMail(env, { to: c.email, toName: `${c.first_name} ${c.last_name}`,
+      ...T.complaintUpdate({ site: siteUrl(env) }, { name: c.preferred_name || c.first_name, ref: c.ref_code, subject: c.subject, status: status!, response: response ?? c.response }), template: "complaint_update" });
     return json({ ok: true });
   }));
 

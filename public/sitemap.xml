@@ -13,5 +13,8 @@
   <url><loc>https://aogsccyouth.com/terms</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
   <url><loc>https://aogsccyouth.com/payments</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
   <url><loc>https://aogsccyouth.com/cookies</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://aogsccyouth.com/code-of-conduct</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://aogsccyouth.com/complaints</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://aogsccyouth.com/data-protection</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
   <url><loc>https://aogsccyouth.com/app</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
 </urlset>

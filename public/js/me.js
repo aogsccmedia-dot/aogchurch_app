@@ -38,6 +38,7 @@ async function render() {
   $("me-name").textContent = u.name || u.email;
   $("me-email").textContent = u.email;
   $("me-member").innerHTML = memberCard(d.member);
+  loadComplaints(d.member);
   $("me-letter").checked = !!d.subscribed;
   $("me-events").innerHTML = d.registrations.length ? d.registrations.map((r) => `
     <article class="event-card"><div class="body">
@@ -69,6 +70,36 @@ $("me-member").addEventListener("click", async (e) => {
     try { await api("/api/me/membership/revoke", { method: "POST", body: { reason } }); toast("Your membership has been revoked"); render(); } catch (err) { toast(err.message); }
   }
 });
+// ---------- complaints (approved members) ----------
+const CMP_LABEL = { received: "Received", in_review: "Being looked into", resolved: "Resolved", closed: "Closed" };
+async function loadComplaints(member) {
+  const box = $("complaints");
+  if (!member || member.status === "revoked") { box.hidden = true; return; }
+  box.hidden = false;
+  const { eligible, complaints } = await api("/api/me/complaints").catch(() => ({ eligible: false, complaints: [] }));
+  $("cmp-eligible").hidden = !eligible; $("cmp-not-eligible").hidden = eligible;
+  $("cmp-mine").innerHTML = complaints.length ? `<p class="eyebrow">My complaints</p>` + complaints.map((c) => `<article class="cmp-item">
+      <div class="cmp-top"><b>${esc(c.subject)}</b><span class="tag">${esc(CMP_LABEL[c.status] || c.status)}</span></div>
+      <p class="muted-text" style="font-size:13px">${esc(c.ref_code)} · raised ${new Date(c.created_at).toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" })}</p>
+      ${c.response ? `<p class="cmp-reply">${esc(c.response)}</p>` : ""}</article>`).join("") : "";
+  if (location.hash === "#complaints") box.scrollIntoView({ behavior: "smooth" });
+}
+$("cmp-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target, status = f.querySelector("[data-status]"), btn = f.querySelector("[type=submit]");
+  f.querySelectorAll(".field.invalid").forEach((x) => x.classList.remove("invalid"));
+  const body = Object.fromEntries(new FormData(f).entries()); body.confidential = f.confidential.checked;
+  btn.disabled = true; status.hidden = true;
+  try {
+    const r = await api("/api/me/complaints", { method: "POST", body });
+    status.className = "notice ok"; status.textContent = `Thank you. We've received it (${r.ref}) and emailed you a copy. A leader will respond within 7 working days.`; status.hidden = false;
+    f.reset(); loadComplaints({ status: "member" });
+  } catch (err) {
+    for (const [k, msg] of Object.entries(err.details || {})) { const fl = f.querySelector(`[name="${k}"]`)?.closest(".field"); if (fl) { fl.classList.add("invalid"); fl.querySelector(".error").textContent = msg; } }
+    status.className = "notice err"; status.textContent = err.message; status.hidden = false;
+  } finally { btn.disabled = false; }
+});
+
 $("me-signout").addEventListener("click", signOut);
 whenSignedIn(render);
 render();

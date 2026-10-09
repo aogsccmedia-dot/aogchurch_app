@@ -15,9 +15,33 @@
           <label class="switch"><input type="checkbox" id="me-letter" aria-label="Receive the weekly letter"></label></div>
         <button class="btn btn-sm" id="me-signout">Sign out</button>
       </aside>
-      <section style="display:grid;gap:18px">
-        <div class="section-head" style="margin:0"><p class="eyebrow gold">My events</p><h2>Where I'll be</h2></div>
-        <div id="me-events" class="event-grid"></div>
-      </section>
+      <div style="display:grid;gap:clamp(36px,5vw,56px);align-content:start">
+        <section style="display:grid;gap:18px">
+          <div class="section-head" style="margin:0"><p class="eyebrow gold">My events</p><h2>Where I'll be</h2></div>
+          <div id="me-events" class="event-grid"></div>
+        </section>
+        <section id="complaints" class="me-complaints" style="display:grid;gap:18px" hidden>
+          <div class="section-head" style="margin:0"><p class="eyebrow gold">Concerns &amp; complaints</p><h2>Tell us what's wrong</h2>
+            <p class="lede">If something hasn't been right, we want to know and put it right. Only leaders who handle complaints can see this. Read our <a href="/complaints" style="color:var(--gold-2);text-decoration:underline">complaints policy</a>.</p></div>
+          <div id="cmp-eligible" hidden>
+            <form id="cmp-form" class="panel" novalidate>
+              <div class="grid-2">
+                <div class="field"><label class="req" for="cmp-cat">What is it about?</label><select class="input" id="cmp-cat" name="category" required><option value="">Choose…</option>
+                  <option value="leadership">Leadership</option><option value="ministry">A ministry or team</option><option value="event">An event</option><option value="safeguarding">Safeguarding / safety</option>
+                  <option value="finance">Finances or payments</option><option value="privacy">Privacy / my information</option><option value="facilities">Facilities &amp; parking</option><option value="other">Something else</option></select><span class="error"></span></div>
+                <div class="field"><label class="req" for="cmp-subject">Subject</label><input class="input" id="cmp-subject" name="subject" required minlength="4" maxlength="140" placeholder="In a few words"><span class="error"></span></div>
+              </div>
+              <div class="field"><label class="req" for="cmp-details">What happened?</label><textarea class="input" id="cmp-details" name="details" required minlength="20" maxlength="5000" placeholder="When and where it happened, who was involved, and anything we should know."></textarea><span class="error"></span></div>
+              <div class="field"><label for="cmp-outcome">What would help put it right? (optional)</label><textarea class="input" id="cmp-outcome" name="desired_outcome" maxlength="1000" rows="2"></textarea><span class="error"></span></div>
+              <label class="check"><input type="checkbox" name="confidential"> Keep this confidential: pastors only</label>
+              <p class="hint">If anyone is in immediate danger, please call 10111 (SAPS) or 112 first.</p>
+              <button class="btn btn-gold" type="submit">Send my complaint</button>
+              <div class="notice" data-status hidden></div>
+            </form>
+          </div>
+          <div id="cmp-not-eligible" class="notice" hidden>Complaints can be raised once a leader has approved your membership. If something is urgent, please use the <a href="/visit#contact" style="color:var(--gold-2)">contact form</a>.</div>
+          <div id="cmp-mine" class="cmp-mine"></div>
+        </section>
+      </div>
     </div>
   </main>

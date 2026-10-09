@@ -380,3 +380,50 @@ export function adminMemberRevoked(b: Brand, o: { name: string; ref: string; rea
     text: `${o.name} (${o.ref}) revoked their membership via ${o.via}.${o.reason ? ` Reason: ${o.reason}` : ""}`,
   };
 }
+
+// ---------- complaints ----------
+const COMPLAINT_STATUS_LABEL: Record<string, string> = { received: "Received", in_review: "Being looked into", resolved: "Resolved", closed: "Closed" };
+
+export function complaintReceived(b: Brand, o: { name: string; ref: string; subject: string }) {
+  return {
+    subject: `We've received your complaint (${o.ref})`,
+    html: layout(b, {
+      preheader: "Thank you for telling us. A leader will respond within 7 working days.",
+      eyebrow: "Complaint received",
+      heading: `Thank you, ${esc(o.name)}`,
+      content: p(`We've received your complaint “<strong>${esc(o.subject)}</strong>”. Thank you for trusting us with it. Raising a concern takes courage, and we take it seriously.`) +
+        p("A leader will review it and respond within <strong>7 working days</strong>. You can follow its progress on your profile at any time.") +
+        p(`Your reference is <strong style="letter-spacing:.06em">${esc(o.ref)}</strong>.`) + button(b.site + "/me#complaints", "View my complaints"),
+    }),
+    text: `Thank you, ${o.name}. We've received your complaint "${o.subject}" (${o.ref}). A leader will respond within 7 working days. ${b.site}/me#complaints` + textFooter(b),
+  };
+}
+
+export function complaintUpdate(b: Brand, o: { name: string; ref: string; subject: string; status: string; response: string | null }) {
+  return {
+    subject: `Update on your complaint (${o.ref}): ${COMPLAINT_STATUS_LABEL[o.status] || o.status}`,
+    html: layout(b, {
+      preheader: `Your complaint is now: ${COMPLAINT_STATUS_LABEL[o.status] || o.status}.`,
+      eyebrow: "Complaint update",
+      heading: `Hi ${esc(o.name)}, an update for you`,
+      content: p(`Your complaint “<strong>${esc(o.subject)}</strong>” (${esc(o.ref)}) is now <strong>${esc(COMPLAINT_STATUS_LABEL[o.status] || o.status)}</strong>.`) +
+        (o.response ? `<p style="margin:0 0 16px;padding:14px 16px;border-left:3px solid ${C.gold};background:#faf4ea;font:15px/1.65 ${SANS};color:${C.ink}">${esc(o.response).replace(/\n/g, "<br>")}</p>` : "") +
+        p("If you'd like to talk about it further, simply reply to this email.") + button(b.site + "/me#complaints", "View my complaints"),
+    }),
+    text: `Your complaint "${o.subject}" (${o.ref}) is now ${COMPLAINT_STATUS_LABEL[o.status] || o.status}.${o.response ? `\n\n${o.response}` : ""}\n${b.site}/me#complaints` + textFooter(b),
+  };
+}
+
+export function adminNewComplaint(b: Brand, o: { name: string; ref: string; category: string; subject: string; confidential: boolean }) {
+  return {
+    subject: `New complaint ${o.ref}: ${o.subject}`,
+    html: layout(b, {
+      preheader: `${o.name} raised a ${o.category} complaint. Please respond within 7 working days.`,
+      eyebrow: "New complaint",
+      heading: `${esc(o.name)} raised a complaint`,
+      content: p(`<strong>${esc(o.subject)}</strong><br>Category: ${esc(o.category)}${o.confidential ? " · <strong>Confidential: pastors only</strong>" : ""}<br>Reference: ${esc(o.ref)}`) +
+        p("Please acknowledge and respond within 7 working days.") + button(b.site + "/admin/#complaints", "Open complaints"),
+    }),
+    text: `New complaint ${o.ref} from ${o.name}: ${o.subject} (${o.category}). ${b.site}/admin/#complaints`,
+  };
+}

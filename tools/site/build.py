@@ -36,8 +36,11 @@ ORDER = [("/", "Home"), ("/about", "About us"), ("/our-story", "Our story"), ("/
          ("/get-involved", "Get involved"), ("/prayer", "Prayer"), ("/visit", "Visit &amp; contact"), ("/join", "Join the church")]
 LEGAL = [
     ("/privacy", "Privacy policy (POPIA)"),
-    ("/terms", "Terms of use"),
+    ("/data-protection", "Data protection &amp; PAIA"),
+    ("/code-of-conduct", "Code of conduct"),
+    ("/complaints", "Complaints policy"),
     ("/payments", "Event payments &amp; refunds"),
+    ("/terms", "Terms of use"),
     ("/cookies", "Cookie policy"),
 ]
 
@@ -84,34 +87,47 @@ def head(title, desc, canonical=None, noindex=False, extra=""):
 </head>'''
 
 
+MENU_GROUPS = [
+    ("Explore", [("/", "Home"), ("/about", "About us"), ("/our-story", "Our story"), ("/beliefs", "What we believe")]),
+    ("Church life", [("/events", "Services &amp; events"), ("/get-involved", "Get involved"), ("/prayer", "Prayer"), ("/visit", "Visit &amp; contact")]),
+    ("For you", [("/me", "My profile"), ("/me#complaints", "Raise a concern"), ("/#letter", "Weekly letter"), ("/app", "Get the app")]),
+]
+
+
 def header():
     primary = "".join(f'<a href="{h}">{t}</a>' for h, t in NAV[1:])
-    menu = "\n      ".join(f'<a href="{h}"><span>{i:02d}</span>{t}</a>' for i, (h, t) in enumerate(MENU + [("/join", "Join the church")], 1))
+    groups = "".join(
+        f'<div class="menu-group" style="--g:{gi}"><p class="menu-label">{label}</p>'
+        + "".join(f'<a href="{h}" style="--i:{ii}">{t}</a>' for ii, (h, t) in enumerate(items))
+        + "</div>" for gi, (label, items) in enumerate(MENU_GROUPS))
     socials = "".join(f'<a href="{u}" target="_blank" rel="noopener" aria-label="{n}">{{{{i:{ic}}}}}</a>' for n, ic, u in SOCIALS)
     return f'''
   <a class="sr-only" href="#main">Skip to content</a>
   <header class="site-header">
     <div class="wrap bar">
       <div class="header-left">
-        <button class="icon-btn" data-menu-open aria-label="Open menu" aria-expanded="false" aria-controls="menu">
-          {{{{i:menu}}}}
-        </button>
+        <button class="icon-btn menu-btn" data-menu-open aria-label="Open menu" aria-expanded="false" aria-controls="menu"><span class="burger" aria-hidden="true"><i></i><i></i></span></button>
         <a class="brand" href="/" aria-label="AOG Sandton City Church home"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
       </div>
       <nav class="main-nav" aria-label="Primary">{primary}</nav>
       <div class="header-actions"><span data-user-slot></span><a class="btn btn-gold" href="/join" data-join-cta><span>Join<span class="long"> church</span></span></a></div>
     </div>
+    <div class="scroll-progress" aria-hidden="true"></div>
   </header>
 
   <div class="menu" id="menu" aria-hidden="true">
-    <div class="bar">
-      <a class="brand" href="/"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
-      <button class="icon-btn" data-menu-close aria-label="Close menu">{{{{i:x}}}}</button>
+    <div class="menu-inner">
+      <div class="bar">
+        <a class="brand" href="/"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
+        <button class="icon-btn" data-menu-close aria-label="Close menu">{{{{i:x}}}}</button>
+      </div>
+      <nav class="menu-groups" aria-label="Main">{groups}</nav>
+      <div class="menu-foot">
+        <a class="btn btn-gold" href="/join" data-join-cta>Join the church {{{{arrow}}}}</a>
+        <div class="social-row">{socials}</div>
+        <span class="menu-addr">{{{{i:mapPin}}}} 17 Humber Street, Woodmead, Sandton</span>
+      </div>
     </div>
-    <nav aria-label="Main">
-      {menu}
-    </nav>
-    <div class="foot"><span>17 Humber Street, Woodmead, Sandton</span><div class="social-row">{socials}</div><a href="/app">{{{{i:smartphone}}}} Get the app</a><a href="/me">My profile</a></div>
   </div>
 '''
 
@@ -119,27 +135,33 @@ def header():
 def footer():
     li = lambda items: "".join(f'<li><a href="{h}">{t}</a></li>' for h, t in items)
     socials = "".join(f'<a href="{u}" target="_blank" rel="noopener" aria-label="{n}" title="{n}">{{{{i:{ic}}}}}</a>' for n, ic, u in SOCIALS)
-    connect = [("/join", "Join the church"), ("/#letter", "Weekly letter"), ("/me", "My profile"), ("/app", "Get the app"), ("/visit#contact", "Contact us")]
+    church = [("/about", "About us"), ("/our-story", "Our story"), ("/beliefs", "What we believe"), ("/events", "Services &amp; events"), ("/get-involved", "Get involved"), ("/visit", "Visit &amp; contact")]
+    members = [("/join", "Join the church"), ("/me", "My profile"), ("/prayer", "Prayer requests"), ("/me#complaints", "Raise a concern"), ("/#letter", "Weekly letter"), ("/app", "Get the app")]
     return f'''
   <footer class="site-footer">
     <div class="wrap">
+      <div class="foot-cta">
+        <div><p class="eyebrow gold">There's a seat saved for you</p><h2>Come as you are this <span class="serif">Sunday.</span></h2></div>
+        <div class="foot-cta-actions"><a class="btn btn-gold" href="/visit">Plan your visit {{{{arrow}}}}</a><a class="btn" href="/events">See services</a></div>
+      </div>
       <div class="cols">
         <div class="foot-brand">
           <a class="brand" href="/"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
-          <p>A community-centred, Bible-based church. Bound in fellowship by the Spirit.</p>
-          <p>17 Humber Street, Woodmead, Sandton</p>
+          <p>A community-centred, Bible-based, Spirit-filled church. Part of the Assemblies of God family.</p>
+          <address>{{{{i:mapPin}}}} <a href="https://maps.google.com/?q=17+Humber+Street,+Woodmead,+Sandton" target="_blank" rel="noopener">17 Humber Street, Woodmead, Sandton</a></address>
           <div class="social-row">{socials}</div>
         </div>
-        <div><h4>Explore</h4><ul>{li(MENU)}</ul></div>
-        <div><h4>Connect</h4><ul>{li(connect)}</ul></div>
-        <div><h4>Policies</h4><ul>{li(LEGAL)}</ul></div>
+        <div><h4>Our church</h4><ul>{li(church)}</ul></div>
+        <div><h4>Members</h4><ul>{li(members)}</ul></div>
+        <div><h4>Policies &amp; compliance</h4><ul>{li(LEGAL)}</ul></div>
       </div>
-      <div class="legal"><span>© <span id="year">2026</span> AOG Sandton City Church</span><button type="button" class="link-btn" data-cookie-settings>Cookie settings</button><span>Bound in fellowship by the Spirit</span></div>
+      <div class="legal">
+        <span>© <span id="year">2026</span> AOG Sandton City Church · POPIA compliant</span>
+        <span class="legal-links"><button type="button" class="link-btn" data-cookie-settings>Cookie settings</button><a href="/data-protection#requests">Access to information (PAIA)</a><button type="button" class="link-btn" data-to-top>Back to top ↑</button></span>
+      </div>
     </div>
   </footer>
 '''
-
-
 
 
 CHURCH = {
@@ -215,6 +237,9 @@ PAGES = {
     "terms": dict(title="Terms of use" + T, crumb="Terms of use", desc="The terms for using the Sandton City Church website, accounts and event registrations.", canonical="/terms", scripts=["site.js", "auth.js"]),
     "payments": dict(title="Event payments & refunds" + T, crumb="Event payments & refunds", desc="How EFT payments, proof of payment, verification and refunds work for Sandton City Church events.", canonical="/payments", scripts=["site.js", "auth.js"]),
     "cookies": dict(title="Cookie policy" + T, crumb="Cookie policy", desc="The cookies and on-device storage the Sandton City Church website uses, and how to change your choices.", canonical="/cookies", scripts=["site.js", "auth.js"]),
+    "code-of-conduct": dict(title="Code of conduct" + T, crumb="Code of conduct", desc="How we treat one another at Sandton City Church: respect, honesty, safety, and keeping children and young people safe.", canonical="/code-of-conduct", scripts=["site.js", "auth.js"]),
+    "complaints": dict(title="Complaints policy" + T, crumb="Complaints policy", desc="How to raise a complaint at Sandton City Church and what to expect: acknowledgement, a response within 7 working days, confidentiality.", canonical="/complaints", scripts=["site.js", "auth.js"]),
+    "data-protection": dict(title="Data protection, POPIA & PAIA" + T, crumb="Data protection", desc="Sandton City Church's data protection standards: Information Officer, security, retention, breach notification and your POPIA/PAIA rights.", canonical="/data-protection", scripts=["site.js", "auth.js"]),
     "app": dict(title="Get the app" + T, crumb="Get the app", desc="Add Sandton City Church to your phone's home screen — iPhone, Android or computer.", canonical="/app", scripts=["site.js", "auth.js"]),
     "membership": dict(title="Your membership" + T, desc="Confirm or manage your membership at Sandton City Church.", noindex=True, scripts=["site.js", "membership.js"]),
     "offline": dict(title="You're offline" + T, desc="You're offline.", noindex=True, scripts=["site.js"]),

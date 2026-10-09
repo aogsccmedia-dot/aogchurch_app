@@ -129,6 +129,7 @@ function initCurrentNav() {
 initCurrentNav();
 initHeader();
 document.querySelector("[data-reload]")?.addEventListener("click", () => location.reload());
+document.querySelectorAll("[data-to-top]").forEach((b) => b.addEventListener("click", () => scrollTo({ top: 0, behavior: "smooth" })));
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
 import("./consent.js").then(() => import("./install.js")).catch(() => {});
 initReveal();
