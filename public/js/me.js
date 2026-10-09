@@ -46,7 +46,8 @@ async function render() {
       <span class="eyebrow">${{ waitlist: "Waitlist", pending: "Awaiting payment approval", confirmed: "Confirmed", rejected: "Payment not approved" }[r.status] || r.status} · ${esc(r.ref_code)}</span>
       <h3><a href="/event?e=${encodeURIComponent(r.slug)}">${esc(r.title)}</a></h3>
       <p class="meta">${esc(fmt(r.starts_at))}${r.location ? " · " + esc(r.location) : ""}</p>
-      ${new Date(r.starts_at) > new Date() ? `<div class="foot"><span></span><button class="btn btn-sm" data-cancel="${esc(r.ref_code)}">Can't make it</button></div>` : ""}
+      <div class="foot">${r.ticket_code ? `<a class="btn btn-sm btn-green" href="/ticket?c=${esc(r.ticket_code)}">${icon("ticket")} ${r.guests ? `My ${1 + Number(r.guests)} tickets` : "My ticket"}</a>` : "<span></span>"}
+        ${new Date(r.starts_at) > new Date() ? `<button class="btn btn-sm btn-ghost" data-cancel="${esc(r.ref_code)}">Can't make it</button>` : ""}</div>
     </div></article>`).join("")
     : `<div class="events-empty" style="grid-column:1/-1">No events yet. <a class="btn btn-sm" href="/events">Browse what's coming up ${icon("arrowRight", "arr")}</a></div>`;
 }

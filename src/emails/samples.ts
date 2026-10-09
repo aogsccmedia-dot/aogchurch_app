@@ -60,6 +60,8 @@ export const SAMPLES: Sample[] = [
     render: (s) => T.adminNewMember({ site: s }, { name: "Thandi Mokoena", ref: "SCC-2M8D", phone: "+27 82 123 4567", email: "thandi@example.com", type: "New member", age: 24, interests: "Worship, Media" }) },
   { key: "admin_member_revoked", group: "Admin", when: "Sent to you when a member revokes their membership.",
     render: (s) => T.adminMemberRevoked({ site: s }, { name: "Thandi Mokoena", ref: "SCC-2M8D", reason: "We've moved to Durban.", via: "email check-in" }) },
+  { key: "admin_granted", group: "Admin", when: "You give a member admin access in Admin → Team & roles.",
+    render: (s) => T.adminGranted({ site: s }, { name: "Thandi" }) },
   { key: "admin_letter_reminder", group: "Admin", when: "Saturday morning, if no letter is scheduled for Sunday.",
     render: (s) => T.adminLetterReminder({ site: s }) },
   { key: "admin_code", group: "Admin", when: "Your 6-digit admin sign-in code.",

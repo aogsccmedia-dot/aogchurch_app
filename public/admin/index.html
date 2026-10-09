@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css?v=a2f30c2cb0">
-  <link rel="stylesheet" href="/css/pages.css?v=5ba944aef2">
-  <link rel="stylesheet" href="/css/admin.css?v=6a52698707">
+  <link rel="stylesheet" href="/css/pages.css?v=5775b7588e">
+  <link rel="stylesheet" href="/css/admin.css?v=68b47e401c">
 </head>
 <body class="admin">
   <!-- Sign in -->
@@ -20,7 +20,8 @@
     <div class="login-card">
       <img src="/assets/logo-192.png" alt="" width="72" height="72">
       <div><p class="eyebrow gold">AOG Sandton City Church</p><h1>Admin sign in</h1>
-        <p class="muted">Only the church media account can access this dashboard. A verification code is emailed on every sign-in.</p></div>
+        <p class="muted">For the church admin team. Sign in with Google, and we'll email a verification code every time.</p></div>
+      <div id="signed-in-admin" class="form-grid" hidden><p class="muted" id="signed-in-as"></p><button class="btn btn-gold" type="button" id="send-code">Email me a code</button></div>
       <div id="admin-google" class="google-slot" hidden></div>
       <form id="code-request" class="form-grid" hidden>
         <div class="field"><label for="l-email">Admin email</label><input class="input" id="l-email" name="email" type="email" autocomplete="username" required></div>
@@ -44,6 +45,8 @@
         <button data-tab="overview" class="active">Overview</button>
         <button data-tab="members">Members <span class="badge" data-count="new_members"></span></button>
         <button data-tab="events">Events &amp; forms <span class="badge" data-count="pending_payments"></span></button>
+        <button data-tab="scan">Door scanner</button>
+        <button data-tab="programme">Church programme</button>
         <button data-tab="letters">Weekly letter</button>
         <button data-tab="subscribers">Subscribers</button>
         <button data-tab="prayers">Prayer <span class="badge" data-count="prayer_total"></span></button>
@@ -52,8 +55,9 @@
         <button data-tab="settings">Site settings</button>
         <button data-tab="templates">Email templates</button>
         <button data-tab="emails">Email log</button>
+        <button data-tab="team" data-super>Team &amp; roles</button>
       </nav>
-      <div class="side-foot"><span id="who"></span><button class="btn btn-sm" id="logout">Sign out</button></div>
+      <div class="side-foot"><span id="who"></span><span class="role-chip" id="role-chip"></span><a class="btn btn-sm btn-ghost" href="/me" id="to-profile" hidden>Switch to my profile</a><button class="btn btn-sm" id="logout">Sign out</button></div>
     </aside>
 
     <main class="main">
@@ -234,6 +238,41 @@
         <div id="msg-list" class="list"></div>
       </section>
 
+      <section data-view="scan" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Events</p><h1>Door scanner</h1><p class="muted">Scan tickets at the door. Each ticket can only be admitted once, so copies are caught.</p></div></header>
+        <div class="scan-grid">
+          <div class="card form-grid">
+            <div class="field"><label for="scan-event">Event</label><select class="input" id="scan-event"></select></div>
+            <p class="muted" id="scan-count"></p>
+            <div class="scan-cam"><video id="scan-video" playsinline muted hidden></video><div class="scan-frame" aria-hidden="true"></div><p class="muted" id="scan-cam-note">Tap “Start camera” and point it at a ticket QR code.</p></div>
+            <div class="actions"><button class="btn btn-gold btn-sm" type="button" id="scan-start">Start camera</button><button class="btn btn-sm" type="button" id="scan-stop" hidden>Stop</button></div>
+            <form id="scan-manual" class="toolbar"><input class="input" name="code" placeholder="Or type the 16-character code" autocomplete="off" autocapitalize="characters"><button class="btn btn-sm" type="submit">Check</button></form>
+          </div>
+          <div class="card"><div id="scan-result" class="scan-out"><p class="muted">Results appear here.</p></div><h3 style="margin-top:16px">Recent scans</h3><div id="scan-log" class="list"></div></div>
+        </div>
+      </section>
+
+      <section data-view="programme" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Calendar</p><h1>Church programme</h1><p class="muted">Regular church programme items (not bookable events). <b>Everyone</b> items show on Services &amp; events and in the Sunday letter for that week. <b>Members only</b> items show on members' profiles. <b>Leaders only</b> items show only here.</p></div></header>
+        <form id="prog-form" class="card form-grid" novalidate>
+          <div class="grid-2"><div class="field"><label class="req">Title</label><input class="input" name="title" required maxlength="140" placeholder="Youth Monthly"></div>
+            <div class="field"><label>Ministry / department</label><input class="input" name="department" maxlength="60" placeholder="Youth Ministry" list="prog-depts"><datalist id="prog-depts"><option>Church</option><option>Youth Ministry</option><option>Mothers Ministry</option><option>Men's Ministry</option><option>Daughters Ministry</option><option>Children's Ministry</option><option>Regional</option><option>Sub-Region</option><option>National</option></datalist></div></div>
+          <div class="grid-2"><div class="field"><label class="req">Date</label><input class="input" type="date" name="start_date" required></div><div class="field"><label>Until (optional)</label><input class="input" type="date" name="end_date"></div></div>
+          <div class="grid-2"><div class="field"><label>Time (optional)</label><input class="input" name="time_label" maxlength="40" placeholder="18:00 – 20:00"></div><div class="field"><label>Venue</label><input class="input" name="venue" maxlength="140" placeholder="Sandton City Church"></div></div>
+          <div class="grid-2"><div class="field"><label class="req">Who can see it</label><select class="input" name="audience"><option value="public">Everyone (website + Sunday letter)</option><option value="members">Members only</option><option value="leaders">Leaders only</option></select></div><div class="field"><label>Notes</label><input class="input" name="notes" maxlength="500"></div></div>
+          <button class="btn btn-gold" type="submit" id="prog-submit" style="justify-self:start">Add to programme</button>
+        </form>
+        <div class="toolbar" style="margin-top:16px"><select class="input" id="prog-aud" style="max-width:220px"><option value="">All items</option><option value="public">Everyone</option><option value="members">Members only</option><option value="leaders">Leaders only</option></select></div>
+        <div id="prog-list" class="list"></div>
+      </section>
+
+      <section data-view="team" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Main admin only</p><h1>Team &amp; roles</h1><p class="muted">Give registered members admin access to help approve registrations, verify members and send tickets. Admins can't delete people or change roles. They sign in with Google plus a code emailed to them.</p></div></header>
+        <div class="card"><h3>Current admins</h3><div id="team-admins" class="list"></div></div>
+        <div class="card" style="margin-top:16px"><h3>Add an admin</h3><p class="muted">People appear here after they've signed in with Google on the website. They must be registered members.</p>
+          <input class="input" id="team-q" placeholder="Search by name or email…" style="margin:10px 0"><div id="team-people" class="list"></div></div>
+      </section>
+
       <section data-view="complaints" hidden>
         <header class="vh"><div><p class="eyebrow gold">Care</p><h1>Complaints</h1><p class="muted">Raised by approved members. Aim to respond within 7 working days. Updates are emailed to the member.</p></div>
           <div class="seg" id="cmp-filter"><button data-st="" class="on">Open &amp; all</button><button data-st="received">New</button><button data-st="in_review">In review</button><button data-st="resolved">Resolved</button><button data-st="closed">Closed</button></div></header>
@@ -260,6 +299,6 @@
   </div>
 
   <dialog class="drawer" id="member-drawer"><div class="drawer-body" id="member-body"></div></dialog>
-  <script type="module" src="/js/admin.js?v=a070c1138c"></script>
+  <script type="module" src="/js/admin.js?v=f05229ab1b"></script>
 </body>
 </html>

@@ -1,20 +1,21 @@
 import type { Env } from "../env.ts";
 import { adminEmail, siteUrl } from "../env.ts";
+import { voidTickets } from "../lib/tickets.ts";
 import { approvedMember, createComplaint } from "../lib/complaints.ts";
 import { confirmMembership, revokeMembership, type MemberRow } from "../lib/membership.ts";
 import { HttpError, Router, clientIp, json, readJson } from "../lib/http.ts";
 import { rateLimit } from "../lib/ratelimit.ts";
 import {
   clearSessionCookie, consumeLoginCode, createLoginCode, createSession, destroySession, getSession,
-  isAdminEmail, upsertUser, verifyGoogleToken,
+  canAdmin, isAdminEmail, upsertUser, verifyGoogleToken,
 } from "../lib/auth.ts";
 import { sendMail } from "../lib/email.ts";
 import { subscribe } from "../lib/newsletter.ts";
 import * as T from "../emails/templates.ts";
 import { promoteWaitlist } from "../lib/registrations.ts";
 
-async function sendAdminCode(env: Env, userId: string | null) {
-  const email = adminEmail(env);
+async function sendAdminCode(env: Env, userId: string | null, to?: string) {
+  const email = (to || adminEmail(env)).toLowerCase();
   const { id, code } = await createLoginCode(env, email, userId);
   const sent = await sendMail(env, { to: email, ...T.adminCode({ site: siteUrl(env) }, code), template: "admin_code" });
   if (!sent && env.ENVIRONMENT !== "development") throw new HttpError(503, "We couldn't send the verification email. Check that Email Sending is enabled for the domain.");
@@ -29,7 +30,7 @@ export function authRoutes(router: Router, env: Env): void {
     const member = await env.DB.prepare("SELECT ref_code, status, first_name, preferred_name, created_at FROM members WHERE (user_id = ? OR email = ?) AND status != 'revoked' ORDER BY created_at DESC LIMIT 1")
       .bind(s.user.id, s.user.email).first();
     const sub = await env.DB.prepare("SELECT status FROM subscribers WHERE email = ?").bind(s.user.email).first<{ status: string }>();
-    return json({ ok: true, user: s.user, is_admin: s.kind === "admin", admin_account: isAdminEmail(env, s.user.email),
+    return json({ ok: true, user: s.user, is_admin: s.kind === "admin", admin_role: s.role ?? null, can_admin: await canAdmin(env, s.user), admin_account: isAdminEmail(env, s.user.email),
       member, subscribed: sub?.status === "active", google_client_id: env.GOOGLE_CLIENT_ID || null });
   });
 
@@ -60,8 +61,9 @@ export function authRoutes(router: Router, env: Env): void {
     await rateLimit(env, "admincode", clientIp(req), 5, 900);
     const { email } = await readJson<{ email?: string }>(req);
     const s = await getSession(env, req);
-    const viaGoogle = s && isAdminEmail(env, s.user.email);
-    if (env.GOOGLE_CLIENT_ID && !viaGoogle) throw new HttpError(403, "Please continue with Google using the church media account.");
+    const viaGoogle = s && await canAdmin(env, s.user);
+    if (env.GOOGLE_CLIENT_ID && !viaGoogle) throw new HttpError(403, "Please sign in with Google using an account that has admin access.");
+    if (s && viaGoogle && !isAdminEmail(env, s.user.email)) return json({ ok: true, ...(await sendAdminCode(env, s.user.id, s.user.email)) });
     if (!viaGoogle && (!email || !isAdminEmail(env, email))) {
       // Same answer for any other address so the admin email can't be probed.
       return json({ ok: true, challenge: crypto.randomUUID(), sent_to: "your inbox" });
@@ -75,8 +77,8 @@ export function authRoutes(router: Router, env: Env): void {
     const { challenge, code } = await readJson<{ challenge?: string; code?: string }>(req);
     if (!challenge || !code) throw new HttpError(400, "Enter the 6-digit code from your email.");
     const r = await consumeLoginCode(env, challenge, code);
-    if (!isAdminEmail(env, r.email)) throw new HttpError(403, "Not allowed.");
     const user = await upsertUser(env, { email: r.email });
+    if (!(await canAdmin(env, user))) throw new HttpError(403, "This account doesn't have admin access.");
     await destroySession(env, req);
     await env.DB.prepare("INSERT INTO audit_log (user_id, action) VALUES (?, 'admin_login')").bind(user.id).run();
     return json({ ok: true, user }, 200, { "Set-Cookie": await createSession(env, req, user.id, "admin") });
@@ -96,7 +98,8 @@ export function authRoutes(router: Router, env: Env): void {
               last_confirmed_at, next_checkin_at, revoked_at
          FROM members WHERE user_id = ? OR email = ? ORDER BY created_at DESC LIMIT 1`).bind(s.user.id, s.user.email).first();
     const { results: registrations } = await env.DB.prepare(
-      `SELECT r.ref_code, r.status, r.created_at, e.title, e.slug, e.starts_at, e.ends_at, e.location FROM event_registrations r
+      `SELECT r.ref_code, r.status, r.created_at, r.guests, e.title, e.slug, e.starts_at, e.ends_at, e.location,
+              (SELECT code FROM tickets t WHERE t.registration_id = r.id AND t.status = 'valid' ORDER BY seq LIMIT 1) AS ticket_code FROM event_registrations r
          JOIN events e ON e.id = r.event_id WHERE (r.user_id = ? OR r.email = ?) AND r.status NOT IN ('cancelled') ORDER BY e.starts_at DESC LIMIT 50`,
     ).bind(s.user.id, s.user.email).all();
     const sub = await env.DB.prepare("SELECT status FROM subscribers WHERE email = ?").bind(s.user.email).first<{ status: string }>();
@@ -153,6 +156,7 @@ export function authRoutes(router: Router, env: Env): void {
       .bind(ref, s.user.id, s.user.email).first<{ id: string; event_id: string }>();
     if (!reg) throw new HttpError(404, "Registration not found.");
     await env.DB.prepare("UPDATE event_registrations SET status = 'cancelled' WHERE id = ?").bind(reg.id).run();
+    await voidTickets(env, reg.id);
     await promoteWaitlist(env, reg.event_id);
     return json({ ok: true });
   });

@@ -3,6 +3,7 @@ import { siteUrl } from "../env.ts";
 import { randomToken, uuid } from "./crypto.ts";
 import { sendMail } from "./email.ts";
 import * as T from "../emails/templates.ts";
+import { programmeWhen } from "./programme.ts";
 import { formatWhen } from "./time.ts";
 
 interface Sub { id: string; email: string; name: string | null; status: string; token: string }
@@ -78,6 +79,13 @@ export async function buildAnnouncement(env: Env, a: AnnouncementRow, ref = new 
     ).bind(ref.toISOString(), new Date(ref.getTime() + 8 * 86400_000).toISOString())
       .all<{ title: string; slug: string; starts_at: string; ends_at: string | null; location: string | null }>();
     events = results.map((e) => ({ title: e.title, when: formatWhen(e.starts_at, e.ends_at), location: e.location, url: `${siteUrl(env)}/event?e=${encodeURIComponent(e.slug)}` }));
+    // Church programme (annual calendar) items in the coming week are announced in the letter too.
+    const day = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Johannesburg" }).format(d);
+    const { results: prog } = await env.DB.prepare(
+      `SELECT start_date, end_date, time_label, title, venue FROM church_programme WHERE audience = 'public' AND start_date >= ? AND start_date < ? ORDER BY start_date LIMIT 10`)
+      .bind(day(ref), day(new Date(ref.getTime() + 8 * 86400_000))).all<{ start_date: string; end_date: string | null; time_label: string | null; title: string; venue: string | null }>();
+    const already = new Set(services.map((x) => x.title.toLowerCase()));
+    for (const p of prog) if (!already.has(p.title.toLowerCase())) services.push({ title: p.title, when: programmeWhen(p), location: p.venue || undefined });
   }
   return { subject: a.subject, preheader: a.preheader, heading: a.heading, body: a.body, scripture_text: a.scripture_text,
     scripture_ref: a.scripture_ref, services, events, cta_label: a.cta_label, cta_url: a.cta_url };

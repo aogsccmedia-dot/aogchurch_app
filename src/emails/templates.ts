@@ -11,7 +11,8 @@ const C = {
   page: "#efe8dc", card: "#fffdf9", ink: "#2b241d", body: "#4a4137", muted: "#8a7f72",
   gold: "#c8963e", goldSoft: "#f3e3c3", night: "#0d0b09", line: "#eadfcd",
 };
-const SANS = "'Helvetica Neue', Helvetica, Arial, sans-serif";
+// Same fonts as the website: Jost for text, Playfair Display for headings (falls back gracefully where web fonts are blocked).
+const SANS = "'Jost', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 // Playfair Display: open-source high-contrast display serif, closest to Magilio.
 // Clients that block web fonts (e.g. Gmail) gracefully fall back to Georgia.
 const SERIF = "'Playfair Display', Georgia, 'Times New Roman', serif";
@@ -39,8 +40,8 @@ export function layout(b: Brand, o: { preheader: string; eyebrow?: string; headi
     ? `<tr><td align="center" style="padding:26px 24px 0;background:${C.card}"><img src="${esc(b.site)}/assets/email/welcome.gif" width="480" alt="Welcome" style="display:block;width:100%;max-width:480px;height:auto;border:0"></td></tr>`
     : o.heroImage ? `<tr><td style="padding:0"><img src="${esc(o.heroImage)}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>` : "";
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><title>${esc(o.heading)}</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-<style>@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap');</style></head>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>@import url('https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap');</style></head>
 <body style="margin:0;padding:0;background:${C.page}">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${esc(o.preheader)}&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:${C.page}"><tr><td align="center" style="padding:28px 12px">
@@ -82,7 +83,7 @@ export function adminCode(b: Brand, code: string) {
       eyebrow: "Admin sign-in",
       heading: "Here's your sign-in code",
       content: p("Someone (hopefully you!) is signing in to the church admin dashboard. Enter this code to continue:") +
-        `<p style="margin:22px 0;font:600 34px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.24em;color:${C.ink};background:${C.goldSoft};border-radius:12px;padding:20px;text-align:center">${esc(spaced)}</p>` +
+        `<p style="margin:22px 0;font:600 34px/1 ${SANS};letter-spacing:.24em;color:${C.ink};background:${C.goldSoft};border-radius:12px;padding:20px;text-align:center">${esc(spaced)}</p>` +
         p("The code expires in 10 minutes and can only be used once. If this wasn't you, you can safely ignore this email — nobody can get in without it."),
     }),
     text: `Your admin sign-in code is ${code}. It expires in 10 minutes. If this wasn't you, ignore this email.` + textFooter(b),
@@ -158,7 +159,7 @@ export function adminNewMember(b: Brand, m: { name: string; ref: string; phone: 
 }
 
 export function eventConfirmation(b: Brand, o: { name: string; status: string; ref: string; title: string; when: string; location: string | null; message: string | null;
-  calendarUrl: string; eventUrl: string; price?: string | null; cover?: string | null; outlookUrl?: string | null; icsUrl?: string | null; approved?: boolean }) {
+  calendarUrl: string; eventUrl: string; price?: string | null; cover?: string | null; outlookUrl?: string | null; icsUrl?: string | null; approved?: boolean; tickets?: { count: number; url: string } | null }) {
   const wait = o.status === "waitlist";
   const ok = !wait && o.approved;
   const cal = (href: string, label: string) => `<a href="${esc(href)}" style="display:inline-block;margin:0 8px 8px 0;padding:10px 14px;border-radius:8px;background:#f3ead9;font:600 13px/1 ${SANS};color:${C.ink};text-decoration:none">${esc(label)}</a>`;
@@ -175,6 +176,10 @@ export function eventConfirmation(b: Brand, o: { name: string; status: string; r
           <span style="font:500 19px/1.3 ${SERIF};color:${C.ink}">${esc(o.title)}</span><br>${esc(o.when)}${o.location ? `<br>${esc(o.location)}` : ""}
           ${o.price ? `<br><span style="color:${C.gold};font-weight:600">${esc(o.price)}</span>` : ""}<br><span style="color:${C.muted};font-size:13px">Ref ${esc(o.ref)}</span></td></tr></table>` +
         (o.message ? p(esc(o.message)) : "") +
+        (o.tickets ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 16px"><tr><td style="padding:16px 18px;border-radius:14px;background:#14110e">
+            <p style="margin:0 0 4px;font:600 11px/1 ${SANS};letter-spacing:.2em;text-transform:uppercase;color:#f6d28b">🎟 Your ${o.tickets.count === 1 ? "ticket" : `${o.tickets.count} tickets`}</p>
+            <p style="margin:0 0 12px;font:15px/1.6 ${SANS};color:#efe7da">${o.tickets.count === 1 ? "Your ticket is" : "Your tickets are"} attached as a PDF, one page per person, each with its own QR code. Show it at the door on your phone or printed. Each ticket can be scanned once.</p>
+            <a href="${esc(o.tickets.url)}" style="display:inline-block;padding:11px 18px;border-radius:9px;background:#d6a650;font:600 14px/1 ${SANS};color:#1a1206;text-decoration:none">View my ${o.tickets.count === 1 ? "ticket" : "tickets"}</a></td></tr></table>` : "") +
         (wait ? "" : `<p style="margin:18px 0 8px;font:600 11px/1 ${SANS};letter-spacing:.2em;text-transform:uppercase;color:${C.gold}">Add it to your calendar</p>
           <p style="margin:0 0 6px">${cal(o.calendarUrl, "Google")}${o.icsUrl ? cal(o.icsUrl, "Apple / iPhone") : ""}${o.outlookUrl ? cal(o.outlookUrl, "Outlook") : ""}</p>
           <p style="margin:0 0 16px;font:13px/1.6 ${SANS};color:${C.muted}">A calendar invite (.ics) is also attached to this email.</p>`) +
@@ -447,5 +452,21 @@ export function memberVerified(b: Brand, o: { name: string; ref: string }) {
         p(`Your member reference is <strong style="letter-spacing:.06em">${esc(o.ref)}</strong>.`) + button(b.site + "/me?welcome=1", "Open my profile"),
     }),
     text: `${o.name}, you're officially a member of AOG Sandton City Church! Your reference: ${o.ref}. ${b.site}/me` + textFooter(b),
+  };
+}
+
+export function adminGranted(b: Brand, o: { name: string }) {
+  return {
+    subject: "You've been given admin access 🔑",
+    html: layout(b, {
+      preheader: "You can now help approve registrations, verify members and send tickets.",
+      eyebrow: "Admin access",
+      heading: `Welcome to the team, ${esc(o.name)}`,
+      content: p("The main church admin has given you admin access to the AOG Sandton City Church website. You can now approve event registrations and payments, verify members, send and scan tickets, and help with prayer requests and complaints.") +
+        p("To open the dashboard: sign in with Google on the website, then choose <strong>Admin dashboard</strong> from your account menu. Each time, we'll email you a 6-digit code to confirm it's you.") +
+        button(b.site + "/admin/", "Open the admin dashboard") +
+        p(`<span style="font-size:13px;color:${C.muted}">You can switch back to your normal member profile at any time. Please keep members' information confidential and follow our code of conduct.</span>`),
+    }),
+    text: `Welcome to the team, ${o.name}! You now have admin access. Sign in with Google, then open ${b.site}/admin/ and enter the code we email you.` + textFooter(b),
   };
 }

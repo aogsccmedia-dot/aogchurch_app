@@ -4,6 +4,7 @@ import { b64 } from "./crypto.ts";
 import { sendMail } from "./email.ts";
 import { calendarUrl, formatWhen, icsFile, outlookUrl } from "./time.ts";
 import * as T from "../emails/templates.ts";
+import { ticketUrl, ticketsAttachment, voidTickets } from "./tickets.ts";
 
 export interface EventRow {
   id: string; slug: string; title: string; category: string; description: string | null; starts_at: string; ends_at: string | null;
@@ -45,19 +46,22 @@ export async function notifyRegistration(env: Env, e: EventRow, r: RegRow, opts:
     const m = T.eventPending({ site }, { ...base, amount: rands(r.amount_due), people: 1 + r.guests });
     return sendMail(env, { to: r.email, toName: r.name, ...m, template: "event_pending" });
   }
+  if (r.status === "rejected" || r.status === "cancelled") await voidTickets(env, r.id);
   if (r.status === "rejected") {
     const m = T.eventDeclined({ site }, { ...base, note: opts.note ?? null });
     return sendMail(env, { to: r.email, toName: r.name, ...m, template: "event_declined" });
   }
   if (r.status === "confirmed" || r.status === "waitlist") {
+    const tk = r.status === "confirmed" ? await ticketsAttachment(env, e, r) : null;
     const m = T.eventConfirmation({ site }, {
+      tickets: tk ? { count: tk.tickets.length, url: ticketUrl(env, tk.tickets[0].code) } : null,
       ...base, status: r.status, approved: !!e.requires_pop && r.status === "confirmed" && !opts.promoted,
       message: opts.promoted ? "Good news — a spot opened up and it's yours!" : e.requires_pop && r.status === "confirmed" ? "Your payment has been approved. This email is your ticket — show your reference at the door." : e.confirmation_message,
       calendarUrl: calendarUrl(e), outlookUrl: outlookUrl(e), icsUrl: `${site}/api/events/${encodeURIComponent(e.slug)}/calendar.ics`,
     });
     return sendMail(env, { to: r.email, toName: r.name, ...m, template: r.status === "confirmed" ? "event_confirmation" : "event_waitlist",
       attachments: r.status === "confirmed"
-        ? [{ filename: `${e.slug}.ics`, type: "text/calendar", disposition: "attachment", content: b64(new TextEncoder().encode(icsFile({ ...e, url: eventUrl }))) }]
+        ? [tk!.attachment, { filename: `${e.slug}.ics`, type: "text/calendar", disposition: "attachment", content: b64(new TextEncoder().encode(icsFile({ ...e, url: eventUrl }))) }]
         : undefined });
   }
   return false;

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Your membership · Sandton City Church</title>
-  <meta name="description" content="Confirm or manage your membership at Sandton City Church.">
+  <title>Your ticket · Sandton City Church</title>
+  <meta name="description" content="Your digital ticket for an event at Sandton City Church.">
   <meta name="theme-color" content="#f6f1e8">
   <meta name="robots" content="noindex">
   <meta name="mobile-web-app-capable" content="yes">
@@ -18,8 +18,8 @@
   <meta property="og:image:alt" content="AOG Sandton City Church, Woodmead, Sandton">
   <meta name="geo.region" content="ZA-GP">
   <meta name="geo.placename" content="Woodmead, Sandton">
-  <meta property="og:title" content="Your membership · Sandton City Church">
-  <meta property="og:description" content="Confirm or manage your membership at Sandton City Church.">
+  <meta property="og:title" content="Your ticket · Sandton City Church">
+  <meta property="og:description" content="Your digital ticket for an event at Sandton City Church.">
   <meta property="og:image" content="https://aogsccyouth.com/assets/og.jpg">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="/favicon.ico" sizes="32x32">
@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="/css/pages.css?v=5775b7588e">
   <script type="speculationrules">{"prerender": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/admin/*"}}, {"not": {"href_matches": "/api/*"}}]}, "eagerness": "moderate"}]}</script>
 </head>
-<body class="portal">
+<body>
   <a class="sr-only" href="#main">Skip to content</a>
   <header class="site-header">
     <div class="wrap bar">
@@ -62,14 +62,8 @@
     </div>
   </div>
 
-  <main id="main" class="wrap membership-page">
-    <section class="membership-card" id="mship" aria-live="polite">
-      <img src="/assets/logo-192.png" alt="" width="64" height="64">
-      <p class="eyebrow gold">Membership</p>
-      <h1 id="ms-title">One moment…</h1>
-      <p class="lede" id="ms-text"></p>
-      <div id="ms-actions" class="ms-actions"></div>
-    </section>
+  <main id="main" class="wrap ticket-page">
+    <div id="tk-root" class="tk-wrap" aria-live="polite"><p class="muted-text">Loading your ticket…</p></div>
   </main>
 
   <footer class="site-footer">
@@ -104,6 +98,7 @@
     <button type="button" data-menu-open-tab aria-controls="menu"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg><span>More</span></button>
   </nav>
   <script type="module" src="/js/site.js?v=b41756e390"></script>
-  <script type="module" src="/js/membership.js?v=2cfaa4fd67"></script>
+  <script type="module" src="/js/auth.js?v=27ae5418de"></script>
+  <script type="module" src="/js/ticket.js?v=79e630cefa"></script>
 </body>
 </html>

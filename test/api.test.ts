@@ -242,7 +242,8 @@ describe("events & form builder", () => {
     assert.equal(a.status, "confirmed");
     const conf = mails("amahle@example.com").at(-1)! as { subject: string; attachments?: { filename: string; type: string }[]; html?: string };
     assert.ok(conf.subject.startsWith("You're registered"));
-    assert.equal(conf.attachments?.[0].type, "text/calendar", "calendar invite attached");
+    assert.ok(conf.attachments?.some((a) => a.type === "text/calendar"), "calendar invite attached");
+    assert.ok(conf.attachments?.some((a) => a.type === "application/pdf"), "PDF tickets attached");
     assert.ok(conf.html!.includes("Apple / iPhone") && conf.html!.includes("R99 per person"));
     const ics = await call(`/api/events/${slug}/calendar.ics`);
     assert.equal(ics.headers.get("content-type"), "text/calendar; charset=utf-8");
@@ -329,7 +330,8 @@ describe("paid events: EFT + proof of payment + admin approval", () => {
     await patch(byEmail("sipho@example.com").id, { status: "confirmed" });
     const ticket = mails("sipho@example.com").at(-1)! as { subject: string; attachments?: { type: string }[]; html?: string };
     assert.match(ticket.subject, /Congratulations/);
-    assert.equal(ticket.attachments?.[0].type, "text/calendar");
+    assert.ok(ticket.attachments?.some((a) => a.type === "text/calendar"));
+    assert.ok(ticket.attachments?.some((a) => a.type === "application/pdf"), "tickets PDF attached on approval");
     assert.ok(ticket.html!.includes("Your payment has been approved"));
 
     await patch(byEmail("lindo@example.com").id, { status: "rejected", note: "The amount on the POP was R100, not R150." });
@@ -566,5 +568,106 @@ describe("Daily Word & Prayer Wall", () => {
     assert.equal((await post(`/api/wall/${id}/answered`, { note: "Passed with distinction!" }, { cookie: amo }, g)).status, 200);
     const after = await (await call("/api/wall", {}, g)).json() as { posts: { answered: number; answered_note: string }[]; prayers_total: number };
     assert.equal(after.posts[0].answered, 1); assert.match(after.posts[0].answered_note, /distinction/); assert.equal(after.prayers_total, 1);
+  });
+});
+
+describe("tickets: generator, PDF, door check-in", () => {
+  test("approved booking for 3 → 3 unique QR tickets in one PDF; each scans once; copies are caught", async () => {
+    const cookie = await adminCookie();
+    const ev = await post("/api/admin/events", { title: "Ticketed Night", category: "night", starts_at: new Date(Date.now() + 9 * 86400_000).toISOString(),
+      location: "Main hall", is_published: true, rsvp_enabled: true, form_schema: [] }, A(cookie));
+    const { id: eventId, slug } = await ev.json() as { id: string; slug: string };
+    const fd = new FormData(); fd.append("name", "Neo Mokoena"); fd.append("email", "neo@example.com"); fd.append("guests", "2");
+    const reg = await call(`/api/events/${slug}/register`, { method: "POST", body: fd });
+    assert.equal(reg.status, 201, await reg.clone().text());
+    const mail = mails("neo@example.com").at(-1)! as { attachments?: { type: string; content: string; filename: string }[]; html?: string };
+    const pdfAtt = mail.attachments!.find((a) => a.type === "application/pdf")!;
+    const pdf = Buffer.from(pdfAtt.content, "base64").toString("latin1");
+    assert.ok(pdf.startsWith("%PDF-1.4") && pdf.includes("/Count 3"), "one page per ticket");
+    assert.match(mail.html!, /Your 3 tickets/);
+
+    const rows = env.DB._db.prepare("SELECT code FROM tickets WHERE event_id = ? ORDER BY seq").all(eventId) as { code: string }[];
+    assert.equal(rows.length, 3);
+    assert.equal(new Set(rows.map((r) => r.code)).size, 3, "unique codes");
+    assert.ok(rows.every((r) => /^[A-Z2-9]{16}$/.test(r.code)));
+
+    // Public view shows limited info; QR + PDF downloads work.
+    const pub = await (await call(`/api/tickets/${rows[0].code}`)).json() as { ticket: { holder: string; state: string; siblings: unknown[] } };
+    assert.equal(pub.ticket.holder, "Neo"); assert.equal(pub.ticket.state, "valid"); assert.equal(pub.ticket.siblings.length, 3);
+    assert.match(await (await call(`/api/tickets/${rows[0].code}/qr.svg`)).text(), /^<svg/);
+    assert.equal((await call(`/api/tickets/${rows[1].code}/pdf`)).headers.get("content-type"), "application/pdf");
+    assert.equal((await call("/api/tickets/AAAAAAAAAAAAAAAA")).status, 404, "fake codes are rejected");
+
+    // Door: first scan admits, a copy is flagged, wrong event is flagged, non-admins can't check in.
+    const scan = async (code: string, event_id?: string) => { const res = await post("/api/admin/tickets/check-in", { code, event_id }, A(cookie)); const j = await res.json() as { result: string; ticket: { holder: string }; error?: string }; if (!j.result) console.log("SCAN", res.status, j); return j; };
+    const first = await scan(`https://aogsccyouth.com/ticket?c=${rows[0].code}`, eventId);
+    assert.equal(first.result, "ok"); assert.equal(first.ticket.holder, "Neo Mokoena");
+    assert.equal((await scan(rows[0].code, eventId)).result, "already_used");
+    assert.equal((await scan(rows[1].code, "some-other-event")).result, "wrong_event");
+    assert.equal((await post("/api/admin/tickets/check-in", { code: rows[1].code })).status, 401);
+    const stats = await (await call(`/api/admin/events/${eventId}/tickets`, { headers: { cookie } })).json() as { total: number; checked_in: number };
+    assert.equal(stats.total, 3); assert.equal(stats.checked_in, 1);
+
+    // Cancelling voids the remaining tickets.
+    const regRow = env.DB._db.prepare("SELECT id FROM event_registrations WHERE email = ? AND event_id = ?").get("neo@example.com", eventId) as { id: string };
+    await call(`/api/admin/registrations/${regRow.id}`, { method: "PATCH", headers: { ...A(cookie), ...JSONH }, body: JSON.stringify({ status: "cancelled" }) });
+    assert.equal((await scan(rows[2].code, eventId)).result, "void");
+  });
+});
+
+describe("delegated admins (team & roles)", () => {
+  test("main admin grants a member admin; they sign in with Google + their own code; can approve but not delete; removal is immediate", async () => {
+    const g = await makeEnv({ GOOGLE_CLIENT_ID: CLIENT_ID });
+    const signIn = async (sub: string, email: string, given: string) => post("/api/auth/google", { credential: await googleToken({ sub, email, given_name: given, name: `${given} T` }) }, {}, g);
+    // A registered member with a Google account.
+    assert.equal((await call("/api/join", { method: "POST", body: joinForm({ email: "lebo@gmail.com", first_name: "Lebo" }) }, g)).status, 201);
+    const leboUser = cookieOf(await signIn("g-lebo", "lebo@gmail.com", "Lebo"));
+    assert.equal((await post("/api/auth/admin/request-code", {}, { cookie: leboUser }, g)).status, 403, "no role yet");
+
+    // Main admin signs in (Google + code) and grants the role.
+    const a = await signIn("g-admin", "aogsccmedia@gmail.com", "SCC");
+    const code = /code is (\d{6})/.exec(g.EMAIL.outbox.at(-1)!.text!)![1];
+    const sup = cookieOf(await post("/api/auth/admin/verify", { challenge: (await a.json() as { challenge: string }).challenge, code }, { cookie: cookieOf(a) }, g));
+    const team = await (await call("/api/admin/team?q=lebo", { headers: { cookie: sup } }, g)).json() as { people: { user_id: string; email: string }[] };
+    const lebo = team.people.find((p) => p.email === "lebo@gmail.com")!;
+    assert.equal((await call("/api/admin/team", { method: "POST", headers: { ...A(sup), ...JSONH }, body: JSON.stringify({ user_id: lebo.user_id }) }, g)).status, 200);
+    assert.ok(g.EMAIL.outbox.some((m) => JSON.stringify(m.to).includes("lebo@gmail.com") && m.subject.includes("admin access")));
+
+    // Lebo: still a normal session, can now request a code, which goes to HER inbox.
+    const me = await (await call("/api/auth/me", { headers: { cookie: leboUser } }, g)).json() as { can_admin: boolean; is_admin: boolean };
+    assert.equal(me.can_admin, true); assert.equal(me.is_admin, false);
+    const rc = await post("/api/auth/admin/request-code", {}, { cookie: leboUser }, g);
+    assert.equal(rc.status, 200);
+    const leboMail = g.EMAIL.outbox.at(-1)!;
+    assert.ok(JSON.stringify(leboMail.to).includes("lebo@gmail.com"), "code sent to the delegated admin, not the main inbox");
+    const staff = cookieOf(await post("/api/auth/admin/verify", { challenge: (await rc.json() as { challenge: string }).challenge, code: /code is (\d{6})/.exec(leboMail.text!)![1] }, { cookie: leboUser }, g));
+    const who = await (await call("/api/admin/whoami", { headers: { cookie: staff } }, g)).json() as { role: string };
+    assert.equal(who.role, "staff");
+    assert.equal((await call("/api/admin/stats", { headers: { cookie: staff } }, g)).status, 200, "can use the dashboard");
+    assert.equal((await call("/api/admin/team", { headers: { cookie: staff } }, g)).status, 403, "can't manage roles");
+    const mid = (g.DB._db.prepare("SELECT id FROM members WHERE email = ?").get("lebo@gmail.com") as { id: string }).id;
+    assert.equal((await call(`/api/admin/members/${mid}`, { method: "DELETE", headers: A(staff) }, g)).status, 403, "can't delete people");
+    assert.equal((await call(`/api/admin/members/${mid}`, { method: "PATCH", headers: { ...A(staff), ...JSONH }, body: JSON.stringify({ status: "member" }) }, g)).status, 200, "can verify members");
+
+    // Removing the role takes effect straight away.
+    assert.equal((await call(`/api/admin/team/${lebo.user_id}`, { method: "DELETE", headers: A(sup) }, g)).status, 200);
+    assert.equal((await call("/api/admin/stats", { headers: { cookie: staff } }, g)).status, 401);
+  });
+});
+
+describe("church programme", () => {
+  test("public sees the SCC calendar; members also see the Sub-Region; board meetings stay with leaders; admin can add", async () => {
+    const g = await makeEnv({ GOOGLE_CLIENT_ID: CLIENT_ID });
+    const pub = await (await call("/api/programme?from=2026-01-01&limit=300", {}, g)).json() as { items: { audience: string; source: string; title: string }[]; weekly: { day: string }[]; member: boolean };
+    assert.equal(pub.member, false);
+    assert.equal(pub.weekly.length, 7);
+    assert.ok(pub.items.length > 50 && pub.items.every((i) => i.audience === "public"), "only public items");
+    assert.ok(!pub.items.some((i) => /Board Meeting/i.test(i.title)), "board meetings hidden");
+    assert.equal((await call("/api/join", { method: "POST", body: joinForm({ email: "member@gmail.com" }) }, g)).status, 201);
+    const s = cookieOf(await post("/api/auth/google", { credential: await googleToken({ sub: "g-m", email: "member@gmail.com", given_name: "M" }) }, {}, g));
+    const mem = await (await call("/api/programme?from=2026-01-01&limit=300", { headers: { cookie: s } }, g)).json() as { member: boolean; items: { audience: string; source: string }[] };
+    assert.equal(mem.member, true);
+    assert.ok(mem.items.some((i) => i.source === "germiston" && i.audience === "members"));
+    assert.ok(!mem.items.some((i) => i.audience === "leaders"));
   });
 });

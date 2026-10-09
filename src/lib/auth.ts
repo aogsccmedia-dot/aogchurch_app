@@ -8,7 +8,7 @@ const USER_DAYS = 30;
 const ADMIN_HOURS = 12;
 
 export interface User { id: string; email: string; name: string | null; given_name: string | null; family_name: string | null; picture: string | null }
-export interface Session { user: User; kind: "user" | "admin" }
+export interface Session { user: User; kind: "user" | "admin"; role?: "super" | "staff" }
 
 // ---------------------------------------------------------------- Google ID tokens
 
@@ -104,14 +104,32 @@ export async function getSession(env: Env, req: Request): Promise<Session | null
   ).bind(await sha256Hex(token), new Date().toISOString()).first<User & { kind: "user" | "admin" }>();
   if (!row) return null;
   const { kind, ...user } = row;
-  // An admin session is only valid for the configured admin account.
-  if (kind === "admin" && !isAdminEmail(env, user.email)) return null;
-  return { user, kind };
+  if (kind !== "admin") return { user, kind };
+  // Admin sessions: the super admin (ADMIN_EMAIL), or someone the super admin has given a role.
+  // If a role is removed, the session quietly drops back to a normal member session.
+  if (isAdminEmail(env, user.email)) return { user, kind, role: "super" };
+  if (await hasStaffRole(env, user.id)) return { user, kind, role: "staff" };
+  return { user, kind: "user" };
 }
 
 export async function destroySession(env: Env, req: Request) {
   const token = getCookie(req, SESSION_COOKIE);
   if (token) await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256Hex(token)).run();
+}
+
+export async function hasStaffRole(env: Env, userId: string): Promise<boolean> {
+  return !!(await env.DB.prepare("SELECT 1 FROM admin_roles WHERE user_id = ?").bind(userId).first());
+}
+/** Can this account open the admin dashboard (after the emailed code)? */
+export async function canAdmin(env: Env, user: { id: string; email: string }): Promise<boolean> {
+  return isAdminEmail(env, user.email) || hasStaffRole(env, user.id);
+}
+
+/** Only the main (super) admin: deleting people and managing admin roles. */
+export async function requireSuper(env: Env, req: Request): Promise<Session> {
+  const s = await requireAdmin(env, req);
+  if (s.role !== "super") throw new HttpError(403, "Only the main church admin can do this.");
+  return s;
 }
 
 export async function requireAdmin(env: Env, req: Request): Promise<Session> {

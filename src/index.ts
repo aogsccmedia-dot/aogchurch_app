@@ -11,6 +11,8 @@ import { publicRoutes } from "./routes/public.ts";
 import { adminRoutes } from "./routes/admin.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { faithRoutes } from "./routes/faith.ts";
+import { ticketRoutes } from "./routes/tickets.ts";
+import { programmeRoutes } from "./routes/programme.ts";
 import { processAnnouncements } from "./lib/newsletter.ts";
 import { processCheckins, processWelcomes } from "./lib/membership.ts";
 import { nextSundayAfternoon } from "./lib/time.ts";
@@ -42,6 +44,8 @@ export default {
       publicRoutes(router, env);
       adminRoutes(router, env);
       faithRoutes(router, env);
+      ticketRoutes(router, env);
+      programmeRoutes(router, env);
       const res = await router.handle(req);
       return res ?? json({ ok: false, error: "Not found." }, 404);
     } catch (err) {

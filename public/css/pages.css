@@ -174,7 +174,7 @@ dialog.sheet::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 .code-form { justify-items: stretch; text-align: left; }
 .signin-sheet .close { position: absolute; right: 10px; top: 10px; }
 .muted-text { color: var(--text-2); font-size: 14.5px; }
-.code-input { font-size: 28px; letter-spacing: .5em; text-align: center; font-family: ui-monospace, Menlo, monospace; }
+.code-input { font-size: 28px; letter-spacing: .5em; text-align: center; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
 .google-slot { min-height: 44px; display: flex; justify-content: center; }
 
 /* event page */
@@ -259,7 +259,7 @@ dialog.sheet::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 @media (max-width: 560px) { .review dl { grid-template-columns: 1fr; } .review dt { margin-top: 6px; } }
 .success { text-align: center; display: grid; justify-items: center; gap: 18px; padding: 30px 0; }
 .success .lamp { width: 180px; aspect-ratio: 240/340; }
-.success .ref { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .1em; color: var(--gold-2); border: 1px solid rgba(227, 178, 91, .4); border-radius: 8px; padding: 8px 14px; }
+.success .ref { font-family: var(--font-sans); font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: .1em; color: var(--gold-2); border: 1px solid rgba(227, 178, 91, .4); border-radius: 8px; padding: 8px 14px; }
 @media (max-width: 900px) {
   .join-shell { grid-template-columns: 1fr; }
   .join-aside { position: static; }
@@ -884,3 +884,90 @@ body.portal { background:
 .wall-mine-row .btn { justify-self: start; }
 @media (max-width: 960px) { .wall-layout { grid-template-columns: 1fr; } .wall-side { position: static; order: -1; } }
 @media (max-width: 520px) { .cal-pop, .feature-actions .cal-menu .cal-pop { position: static; margin-top: 8px; min-width: 0; width: 100%; max-width: none; } .feature-actions .cal-menu { flex: 1 1 100%; } }
+
+/* =====================================================================
+   Digital ticket + door check-in
+   ===================================================================== */
+.ticket-page { padding: clamp(20px, 5vw, 56px) 0 90px; display: grid; justify-items: center; }
+.tk-wrap { width: min(100%, 440px); display: grid; gap: 18px; }
+.tk-card { border-radius: 24px; overflow: hidden; background: var(--bg-2); border: 1px solid var(--line-strong); box-shadow: 0 30px 60px -36px rgba(43, 32, 16, .5); }
+.tk-band { display: flex; gap: 12px; align-items: center; padding: 16px 20px; background: #14110e; color: #f6f0e6; border-bottom: 3px solid var(--gold-btn); }
+.tk-band img { border-radius: 50%; }
+.tk-band b { display: block; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: #f6d28b; font-weight: 500; }
+.tk-band span { font-size: 13px; color: #cfc6b8; }
+.tk-body { display: grid; gap: 10px; padding: 22px 22px 24px; justify-items: center; text-align: center; }
+.tk-body h1 { font-size: clamp(26px, 6vw, 34px); font-weight: 400; font-family: var(--font-serif); }
+.tk-when { display: inline-flex; gap: 6px; align-items: center; margin: 0; color: var(--text-2); font-size: 14.5px; }
+.tk-when .i { width: 16px; height: 16px; color: var(--gold); }
+.tk-qr { margin: 8px 0 0; padding: 14px; border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); }
+.tk-qr img { display: block; width: min(64vw, 260px); height: auto; image-rendering: pixelated; }
+.tk-qr.dim { opacity: .35; filter: grayscale(1); }
+.tk-code { margin: 0; font-weight: 600; letter-spacing: .12em; font-variant-numeric: tabular-nums; }
+.tk-state { margin: 0; padding: 6px 14px; border-radius: 999px; font-size: 13.5px; font-weight: 500; }
+.tk-state.ok { background: color-mix(in srgb, var(--green) 35%, transparent); color: var(--green-deep); }
+.tk-state.warn { background: #fdecc8; color: #8a5c14; }
+.tk-state.bad { background: #fde1dc; color: #a3311d; }
+.tk-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin: 6px 0 0; padding-top: 14px; border-top: 1px dashed var(--line-strong); text-align: left; }
+.tk-meta dt { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.tk-meta dd { margin: 2px 0 0; font-weight: 500; }
+.tk-sibs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.tk-sibs a { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line-strong); font-size: 13.5px; color: var(--text-2); }
+.tk-sibs a[aria-current] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.tk-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 6px; }
+.tk-admin { display: grid; gap: 12px; padding: 18px; border-radius: 20px; border: 2px solid var(--green); background: color-mix(in srgb, var(--green) 12%, var(--bg-2)); }
+.tk-admit { min-height: 56px; font-size: 17px; justify-content: center; }
+.scan-result { display: grid; gap: 4px; padding: 16px 18px; border-radius: 16px; text-align: center; }
+.scan-result b { font-size: 22px; font-weight: 600; }
+.scan-result.ok { background: #1f8a4c; color: #fff; }
+.scan-result.bad { background: #b4321f; color: #fff; }
+.purpose { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: clamp(20px, 4vw, 48px); align-items: start; padding: clamp(22px, 4vw, 40px); border-radius: 22px; border: 1px solid var(--line); background: var(--bg-2); }
+.purpose h2 { font-size: clamp(26px, 3.2vw, 38px); font-weight: 300; margin: 6px 0 12px; }
+.purpose-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.purpose-list li { padding: 12px 14px; border-radius: 12px; background: var(--bg); color: var(--text-2); font-size: 15px; }
+.purpose-list b { color: var(--text); font-weight: 500; }
+.purpose-list a { color: var(--gold-2); text-decoration: underline; }
+@media (max-width: 860px) { .purpose { grid-template-columns: 1fr; } }
+.team-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+
+/* =====================================================================
+   Our week + Church programme
+   ===================================================================== */
+.week-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+.wk-day { display: grid; gap: 10px; align-content: start; padding: 16px 14px; border-radius: 18px; border: 1px solid var(--line); background: var(--bg-2); }
+.wk-dow { font-family: var(--font-serif); font-size: 28px; line-height: 1; color: var(--gold-2); }
+.wk-name { margin: 0; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.wk-day b { display: flex; gap: 6px; align-items: flex-start; font-weight: 500; font-size: 15px; line-height: 1.35; color: var(--text); margin-top: 4px; }
+.wk-day b .i { width: 16px; height: 16px; flex: none; margin-top: 2px; color: var(--gold); }
+.wk-time { display: inline-block; margin-top: 8px; padding: 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--gold-btn) 22%, transparent); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.wk-day small { display: block; margin-top: 6px; color: var(--text-2); font-size: 12.5px; line-height: 1.45; }
+.wk-day.main { background: #14110e; border-color: #14110e; color: #f6f0e6; }
+.wk-day.main b, .wk-day.main .wk-dow { color: #f6d28b; }
+.wk-day.main small, .wk-day.main .wk-name { color: #cfc6b8; }
+.wk-day.main .wk-time { background: var(--gold-btn); color: #1c1712; }
+.wk-day.rest { opacity: .7; border-style: dashed; }
+@media (max-width: 1100px) { .week-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .week-grid { grid-template-columns: 1fr; } .wk-day { grid-template-columns: 56px minmax(0, 1fr); align-items: start; } .wk-dow { font-size: 24px; } }
+
+.programme { display: grid; gap: 22px; }
+.prog-filter { display: flex; flex-wrap: wrap; gap: 6px; }
+.prog-filter button { padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--bg-2); color: var(--text-2); font: inherit; font-size: 13.5px; cursor: pointer; }
+.prog-filter button[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.prog-month h3 { font-size: 13px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin: 0 0 10px; }
+.prog-month ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.prog-item { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg-2); border-left: 4px solid var(--gold-btn); }
+.prog-item.sage { border-left-color: var(--sage); } .prog-item.lilac { border-left-color: var(--lilac); } .prog-item.green { border-left-color: var(--green); }
+.prog-date { display: grid; justify-items: center; line-height: 1; }
+.prog-date b { font-family: var(--font-serif); font-size: 24px; font-weight: 400; }
+.prog-date small { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.prog-body { display: grid; gap: 3px; min-width: 0; }
+.prog-body b { font-weight: 500; }
+.prog-body small { color: var(--text-2); font-size: 13px; overflow-wrap: anywhere; }
+.prog-tag { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-2); padding: 4px 9px; border-radius: 999px; background: var(--hover); white-space: nowrap; }
+@media (max-width: 560px) { .prog-item { grid-template-columns: 44px minmax(0, 1fr); } .prog-tag { grid-column: 2; justify-self: start; } }
+.cal-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; padding: 5px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--line); width: fit-content; max-width: 100%; }
+.cal-tabs button { display: inline-flex; gap: 8px; align-items: center; padding: 9px 16px; border-radius: 999px; border: 0; background: none; font: inherit; font-size: 14.5px; color: var(--text-2); cursor: pointer; }
+.cal-tabs button[aria-selected="true"] { background: var(--text); color: var(--bg); }
+.cal-tabs .lock { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--lilac) 45%, transparent); color: #3a2f6e; }
+.cal-tabs button[aria-selected="true"] .lock { background: var(--lilac); }
+.cal-locked .link-btn { color: var(--gold-2); }
+.cal-locked a { color: var(--gold-2); text-decoration: underline; }

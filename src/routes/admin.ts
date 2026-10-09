@@ -9,6 +9,7 @@ import { deleteOwnerFiles, readUpload, storeFiles } from "../lib/uploads.ts";
 import { parseSchema, sanitizeSchema, slugify } from "../lib/forms.ts";
 import { emailHealth, resendFailed, sendMail } from "../lib/email.ts";
 import { SAMPLES } from "../emails/samples.ts";
+import { voidTickets } from "../lib/tickets.ts";
 import { CHECKIN_MONTHS, addMonths } from "../lib/membership.ts";
 import { buildAnnouncement, processAnnouncements, renderAnnouncement, type AnnouncementRow } from "../lib/newsletter.ts";
 import { calendarUrl, formatWhen, nextSundayAfternoon } from "../lib/time.ts";
@@ -49,6 +50,10 @@ export function adminRoutes(router: Router, env: Env): void {
     if (req.method !== "GET" && req.method !== "HEAD" && req.headers.get("x-scc-admin") !== "1") throw new HttpError(403, "Missing request header.");
     return h(req, p, s);
   };
+  const superOnly = (h: H) => guard(async (req, p, s) => {
+    if (s.role !== "super") throw new HttpError(403, "Only the main church admin can do this.");
+    return h(req, p, s);
+  });
 
   // ---------- dashboard ----------
   router.get("/api/admin/stats", guard(async () => {
@@ -141,7 +146,7 @@ export function adminRoutes(router: Router, env: Env): void {
     return json({ ok: true });
   }));
 
-  router.delete("/api/admin/members/:id", guard(async (_req, { id }, s) => {
+  router.delete("/api/admin/members/:id", superOnly(async (_req, { id }, s) => {
     await env.DB.batch([await deleteOwnerFiles(env, "member", id), env.DB.prepare("DELETE FROM members WHERE id = ?").bind(id)]);
     await audit(env, s, "delete", "member", id);
     return json({ ok: true });
@@ -363,6 +368,7 @@ export function adminRoutes(router: Router, env: Env): void {
         .bind(next, new Date().toISOString(), note, id).run();
       const e = await env.DB.prepare("SELECT * FROM events WHERE id = ?").bind(reg.event_id).first<EventRow>();
       if (e && (next === "confirmed" || next === "rejected") && body.notify !== false) await notifyRegistration(env, e, { ...reg, status: next }, { note });
+      if (next !== "confirmed") await voidTickets(env, reg.id);
       if (["cancelled", "rejected", "waitlist"].includes(next)) await promoteWaitlist(env, reg.event_id);
     }
     if (typeof body.checked_in === "boolean") {
@@ -541,6 +547,41 @@ export function adminRoutes(router: Router, env: Env): void {
     await audit(env, s, "unschedule", "announcement", id);
     return json({ ok: true });
   }));
+
+  // ---------- team: delegated admins (super admin only) ----------
+  router.get("/api/admin/team", superOnly(async (req) => {
+    const q = (new URL(req.url).searchParams.get("q") || "").trim().toLowerCase();
+    const { results: admins } = await env.DB.prepare(
+      `SELECT a.user_id, a.email, a.created_at, u.name, u.picture, m.ref_code, m.status FROM admin_roles a JOIN users u ON u.id = a.user_id
+         LEFT JOIN members m ON m.user_id = a.user_id OR m.email = a.email GROUP BY a.user_id ORDER BY a.created_at`).all();
+    const like = `%${q}%`;
+    const { results: people } = await env.DB.prepare(
+      `SELECT u.id AS user_id, u.email, u.name, u.picture, m.ref_code, m.status, m.first_name, m.last_name,
+              EXISTS (SELECT 1 FROM admin_roles a WHERE a.user_id = u.id) AS is_admin
+         FROM users u LEFT JOIN members m ON (m.user_id = u.id OR m.email = u.email) AND m.status != 'revoked'
+        WHERE lower(u.email) != ? AND (? = '' OR lower(u.email) LIKE ? OR lower(COALESCE(u.name, '')) LIKE ? OR lower(COALESCE(m.first_name || ' ' || m.last_name, '')) LIKE ?)
+        GROUP BY u.id ORDER BY (m.ref_code IS NULL), u.name LIMIT 50`).bind(adminEmail(env), q, like, like, like).all();
+    return json({ ok: true, admins, people });
+  }));
+  router.post("/api/admin/team", superOnly(async (req, _p, s) => {
+    const { user_id } = await readJson<{ user_id?: string }>(req);
+    const u = await env.DB.prepare("SELECT id, email, name, given_name FROM users WHERE id = ?").bind(user_id || "").first<{ id: string; email: string; name: string | null; given_name: string | null }>();
+    if (!u) throw new HttpError(404, "That person needs to sign in with Google on the website once before they can be made an admin.");
+    const member = await env.DB.prepare("SELECT status FROM members WHERE (user_id = ? OR email = ?) AND status != 'revoked' LIMIT 1").bind(u.id, u.email).first<{ status: string }>();
+    if (!member) throw new HttpError(422, "Only registered members can be given admin access. Ask them to join the church first.");
+    await env.DB.prepare("INSERT OR IGNORE INTO admin_roles (user_id, email, granted_by) VALUES (?, ?, ?)").bind(u.id, u.email.toLowerCase(), s.user.email).run();
+    await audit(env, s, "grant_admin", "user", u.id, { email: u.email });
+    await sendMail(env, { to: u.email, toName: u.name || undefined, ...T.adminGranted({ site: siteUrl(env) }, { name: u.given_name || (u.name || "").split(" ")[0] || "friend" }), template: "admin_granted" });
+    return json({ ok: true });
+  }));
+  router.delete("/api/admin/team/:userId", superOnly(async (_req, { userId }, s) => {
+    const r = await env.DB.prepare("DELETE FROM admin_roles WHERE user_id = ?").bind(userId).run();
+    if (!r.meta.changes) throw new HttpError(404, "Not an admin.");
+    await env.DB.prepare("DELETE FROM sessions WHERE user_id = ? AND kind = 'admin'").bind(userId).run();
+    await audit(env, s, "revoke_admin", "user", userId);
+    return json({ ok: true });
+  }));
+  router.get("/api/admin/whoami", guard(async (_req, _p, s) => json({ ok: true, email: s.user.email, name: s.user.name, role: s.role ?? "super" })));
 
   // ---------- complaints ----------
   router.get("/api/admin/complaints", guard(async (req) => {

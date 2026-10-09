@@ -48,9 +48,11 @@ function showCodeStep(r) {
 async function showLogin() {
   $("#app-view").hidden = true; $("#login-view").hidden = false;
   const { google_client_id: cid, user } = await fetch("/api/auth/me").then((r) => r.json()).catch(() => ({}));
-  if (user && user.email && cid) {
-    // Signed in with Google already (e.g. via the public site) → just need the code.
-    $("#admin-google").hidden = false;
+  const meInfo = await fetch("/api/auth/me").then((r) => r.json()).catch(() => ({}));
+  if (user && user.email && meInfo.can_admin) {
+    // Already signed in with Google on the website → just need the emailed code.
+    $("#signed-in-admin").hidden = false;
+    $("#signed-in-as").textContent = `Signed in as ${user.email}.`;
   }
   if (cid) {
     const s = document.createElement("script");
@@ -59,8 +61,10 @@ async function showLogin() {
       google.accounts.id.initialize({ client_id: cid, ux_mode: "popup", callback: safe(async (resp) => {
         loginErr("");
         const r = await api("/api/auth/google", { method: "POST", body: { credential: resp.credential } });
-        if (!r.needs_code) { loginErr("That Google account isn't the church admin account. Please use aogsccmedia@gmail.com."); return; }
-        showCodeStep(r);
+        if (r.needs_code) { showCodeStep(r); return; }
+        // Delegated admins: their Google session is a normal one; ask for a code to their own email.
+        try { showCodeStep(await api("/api/auth/admin/request-code", { method: "POST", body: {} })); }
+        catch { loginErr("That Google account doesn't have admin access. Ask the main church admin to add you under Team & roles."); }
       }) });
       google.accounts.id.renderButton($("#admin-google"), { theme: "filled_black", size: "large", shape: "pill", text: "continue_with", width: 300 });
       $("#admin-google").hidden = false;
@@ -71,6 +75,7 @@ async function showLogin() {
   }
 }
 
+$("#send-code").addEventListener("click", safe(async () => { loginErr(""); showCodeStep(await api("/api/auth/admin/request-code", { method: "POST", body: {} })); $("#signed-in-admin").hidden = true; }));
 $("#code-request").addEventListener("submit", safe(async (e) => {
   e.preventDefault(); loginErr("");
   showCodeStep(await api("/api/auth/admin/request-code", { method: "POST", body: { email: e.target.email.value } }));
@@ -88,6 +93,10 @@ async function boot() {
   me = r.user;
   $("#login-view").hidden = true; $("#app-view").hidden = false;
   $("#who").textContent = me.email;
+  const role = r.admin_role || "super";
+  document.body.dataset.role = role;
+  $("#role-chip").textContent = role === "super" ? "Main admin" : "Admin";
+  $("#to-profile").hidden = role === "super";
   const hour = Number(new Intl.DateTimeFormat("en-ZA", { hour: "numeric", hour12: false, timeZone: TZ }).format(new Date()));
   $("#greeting").textContent = `${hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"}${me.given_name ? ", " + me.given_name : ""}`;
   openTab(location.hash.slice(1) || "overview");
@@ -198,7 +207,7 @@ async function openMember(id) {
       <button class="btn btn-gold btn-sm" id="md-save" style="justify-self:start">Save</button></div>
     ${attachments.length ? `<div class="card"><h3>Attachments</h3><div class="files">${attachments.map((a) => `<a href="/api/admin/files/${esc(a.id)}" target="_blank" rel="noopener">${a.content_type.startsWith("image/") && a.content_type !== "image/heic" ? `<img src="/api/admin/files/${esc(a.id)}" alt="">` : `<span class="doc">${esc((a.filename.split(".").pop() || "file").toUpperCase())}</span>`}<span>${esc(a.kind)} · ${(a.size_bytes / 1024).toFixed(0)} KB</span></a>`).join("")}</div></div>` : ""}
     <dl class="kv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
-    <button class="btn btn-sm" id="md-delete" style="justify-self:start;color:var(--danger)">Delete record (POPIA request)</button>`;
+    ${document.body.dataset.role === "super" ? `<button class="btn btn-sm" id="md-delete" style="justify-self:start;color:var(--danger)">Delete record (POPIA request)</button>` : `<p class="muted" style="font-size:13px">Only the main admin can delete records.</p>`}`;
   const dlg = $("#member-drawer"); dlg.showModal();
   $("#md-save").onclick = safe(async () => { await api(`/api/admin/members/${id}`, { method: "PATCH", body: { status: $("#md-status").value, admin_notes: $("#md-notes").value, assigned_to: $("#md-assigned").value } }); toast("Saved"); safe(loaders.members)(); });
   $("#md-delete").onclick = safe(async () => { if (!confirm(`Permanently delete ${m.first_name} ${m.last_name} and their files?`)) return; await api(`/api/admin/members/${id}`, { method: "DELETE" }); dlg.close(); toast("Deleted"); safe(loaders.members)(); });
@@ -366,6 +375,7 @@ function drawResponses() {
     <td>${r.amount_due ? `<b style="font-weight:450">R${Number(r.amount_due).toLocaleString("en-ZA")}</b>` : '<span class="sub">—</span>'}
       ${r.pop_attachment_id ? `<div><a class="pop-link" href="/api/admin/files/${esc(r.pop_attachment_id)}" target="_blank" rel="noopener">${icon("file")} View proof</a></div>` : ""}
       ${r.status === "pending" ? `<div class="row-actions"><button class="btn btn-sm btn-gold" data-approve="${esc(r.id)}">${icon("check")} Approve</button><button class="btn btn-sm" data-decline="${esc(r.id)}">Decline</button></div>` : ""}
+      ${r.status === "confirmed" ? `<div class="row-actions"><button class="btn btn-sm" data-resend="${esc(r.id)}">${icon("ticket")} Resend ${1 + Number(r.guests || 0)} ticket${r.guests ? "s" : ""}</button></div>` : ""}
       ${r.reviewed_at ? `<div class="sub">Reviewed ${fmtDate(r.reviewed_at)}</div>` : ""}</td>
     <td><div class="resp-answers">${qs.map((fld) => { const v = r.answers[fld.id]; const fl = r.files.filter((x) => x.kind === `answer:${fld.id}`);
       return `<span><b>${esc(fld.label)}${/[?:.]$/.test(fld.label) ? "" : ":"}</b> ${fl.length ? fl.map((x) => `<a href="/api/admin/files/${esc(x.id)}" target="_blank" style="color:var(--gold-2)">${esc(x.filename)}</a>`).join(", ") : esc(Array.isArray(v) ? v.join(", ") : v ?? "—")}</span>`; }).join("") || '<span class="sub">—</span>'}</div></td>
@@ -382,8 +392,9 @@ $("#approve-all").addEventListener("click", safe(async () => {
   toast(`${r.approved} approved — tickets emailed`); await loadResponses();
 }));
 $("#resp-table").addEventListener("click", safe(async (e) => {
-  const a = e.target.closest("[data-approve]"), d = e.target.closest("[data-decline]");
-  if (a) { await api(`/api/admin/registrations/${a.dataset.approve}`, { method: "PATCH", body: { status: "confirmed" } }); toast("Approved — ticket emailed"); await loadResponses(); }
+  const a = e.target.closest("[data-approve]"), d = e.target.closest("[data-decline]"), rs = e.target.closest("[data-resend]");
+  if (rs) { rs.disabled = true; const r = await api(`/api/admin/registrations/${rs.dataset.resend}/resend-tickets`, { method: "POST" }); toast(`Tickets sent to ${r.sent_to}`); rs.disabled = false; }
+  if (a) { await api(`/api/admin/registrations/${a.dataset.approve}`, { method: "PATCH", body: { status: "confirmed" } }); toast("Approved: tickets (PDF) emailed"); await loadResponses(); }
   if (d) {
     const note = prompt("Optional note to the person (e.g. amount didn't match):", "");
     if (note === null) return;
@@ -424,6 +435,14 @@ function serviceRow(s = {}) {
   $("#services").append(d);
 }
 $("#add-service").addEventListener("click", () => serviceRow());
+// Our regular week: new letters start with these (edit or remove as needed).
+const WEEKLY = [
+  { title: "Prayer", when: "Monday · 06:00 – 15:00", location: "Sandton City Church" },
+  { title: "Choir practice", when: "Wednesday · 18:00 – 19:30", location: "Sandton City Church" },
+  { title: "Mothers', Fathers' & Daughters' services", when: "Thursday · 18:00 – 20:00", location: "Sandton City Church" },
+  { title: "Youth service", when: "Friday · 18:00 – 20:00", location: "Sandton City Church" },
+  { title: "Main service", when: "Sunday · 08:45 – 11:00", location: "17 Humber Street, Woodmead" },
+];
 const letterBody = () => ({
   subject: lf.subject.value, preheader: lf.preheader.value, heading: lf.heading.value, body: lf.body.value,
   scripture_text: lf.scripture_text.value, scripture_ref: lf.scripture_ref.value, include_events: lf.include_events.checked,
@@ -445,6 +464,7 @@ async function editLetter(id) {
     lf.body.value = "What a joy it was to worship together this morning! Thank you for being part of this family.\n\nHere's what's happening this week — we'd love to see you there. Bring a friend, bring your questions, and come expecting God to move.";
     lf.scripture_text.value = "Those who hope in the Lord will renew their strength. They will soar on wings like eagles.";
     lf.scripture_ref.value = "Isaiah 40:31";
+    WEEKLY.forEach(serviceRow);
     serviceRow();
   }
   const locked = currentLetter && !["draft", "scheduled"].includes(currentLetter.status);
@@ -525,6 +545,119 @@ loaders.messages = async () => {
     <p>${esc(m.message)}</p><div class="actions"><a class="btn btn-sm" href="mailto:${esc(m.email)}?subject=${encodeURIComponent("Re: " + (m.subject || "your message to Sandton City Church"))}">Reply by email</a><button class="btn btn-sm" data-msg="${esc(m.id)}" data-st="replied">Mark replied</button><button class="btn btn-sm" data-msg="${esc(m.id)}" data-st="archived">Archive</button></div></article>`).join("") : `<div class="empty">No messages yet.</div>`;
 };
 $("#msg-list").addEventListener("click", safe(async (e) => { const b = e.target.closest("[data-msg]"); if (!b) return; await api(`/api/admin/messages/${b.dataset.msg}`, { method: "PATCH", body: { status: b.dataset.st } }); toast("Updated"); loaders.messages(); }));
+
+// ================================================================ door scanner
+let scanStream = null, scanTimer = null, lastScan = { code: "", at: 0 };
+const SCAN_MSG = { ok: ["Admit ✓", "ok"], already_used: ["Already used!", "bad"], void: ["Not valid", "bad"], wrong_event: ["Different event", "bad"] };
+loaders.scan = async () => {
+  const { events } = await api("/api/admin/events");
+  const now = Date.now() - 86400_000;
+  const list = events.filter((e) => new Date(e.ends_at || e.starts_at).getTime() > now).concat(events.filter((e) => new Date(e.ends_at || e.starts_at).getTime() <= now));
+  const sel = $("#scan-event"), prev = sel.value;
+  sel.innerHTML = list.map((e) => `<option value="${esc(e.id)}">${esc(e.title)} · ${fmtDate(e.starts_at)}</option>`).join("") || `<option value="">No events yet</option>`;
+  if (prev) sel.value = prev;
+  scanCount();
+};
+async function scanCount() {
+  const id = $("#scan-event").value; if (!id) return;
+  const r = await api(`/api/admin/events/${id}/tickets`).catch(() => null);
+  if (r) $("#scan-count").textContent = `${r.checked_in} of ${r.total} tickets checked in`;
+}
+async function checkIn(raw) {
+  const code = String(raw || "").trim(); if (!code) return;
+  if (code === lastScan.code && Date.now() - lastScan.at < 4000) return;   // same QR still in view
+  lastScan = { code, at: Date.now() };
+  try {
+    const r = await api("/api/admin/tickets/check-in", { method: "POST", body: { code, event_id: $("#scan-event").value || undefined } });
+    const [label, cls] = SCAN_MSG[r.result];
+    const t = r.ticket;
+    $("#scan-result").innerHTML = `<div class="scan-result ${cls}"><b>${label}</b><span>${esc(t.holder)} · ticket ${t.seq} of ${t.quantity} · ${esc(t.ref)}</span>
+      ${r.result === "already_used" ? `<span>First admitted ${fmtDate(t.checked_in_at)}. This may be a copy: check ID.</span>` : r.result === "wrong_event" ? `<span>This ticket is for ${esc(t.event.title)}.</span>` : ""}</div>`;
+    $("#scan-log").insertAdjacentHTML("afterbegin", `<div class="item"><span class="pill ${cls === "ok" ? "member" : "new"}">${label}</span> ${esc(t.holder)} · ${esc(t.code.slice(0, 4))}… · ${new Date().toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" })}</div>`);
+    if (navigator.vibrate) navigator.vibrate(r.result === "ok" ? 60 : [80, 60, 80]);
+    scanCount();
+  } catch (e) {
+    $("#scan-result").innerHTML = `<div class="scan-result bad"><b>Not found</b><span>${esc(e.message)}</span></div>`;
+    if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
+  }
+}
+$("#scan-event").addEventListener("change", scanCount);
+$("#scan-manual").addEventListener("submit", (e) => { e.preventDefault(); lastScan = { code: "", at: 0 }; checkIn(e.target.code.value); e.target.reset(); });
+$("#scan-start").addEventListener("click", safe(async () => {
+  if (!("BarcodeDetector" in window)) {
+    $("#scan-cam-note").innerHTML = "This browser can't scan inside the page. Use your phone's <b>camera app</b> instead: point it at a ticket and tap the link. You'll get a big <b>Admit</b> button. Or type the code below.";
+    return;
+  }
+  const detector = new BarcodeDetector({ formats: ["qr_code"] });
+  scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+  const v = $("#scan-video"); v.srcObject = scanStream; v.hidden = false; await v.play();
+  $("#scan-start").hidden = true; $("#scan-stop").hidden = false; $("#scan-cam-note").textContent = "Point the camera at a ticket QR code.";
+  const tick = async () => {
+    try { const codes = await detector.detect(v); if (codes[0]) await checkIn(codes[0].rawValue); } catch { /* frame not ready */ }
+    scanTimer = setTimeout(tick, 350);
+  };
+  tick();
+}));
+function stopScan() {
+  clearTimeout(scanTimer); scanStream?.getTracks().forEach((t) => t.stop()); scanStream = null;
+  $("#scan-video").hidden = true; $("#scan-start").hidden = false; $("#scan-stop").hidden = true;
+}
+$("#scan-stop").addEventListener("click", stopScan);
+addEventListener("hashchange", () => { if (!location.hash.startsWith("#scan")) stopScan(); });
+
+// ================================================================ church programme
+let progEditing = null;
+const PF = () => $("#prog-form");
+async function loadProgramme() {
+  const { items } = await api("/api/admin/programme");
+  const aud = $("#prog-aud").value;
+  const AUD = { public: ["Everyone", "member"], members: ["Members only", "pending"], leaders: ["Leaders only", ""] };
+  const list = items.filter((p) => !aud || p.audience === aud);
+  $("#prog-list").innerHTML = list.length ? list.map((p) => `<div class="item prog-admin" data-prog="${esc(p.id)}">
+      <div><b style="font-weight:450">${esc(p.title)}</b><div class="meta">${esc(p.when)}${p.venue ? ` · ${esc(p.venue)}` : ""}${p.department ? ` · ${esc(p.department)}` : ""}</div></div>
+      <span class="pill ${AUD[p.audience][1]}">${AUD[p.audience][0]}</span>
+      <div class="actions"><button class="btn btn-sm" data-edit>Edit</button><button class="btn btn-sm" data-del>Remove</button></div></div>`).join("") : `<div class="empty">Nothing here yet.</div>`;
+  $("#prog-list")._items = items;
+}
+loaders.programme = loadProgramme;
+$("#prog-aud").addEventListener("change", () => safe(loadProgramme)());
+$("#prog-form").addEventListener("submit", safe(async (e) => {
+  e.preventDefault();
+  const body = Object.fromEntries(new FormData(PF()).entries());
+  if (progEditing) await api(`/api/admin/programme/${progEditing}`, { method: "PUT", body }); else await api("/api/admin/programme", { method: "POST", body });
+  toast(progEditing ? "Updated" : "Added to the church programme"); progEditing = null; PF().reset(); $("#prog-submit").textContent = "Add to programme"; loadProgramme();
+}));
+$("#prog-list").addEventListener("click", safe(async (e) => {
+  const row = e.target.closest("[data-prog]"); if (!row) return;
+  const item = $("#prog-list")._items.find((p) => p.id === row.dataset.prog);
+  if (e.target.closest("[data-del]")) { if (!confirm(`Remove “${item.title}”?`)) return; await api(`/api/admin/programme/${item.id}`, { method: "DELETE" }); toast("Removed"); loadProgramme(); }
+  if (e.target.closest("[data-edit]")) {
+    progEditing = item.id;
+    for (const k of ["title", "start_date", "end_date", "time_label", "department", "venue", "notes", "audience"]) if (PF()[k]) PF()[k].value = item[k] ?? "";
+    $("#prog-submit").textContent = "Save changes"; PF().scrollIntoView({ behavior: "smooth" });
+  }
+}));
+
+// ================================================================ team & roles (main admin)
+async function loadTeam() {
+  const { admins, people } = await api(`/api/admin/team?q=${encodeURIComponent($("#team-q").value)}`);
+  $("#team-admins").innerHTML = admins.length ? admins.map((a) => `<div class="item team-row">
+      <span class="avatar sm">${a.picture ? `<img src="${esc(a.picture)}" alt="" referrerpolicy="no-referrer">` : esc((a.name || a.email)[0].toUpperCase())}</span>
+      <div><b>${esc(a.name || a.email)}</b><div class="meta">${esc(a.email)}${a.ref_code ? ` · ${esc(a.ref_code)}` : ""} · since ${fmtDate(a.created_at)}</div></div>
+      <button class="btn btn-sm" data-revoke="${esc(a.user_id)}">Remove admin</button></div>`).join("") : `<div class="empty">Only you for now.</div>`;
+  $("#team-people").innerHTML = people.length ? people.map((p) => `<div class="item team-row">
+      <span class="avatar sm">${p.picture ? `<img src="${esc(p.picture)}" alt="" referrerpolicy="no-referrer">` : esc((p.name || p.email)[0].toUpperCase())}</span>
+      <div><b>${esc(p.first_name ? `${p.first_name} ${p.last_name}` : p.name || p.email)}</b><div class="meta">${esc(p.email)} · ${p.ref_code ? `Member ${esc(p.ref_code)} (${esc(p.status)})` : "Not a registered member yet"}</div></div>
+      ${p.is_admin ? `<span class="pill member">Admin</span>` : p.ref_code ? `<button class="btn btn-sm btn-gold" data-grant="${esc(p.user_id)}">Make admin</button>` : `<span class="pill">Needs to join</span>`}</div>`).join("") : `<div class="empty">No one found.</div>`;
+}
+loaders.team = loadTeam;
+let teamT;
+$("#team-q").addEventListener("input", () => { clearTimeout(teamT); teamT = setTimeout(() => safe(loadTeam)(), 250); });
+$("[data-view=team]").addEventListener("click", safe(async (e) => {
+  const g = e.target.closest("[data-grant]"), r = e.target.closest("[data-revoke]");
+  if (g) { await api("/api/admin/team", { method: "POST", body: { user_id: g.dataset.grant } }); toast("Admin access given. We've emailed them."); loadTeam(); }
+  if (r && confirm("Remove this person's admin access? They'll keep their normal member profile.")) { await api(`/api/admin/team/${r.dataset.revoke}`, { method: "DELETE" }); toast("Admin access removed"); loadTeam(); }
+}));
 
 // ================================================================ complaints
 const CMP_LABEL = { received: "New", in_review: "In review", resolved: "Resolved", closed: "Closed" };

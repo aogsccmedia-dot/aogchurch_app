@@ -68,10 +68,11 @@ def head(title, desc, canonical=None, noindex=False, extra=""):
   <meta name="theme-color" content="#f6f1e8">{robots}{canon}
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="SCC Church">
+  <meta name="apple-mobile-web-app-title" content="AOG SCC">
+  <meta name="application-name" content="AOG Sandton City Church">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Sandton City Church">
+  <meta property="og:site_name" content="AOG Sandton City Church">
   <meta property="og:locale" content="en_ZA">
   <meta property="og:image:alt" content="AOG Sandton City Church, Woodmead, Sandton">
   <meta name="geo.region" content="ZA-GP">
@@ -227,18 +228,18 @@ TABBAR = """
 C = "Sandton City Church"
 T = f" · {C}"
 PAGES = {
-    "index": dict(title=f"{C} (AOG) · Church in Woodmead, Sandton", desc="AOG Sandton City Church: a community-centred, Bible-based, Spirit-filled church at 17 Humber Street, Woodmead, Sandton. Sunday services, youth ministry, events and a weekly letter.", canonical="/", scripts=["site.js", "auth.js", "pages.js", "word.js"],
+    "index": dict(title="AOG Sandton City Church · Church in Woodmead, Sandton", desc="AOG Sandton City Church: a community-centred, Bible-based, Spirit-filled church at 17 Humber Street, Woodmead, Sandton. Sunday services, youth ministry, events and a weekly letter.", canonical="/", scripts=["site.js", "auth.js", "pages.js", "word.js"],
                   extra='\n  <link rel="preload" as="image" href="/assets/photos/worship-1600.webp" type="image/webp">' + ld(CHURCH, WEBSITE)),
     "about": dict(title="About us" + T, crumb="About us", desc="Who we are: AOG Sandton City Church is an Assemblies of God family in Woodmead, Sandton — Bible-based, community-centred and Spirit-filled.", canonical="/about", scripts=["site.js", "auth.js", "pages.js"]),
     "our-story": dict(title="Our story" + T, crumb="Our story", desc="The story of AOG Sandton City Church: part of the worldwide Assemblies of God family, at home in Woodmead, Sandton, with a youth ministry on fire.", canonical="/our-story", scripts=["site.js", "auth.js", "pages.js"]),
     "beliefs": dict(title="What we believe" + T, crumb="What we believe", desc="What AOG Sandton City Church believes about the Bible, God, Jesus, salvation, the Holy Spirit, baptism, healing and the church.", canonical="/beliefs", scripts=["site.js", "auth.js", "pages.js"]),
-    "events": dict(title="Services & events" + T, crumb="Services & events", desc="Sunday services and upcoming events at Sandton City Church, Woodmead. Register online, pay by EFT and add events to your calendar.", canonical="/events", scripts=["site.js", "auth.js", "pages.js"]),
+    "events": dict(title="Services & events" + T, crumb="Services & events", desc="Sunday services and upcoming events at Sandton City Church, Woodmead. Register online, pay by EFT and add events to your calendar.", canonical="/events", scripts=["site.js", "auth.js", "pages.js", "programme.js"]),
     "get-involved": dict(title="Get involved" + T, crumb="Get involved", desc="Find your place on the team at Sandton City Church — worship, media, hospitality, kids, youth and more.", canonical="/get-involved", scripts=["site.js", "auth.js", "pages.js"]),
     "prayer": dict(title="Prayer requests" + T, crumb="Prayer", desc="Send a prayer request to Sandton City Church. Our prayer team will stand with you — anonymously if you prefer.", canonical="/prayer", scripts=["site.js", "auth.js", "pages.js", "wall.js"]),
     "visit": dict(title="Visit & contact" + T, crumb="Visit & contact", desc="Visit Sandton City Church at 17 Humber Street, Woodmead, Sandton. Directions, what to expect, and how to contact us.", canonical="/visit", scripts=["site.js", "auth.js", "pages.js"]),
     "join": dict(title="Join the church" + T, crumb="Join the church", desc="Join AOG Sandton City Church. Tell us a little about you and a leader will reach out personally.", canonical="/join", scripts=["site.js", "auth.js", "join.js"]),
     "event": dict(title="Event" + T, desc="Register for an upcoming service or event at Sandton City Church.", scripts=["site.js", "auth.js", "event.js"]),
-    "me": dict(title="My profile" + T, body="portal", desc="Your profile, events and weekly letter settings.", noindex=True, scripts=["site.js", "auth.js", "me.js", "word.js"]),
+    "me": dict(title="My profile" + T, body="portal", desc="Your profile, events and weekly letter settings.", noindex=True, scripts=["site.js", "auth.js", "me.js", "word.js", "programme.js"]),
     "privacy": dict(title="Privacy policy" + T, crumb="Privacy policy", desc="How AOG Sandton City Church handles your personal information under POPIA.", canonical="/privacy", scripts=["site.js", "auth.js"]),
     "terms": dict(title="Terms of use" + T, crumb="Terms of use", desc="The terms for using the Sandton City Church website, accounts and event registrations.", canonical="/terms", scripts=["site.js", "auth.js"]),
     "payments": dict(title="Event payments & refunds" + T, crumb="Event payments & refunds", desc="How EFT payments, proof of payment, verification and refunds work for Sandton City Church events.", canonical="/payments", scripts=["site.js", "auth.js"]),
@@ -247,6 +248,7 @@ PAGES = {
     "complaints": dict(title="Complaints policy" + T, crumb="Complaints policy", desc="How to raise a complaint at Sandton City Church and what to expect: acknowledgement, a response within 7 working days, confidentiality.", canonical="/complaints", scripts=["site.js", "auth.js"]),
     "data-protection": dict(title="Data protection, POPIA & PAIA" + T, crumb="Data protection", desc="Sandton City Church's data protection standards: Information Officer, security, retention, breach notification and your POPIA/PAIA rights.", canonical="/data-protection", scripts=["site.js", "auth.js"]),
     "app": dict(title="Get the app" + T, crumb="Get the app", desc="Add Sandton City Church to your phone's home screen — iPhone, Android or computer.", canonical="/app", scripts=["site.js", "auth.js"]),
+    "ticket": dict(title="Your ticket" + T, desc="Your digital ticket for an event at Sandton City Church.", noindex=True, scripts=["site.js", "auth.js", "ticket.js"]),
     "membership": dict(title="Your membership" + T, body="portal", desc="Confirm or manage your membership at Sandton City Church.", noindex=True, scripts=["site.js", "membership.js"]),
     "offline": dict(title="You're offline" + T, desc="You're offline.", noindex=True, scripts=["site.js"]),
     "404": dict(title="Page not found" + T, desc="Page not found.", noindex=True, scripts=["site.js", "auth.js"]),

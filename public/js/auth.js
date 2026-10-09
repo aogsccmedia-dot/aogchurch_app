@@ -109,7 +109,8 @@ export function renderHeaderUser(me) {
   const avatar = u.picture ? `<img src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : `<span>${esc(initials)}</span>`;
   slot.innerHTML = `<details class="user-menu"><summary aria-label="Account menu" class="avatar">${avatar}</summary>
     <div class="user-pop"><b>${esc(u.name || u.email)}</b><small>${esc(u.email)}</small>
-      ${me.is_admin || me.admin_account ? `<a href="/admin/">Admin dashboard</a>` : `<a href="/me">My profile</a>`}
+      ${me.admin_account ? "" : `<a href="/me">My profile</a>`}
+      ${me.can_admin || me.is_admin || me.admin_account ? `<a href="/admin/">Admin dashboard</a>` : ""}
       ${!me.member && !me.admin_account ? `<a href="/join">Complete joining</a>` : ""}
       <button type="button" data-signout>Sign out</button></div></details>`;
   slot.querySelector("[data-signout]").addEventListener("click", signOut);
