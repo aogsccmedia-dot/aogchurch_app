@@ -1,3 +1,4 @@
+import { functionalAllowed } from "./consent.js";
 import { icon } from "./icons.js";
 import { AVAILABILITY, LABELS, MINISTRIES } from "./options.js";
 import { api, esc } from "./site.js";
@@ -186,6 +187,7 @@ function saveDraft() {
       else data[el.name] = el.value;
     }
     data.__step = current;
+    if (!functionalAllowed()) return;
     localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
     saveState.textContent = "Draft saved";
   } catch { /* storage unavailable */ }

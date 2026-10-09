@@ -6,8 +6,12 @@ import { icon } from "./icons.js";
 
 initPhotos();
 
+// Shared behaviour for the public content pages (home, about, events, get involved, prayer, visit).
+// Every block is optional: it only runs when its section is on the page.
+const $id = (id) => document.getElementById(id);
+
 // ---------- ministries ----------
-document.getElementById("ministries").innerHTML = MINISTRIES.map((m) => `
+if ($id("ministries")) $id("ministries").innerHTML = MINISTRIES.map((m) => `
   <a class="ministry" href="/join?interest=${m.slug}">${m.icon}<b>${esc(m.label)}</b><span>${esc(m.desc)}</span></a>`).join("");
 
 // ---------- events ----------
@@ -48,16 +52,18 @@ async function renderFeatured(ev) {
 document.addEventListener("click", (e) => { document.querySelectorAll(".cal-menu[open]").forEach((m) => { if (!m.contains(e.target)) m.open = false; }); });
 
 async function loadEvents() {
+  if (!eventsEl) return;
+  const limit = Number(eventsEl.dataset.limit || 0);
   try {
     const { events } = await api("/api/events");
     if (!events.length) {
       eventsEl.innerHTML = `<div class="events-empty" style="grid-column:1/-1"><b style="font-weight:450;color:var(--text)">New dates are on their way.</b>
-        <span>Sign up for the weekly letter and we'll send you the services every Sunday afternoon.</span><a class="btn btn-sm" href="#letter">Get the weekly letter ${icon("arrowRight", "arr")}</a></div>`;
+        <span>Sign up for the weekly letter and we'll send you the services every Sunday afternoon.</span><a class="btn btn-sm" href="${$id("letter") ? "#letter" : "/#letter"}">Get the weekly letter ${icon("arrowRight", "arr")}</a></div>`;
       return;
     }
     const featured = events.find((e) => e.cover_url && e.registration_open) || events.find((e) => e.registration_open);
-    if (featured) renderFeatured(featured);
-    eventsEl.innerHTML = events.map((ev, i) => `<a class="event-card" href="/event?e=${encodeURIComponent(ev.slug)}">
+    if (featured && $id("featured")) renderFeatured(featured);
+    eventsEl.innerHTML = (limit ? events.slice(0, limit) : events).map((ev, i) => `<a class="event-card" href="/event?e=${encodeURIComponent(ev.slug)}">
         <figure class="photo cover-square">${coverImg(ev, i)}</figure>
         <div class="body"><span class="eyebrow gold">${esc(whenShort(ev.starts_at))}</span><h3>${esc(ev.title)}</h3>
           <p class="meta">${esc(ev.location || "17 Humber Street, Woodmead")}</p>
@@ -70,39 +76,40 @@ async function loadEvents() {
 loadEvents();
 
 // ---------- weekly letter ----------
-const letterStatus = document.getElementById("letter-status");
-const showLetter = (msg, ok = true) => { letterStatus.textContent = msg; letterStatus.className = `notice ${ok ? "ok" : "err"}`; letterStatus.hidden = false; };
+const letterStatus = $id("letter-status");
+const letterForm = $id("letter-form");
 const q = new URLSearchParams(location.search).get("letter");
-if (q === "confirmed") showLetter("You're confirmed! Look out for our letter every Sunday afternoon. 💛");
-if (q === "unsubscribed") showLetter("You've been unsubscribed. We'll miss you — you're always welcome back.");
-if (q === "invalid") showLetter("That link has expired or was already used.", false);
-
-const letterForm = document.getElementById("letter-form");
-letterForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const body = Object.fromEntries(new FormData(letterForm).entries());
-  try { const r = await api("/api/newsletter/subscribe", { method: "POST", body }); showLetter(r.message); letterForm.reset(); }
-  catch (err) { showLetter(err.message, false); }
-});
-
-async function setupLetterForMe(me) {
-  if (me?.user) {
-    if (me.subscribed) { letterForm.hidden = true; showLetter(`You're subscribed as ${me.user.email}. Manage it anytime from your profile.`); return; }
-    letterForm.innerHTML = `<button class="btn btn-gold" type="button" id="one-tap-sub">Subscribe as ${esc(me.user.email)}</button>`;
-    document.getElementById("one-tap-sub").addEventListener("click", async () => {
-      const r = await api("/api/newsletter/subscribe", { method: "POST", body: {} }); showLetter(r.message); letterForm.hidden = true;
-    });
-    return;
-  }
-  const shown = await googleButton(document.getElementById("letter-google"), { text: "continue_with" });
-  document.getElementById("letter-or").hidden = !shown;
+if (letterForm) {
+  const showLetter = (msg, ok = true) => { letterStatus.textContent = msg; letterStatus.className = `notice ${ok ? "ok" : "err"}`; letterStatus.hidden = false; };
+  if (q === "confirmed") showLetter("You're confirmed! Look out for our letter every Sunday afternoon. 💛");
+  if (q === "unsubscribed") showLetter("You've been unsubscribed. We'll miss you — you're always welcome back.");
+  if (q === "invalid") showLetter("That link has expired or was already used.", false);
+  letterForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = letterForm.querySelector('[type="submit"]'); if (btn) btn.disabled = true;
+    const body = Object.fromEntries(new FormData(letterForm).entries());
+    try { const r = await api("/api/newsletter/subscribe", { method: "POST", body }); showLetter(r.message); letterForm.reset(); }
+    catch (err) { showLetter(err.message, false); }
+    finally { if (btn) btn.disabled = false; }
+  });
+  const setupLetterForMe = async (me) => {
+    if (me?.user) {
+      if (me.subscribed) { letterForm.hidden = true; showLetter(`You're subscribed as ${me.user.email}. Manage it anytime from your profile.`); return; }
+      letterForm.innerHTML = `<button class="btn btn-gold" type="button" id="one-tap-sub">Subscribe as ${esc(me.user.email)}</button>`;
+      $id("one-tap-sub").addEventListener("click", async () => {
+        const r = await api("/api/newsletter/subscribe", { method: "POST", body: {} }); showLetter(r.message); letterForm.hidden = true;
+      });
+      return;
+    }
+    const shown = await googleButton($id("letter-google"), { text: "continue_with" });
+    $id("letter-or").hidden = !shown;
+  };
+  getMe().then(setupLetterForMe);
+  whenSignedIn(setupLetterForMe);
+  if (q) setTimeout(() => $id("letter").scrollIntoView({ behavior: "smooth" }), 300);
 }
-getMe().then(setupLetterForMe);
-whenSignedIn(setupLetterForMe);
 
 // ---------- forms ----------
-jsonForm(document.getElementById("prayer-form"), "/api/prayer");
-jsonForm(document.getElementById("contact-form"), "/api/contact");
+if ($id("prayer-form")) jsonForm($id("prayer-form"), "/api/prayer");
+if ($id("contact-form")) jsonForm($id("contact-form"), "/api/contact");
 getSettings().then((s) => { if (s.contact_email) document.querySelector('[data-setting-row="contact_email"]')?.removeAttribute("hidden"); });
-if (q) setTimeout(() => document.getElementById("letter").scrollIntoView({ behavior: "smooth" }), 300);
-

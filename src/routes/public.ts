@@ -295,6 +295,17 @@ export function publicRoutes(router: Router, env: Env): void {
     return json({ ok: true, message: "We've received your request and we're standing with you in prayer." }, 201);
   });
 
+  // Cookie consent: store the visitor's choice (anonymous id, no IP) so we can show what was agreed.
+  router.post("/api/consent", async (req) => {
+    await rateLimit(env, "consent", clientIp(req), 30, 3600);
+    const b = await readJson<{ visitor_id?: string; functional?: boolean; version?: string }>(req);
+    const vid = typeof b.visitor_id === "string" && /^[a-z0-9-]{8,64}$/i.test(b.visitor_id) ? b.visitor_id : null;
+    if (!vid) throw new HttpError(422, "Invalid consent record.");
+    await env.DB.prepare("INSERT INTO cookie_consents (visitor_id, essential, functional, policy_version) VALUES (?,1,?,?)")
+      .bind(vid, b.functional ? 1 : 0, String(b.version || "1").slice(0, 20)).run();
+    return json({ ok: true });
+  });
+
   router.post("/api/contact", async (req) => {
     const ip = clientIp(req);
     await rateLimit(env, "contact", ip, 6, 3600);

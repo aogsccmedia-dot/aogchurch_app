@@ -118,9 +118,14 @@ $("#nav").addEventListener("click", (e) => { const b = e.target.closest("[data-t
 document.addEventListener("click", (e) => { const g = e.target.closest("[data-go]"); if (g) { e.preventDefault(); openTab(g.dataset.go); } });
 
 // ================================================================ overview
+const EMAIL_SETUP = `<b>Emails to members aren't being delivered yet.</b> Cloudflare only lets this site email your own verified addresses until the domain is switched on for sending.
+  <ol class="setup-steps"><li>Open <a href="https://dash.cloudflare.com/?to=/:account/email-service/sending" target="_blank" rel="noopener">Cloudflare → Email Service → Email Sending</a>.</li>
+  <li>Choose <b>Onboard domain</b> → <b>aogsccyouth.com</b> and accept the DNS records it adds (they're added automatically).</li>
+  <li>Wait until the domain shows <b>Verified</b> (usually a few minutes), then come back to <a href="#emails">Email log</a> and press <b>Resend failed emails</b>.</li></ol>`;
 loaders.overview = async () => {
-  const { stats, interests, next_letter, email_enabled, google_enabled } = await api("/api/admin/stats");
+  const { stats, interests, next_letter, email_enabled, google_enabled, email_health } = await api("/api/admin/stats");
   const notes = [];
+  if (email_enabled && email_health?.needs_setup) notes.push(EMAIL_SETUP);
   if (!email_enabled) notes.push("<b>Email sending is off.</b> Onboard aogsccyouth.com in Cloudflare → Email Service so confirmations, codes and letters are delivered.");
   if (!google_enabled) notes.push("<b>Google sign-in is off.</b> Add the Google client ID to switch on one-tap joining.");
   $("#setup-notes").innerHTML = notes.length ? `<div class="setup">${notes.map((n) => `<span>${n}</span>`).join("")}</div>` : "";
@@ -513,10 +518,38 @@ loaders.settings = async () => {
 };
 $("#settings-form").addEventListener("submit", safe(async (e) => { e.preventDefault(); await api("/api/admin/settings", { method: "PUT", body: Object.fromEntries(new FormData(e.target)) }); toast("Settings saved"); }));
 loaders.emails = async () => {
-  const { log } = await api("/api/admin/email-log");
-  $("#email-table tbody").innerHTML = log.length ? log.map((l) => `<tr><td class="sub">${fmtDate(l.created_at.replace(" ", "T") + (l.created_at.endsWith("Z") ? "" : "Z"))}</td><td>${esc(l.to_email)}</td><td class="sub">${esc(l.template)}</td><td>${esc(l.subject)}</td>
+  const { log, health } = await api("/api/admin/email-log");
+  $("#email-health").innerHTML = `<div class="stat"><b>${health.sent}</b><span>Delivered (30 days)</span></div><div class="stat"><b>${health.failed}</b><span>Not delivered</span></div><div class="stat"><b>${health.resendable}</b><span>Ready to resend</span></div>`;
+  $("#email-setup").innerHTML = health.needs_setup ? `<div class="setup"><span>${EMAIL_SETUP}</span></div>` : "";
+  $("#email-resend").hidden = !health.resendable;
+  const reason = (e) => !e ? "" : /RECIPIENT_NOT_ALLOWED/.test(e) ? "Domain not switched on for sending yet" : /SUPPRESSED/.test(e) ? "Address is on the suppression list (bounced or complained)" : /SENDER/.test(e) ? "Sender domain not verified" : e;
+  $("#email-table tbody").innerHTML = log.length ? log.map((l) => `<tr><td class="sub">${fmtDate(l.created_at.replace(" ", "T") + (l.created_at.endsWith("Z") ? "" : "Z"))}</td><td>${esc(l.to_email)}</td><td class="sub">${esc(l.template)}</td><td>${esc(l.subject)}${l.error ? `<div class="sub" style="color:var(--danger)">${esc(reason(l.error))}</div>` : ""}</td>
     <td><span class="pill ${l.status === "sent" ? "member" : l.status === "failed" ? "new" : ""}" title="${esc(l.error || "")}">${esc(l.status)}</span></td></tr>`).join("") : `<tr><td colspan="5" class="sub" style="text-align:center;padding:30px">No emails sent yet.</td></tr>`;
 };
+$("#email-resend").addEventListener("click", safe(async () => {
+  const r = await api("/api/admin/email-log/resend", { method: "POST" });
+  toast(r.tried ? `Resent ${r.sent} of ${r.tried}${r.failed ? ` · ${r.failed} still failing` : ""}` : "Nothing to resend");
+  loaders.emails();
+}));
+
+// ---------- email templates gallery ----------
+loaders.templates = async () => {
+  const { templates } = await api("/api/admin/email-templates");
+  const groups = [...new Set(templates.map((t) => t.group))];
+  $("#tpl-list").innerHTML = groups.map((g) => `<p class="eyebrow">${esc(g)}</p>` + templates.filter((t) => t.group === g).map((t) =>
+    `<button type="button" class="tpl-item" data-key="${esc(t.key)}"><b>${esc(t.subject)}</b><span>${esc(t.when)}</span></button>`).join("")).join("");
+  const first = $("#tpl-list .tpl-item"); if (first) showTemplate(first.dataset.key);
+};
+function showTemplate(key) {
+  $$("#tpl-list .tpl-item").forEach((b) => b.toggleAttribute("aria-current", b.dataset.key === key));
+  $("#tpl-frame").src = `/api/admin/email-templates/${encodeURIComponent(key)}/preview`;
+  $("#tpl-test").dataset.key = key;
+}
+$("#tpl-list").addEventListener("click", (e) => { const b = e.target.closest(".tpl-item"); if (b) showTemplate(b.dataset.key); });
+$("#tpl-test").addEventListener("click", safe(async (e) => {
+  const r = await api(`/api/admin/email-templates/${encodeURIComponent(e.currentTarget.dataset.key)}/test`, { method: "POST" });
+  toast(`Test sent to ${r.sent_to}`);
+}));
 
 addEventListener("hashchange", () => { if (me) openTab(location.hash.slice(1) || "overview"); });
 boot();

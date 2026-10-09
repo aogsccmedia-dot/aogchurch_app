@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://aogsccyouth.com/</loc><priority>1.0</priority></url>
-  <url><loc>https://aogsccyouth.com/join</loc><priority>0.9</priority></url>
-  <url><loc>https://aogsccyouth.com/light?l=word</loc></url>
-  <url><loc>https://aogsccyouth.com/light?l=fellowship</loc></url>
-  <url><loc>https://aogsccyouth.com/light?l=spirit</loc></url>
-  <url><loc>https://aogsccyouth.com/privacy</loc></url>
+  <url><loc>https://aogsccyouth.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://aogsccyouth.com/about</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://aogsccyouth.com/our-story</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://aogsccyouth.com/beliefs</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://aogsccyouth.com/events</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://aogsccyouth.com/get-involved</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://aogsccyouth.com/prayer</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://aogsccyouth.com/visit</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://aogsccyouth.com/join</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://aogsccyouth.com/privacy</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://aogsccyouth.com/terms</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://aogsccyouth.com/payments</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://aogsccyouth.com/cookies</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://aogsccyouth.com/app</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
 </urlset>

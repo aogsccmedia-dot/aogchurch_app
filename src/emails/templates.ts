@@ -112,7 +112,7 @@ export function subscribeWelcome(b: Brand, name: string | null, unsub: string) {
       heroImage: `${b.site}/assets/photos/congregation-1200.jpg`,
       content: p("We're so glad you're here. Every Sunday afternoon you'll receive a short letter with the services for the week ahead, upcoming events, and a word to carry with you.") +
         scripture("Let us not give up meeting together, but let us encourage one another.", "Hebrews 10:25") +
-        p("Until then, know that you are loved, you are seen, and there's always a seat saved for you at 17 Humber Street.") + button(b.site + "/#services", "See this week's services"),
+        p("Until then, know that you are loved, you are seen, and there's always a seat saved for you at 17 Humber Street.") + button(b.site + "/events", "See what's coming up"),
       unsubscribeUrl: unsub,
     }),
     text: `Welcome! Every Sunday afternoon you'll receive a short letter with the week's services, events and a word to carry with you.\n\n"Let us not give up meeting together, but let us encourage one another." — Hebrews 10:25` + textFooter(b, unsub),
@@ -282,7 +282,7 @@ export function announcement(b: Brand, a: AnnouncementData, firstName: string | 
       heading: a.heading,
       heroImage: `${b.site}/assets/photos/worship-1200.jpg`,
       content: greeting + paragraphs(a.body) + (a.scripture_text ? scripture(a.scripture_text, a.scripture_ref || "") : "") + schedule +
-        (a.cta_url && a.cta_label ? button(a.cta_url, a.cta_label) : button(b.site + "/#services", "See all services")),
+        (a.cta_url && a.cta_label ? button(a.cta_url, a.cta_label) : button(b.site + "/events", "See all services & events")),
       unsubscribeUrl: unsub,
       footerNote: "You're receiving this because you signed up for our weekly announcement letter.",
     }),

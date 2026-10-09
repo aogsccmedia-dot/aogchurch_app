@@ -14,7 +14,10 @@ It's one Cloudflare Worker that serves the public site and the API, backed by Cl
 | **Weekly letter** | Footer and Google sign-up (double opt-in), plus an opt-in on the join form. The admin writes the letter; it sends **every Sunday at 14:00 SAST**, batched by cron, and automatically includes the week's published events. One-click unsubscribe. If nothing is scheduled by Saturday morning, the admin gets a reminder. |
 | **Accounts** | Google sign-in for everyone, with a `/me` profile showing their events, a weekly-letter toggle and cancellations. |
 | **Admin** (`/admin/`) | **Only `aogsccmedia@gmail.com`**, via Google **plus a 6-digit code emailed on every sign-in**. The admin never has to fill in the join form. Includes members (search, status, notes, attachments, CSV, POPIA erase), events & responses (check-in, CSV), letters (preview, test send, schedule), subscribers, prayer, messages, site settings and an email log. |
-| **Emails** | Warm, branded HTML templates with the church logo, sent from `noreply@aogsccyouth.com` through Cloudflare Email Service. |
+| **Pages** | Home, About us, Our story, What we believe, Services & events, Get involved, Prayer, Visit & contact, Join, plus Privacy (POPIA), Terms, Event payments & refunds and Cookie policy. Section tabs, previous/next buttons and a phone tab bar make it easy to move around. SEO: Church + WebSite structured data, breadcrumbs, event listings, sitemap. |
+| **App (PWA)** | Installable on iPhone, Android and desktop. `/app` detects the device and browser and shows the right steps (one-tap Install where the browser supports it). Works offline for pages already visited. |
+| **Cookies** | A consent banner (Essential / Functional). Choices are stored in a cookie and logged anonymously in D1. |
+| **Emails** | Warm, branded HTML templates with the church logo, sent from `noreply@aogsccyouth.com` through Cloudflare Email Service. Preview and test-send every template in Admin → Email templates; failed emails can be resent from Admin → Email log. |
 
 ## Architecture
 
@@ -39,7 +42,8 @@ src/
   routes/admin.ts       everything behind the admin login
   lib/                  auth, forms (schema validation), newsletter, storage, uploads, email, rate limiting
   emails/templates.ts   branded email templates
-public/                 HTML/CSS/JS (no build step)
+public/                 HTML/CSS/JS served as-is
+tools/site/             page sources: edit tools/site/pages/*.html, then run `python3 tools/site/build.py`
 migrations/             D1 SQL migrations (applied automatically on deploy)
 test/                   API tests that run the real Worker on Node + SQLite
 ```

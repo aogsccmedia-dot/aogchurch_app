@@ -1,12 +1,31 @@
 {
-  "name": "SCC Youth · AOG Sandton City Church",
-  "short_name": "SCC Youth",
-  "start_url": "/",
+  "id": "/",
+  "name": "AOG Sandton City Church",
+  "short_name": "SCC Church",
+  "description": "Services, events and tickets, prayer and the weekly letter from AOG Sandton City Church, Woodmead.",
+  "lang": "en-ZA",
+  "start_url": "/?source=app",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
   "background_color": "#f6f1e8",
   "theme_color": "#f6f1e8",
+  "categories": ["lifestyle", "social", "education"],
   "icons": [
-    { "src": "/assets/logo-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/assets/logo-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    { "src": "/assets/logo-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/logo-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/assets/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Services & events", "short_name": "Events", "url": "/events?source=app", "icons": [{ "src": "/assets/logo-192.png", "sizes": "192x192" }] },
+    { "name": "My tickets & profile", "short_name": "My profile", "url": "/me?source=app", "icons": [{ "src": "/assets/logo-192.png", "sizes": "192x192" }] },
+    { "name": "Send a prayer request", "short_name": "Prayer", "url": "/prayer?source=app", "icons": [{ "src": "/assets/logo-192.png", "sizes": "192x192" }] }
+  ],
+  "screenshots": [
+    { "src": "/assets/screens/home-narrow.png", "sizes": "540x1170", "type": "image/png", "form_factor": "narrow", "label": "Home" },
+    { "src": "/assets/screens/events-narrow.png", "sizes": "540x1170", "type": "image/png", "form_factor": "narrow", "label": "Services & events" },
+    { "src": "/assets/screens/home-wide.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "Home" }
   ]
 }

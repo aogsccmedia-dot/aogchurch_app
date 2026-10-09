@@ -32,7 +32,7 @@ async function render() {
       <p class="meta">${esc(fmt(r.starts_at))}${r.location ? " · " + esc(r.location) : ""}</p>
       ${new Date(r.starts_at) > new Date() ? `<div class="foot"><span></span><button class="btn btn-sm" data-cancel="${esc(r.ref_code)}">Can't make it</button></div>` : ""}
     </div></article>`).join("")
-    : `<div class="events-empty" style="grid-column:1/-1">No events yet. <a class="btn btn-sm" href="/#services">Browse what's coming up ${icon("arrowRight", "arr")}</a></div>`;
+    : `<div class="events-empty" style="grid-column:1/-1">No events yet. <a class="btn btn-sm" href="/events">Browse what's coming up ${icon("arrowRight", "arr")}</a></div>`;
 }
 
 $("me-letter").addEventListener("change", async (e) => {

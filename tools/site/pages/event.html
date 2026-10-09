@@ -1,0 +1,61 @@
+
+  <main id="main" class="wrap">
+    <div class="event-hero" id="event-root">
+      <div>
+        <figure class="photo alive cover-square" id="ev-cover"><picture><source type="image/webp" srcset="/assets/photos/worship-1600.webp"><img src="/assets/photos/worship-1200.jpg" alt=""></picture></figure>
+        <div class="event-info">
+          <p class="eyebrow gold" id="ev-cat">Event</p>
+          <h1 id="ev-title">Loading…</h1>
+          <div class="event-facts">
+            <div>{{i:calendar}}<span id="ev-when"></span></div>
+            <div>{{i:mapPin}}<span id="ev-where"></span></div>
+            <div id="ev-price-row" hidden>{{i:ticket}}<span id="ev-price"></span></div>
+            <div id="ev-cap-row" hidden>{{i:users}}<span id="ev-cap"></span></div>
+          </div>
+          <p class="desc" id="ev-desc"></p>
+          <div class="cal-row">
+            <details class="cal-menu"><summary class="btn btn-sm">{{i:calendarPlus}} Add to calendar</summary>
+              <div class="cal-pop"><a id="ev-cal" target="_blank" rel="noopener">Google Calendar</a><a id="ev-ics">Apple / iPhone (.ics)</a><a id="ev-outlook" target="_blank" rel="noopener">Outlook</a></div></details>
+            <button class="btn btn-sm" id="ev-share" type="button">{{i:share}} Share</button>
+          </div>
+        </div>
+      </div>
+      <aside class="reg-card" id="reg-card">
+        <div><p class="eyebrow gold">Register</p><h3 id="reg-heading">Save your seat</h3></div>
+        <div id="reg-google" class="google-slot" hidden></div>
+        <form id="reg-form" novalidate hidden>
+          <div class="honeypot" aria-hidden="true"><input name="website" tabindex="-1" autocomplete="off"></div>
+          <div class="field"><label class="req" for="r-name">Full name</label><input class="input" id="r-name" name="name" required autocomplete="name" maxlength="120"><span class="error"></span></div>
+          <div class="field" id="r-email-field"><label class="req" for="r-email">Email</label><input class="input" id="r-email" name="email" type="email" required autocomplete="email" maxlength="254"><span class="error"></span></div>
+          <div class="field" id="r-phone-field"><label class="req" for="r-phone">Phone</label><input class="input" id="r-phone" name="phone" type="tel" autocomplete="tel" maxlength="30"><span class="error"></span></div>
+          <div id="custom-fields" style="display:grid;gap:16px"></div>
+          <div class="field"><label for="r-guests" id="r-guests-label">Bringing anyone?</label><select class="input" id="r-guests" name="guests"><option value="0">Just me</option><option value="1">+1 guest</option><option value="2">+2 guests</option><option value="3">+3 guests</option><option value="4">+4 guests</option><option value="5">+5 guests</option></select></div>
+          <div id="pay-block" class="pay-block" hidden>
+            <div class="pay-head">{{i:landmark}}<div><b>Secure EFT payment</b><span>Three quick steps. Your seat is held while we verify.</span></div><div class="amount-due"><span>Amount due</span><b id="amount-due"></b></div></div>
+            <div class="pay-step" id="bank-wrap">
+              <p class="step-label"><span class="n">1</span>Pay by EFT to this account</p>
+              <dl class="bank-rows" id="bank-rows"></dl>
+              <div class="ref-row"><div><span class="k">Payment reference <em>Mandatory</em></span><b id="pay-ref">Type your full name above</b><small>Use your full names exactly as above so we can match your payment.</small></div><button type="button" class="icon-btn copy" id="copy-ref" aria-label="Copy reference">{{i:copy}}</button></div>
+              <button type="button" class="btn btn-sm" id="copy-bank">{{i:copy}} Copy all details</button>
+            </div>
+            <div class="pay-step">
+              <p class="step-label"><span class="n">2</span>Upload your proof of payment</p>
+              <div class="field" data-field="pop">
+                <label class="sr-only" for="pop">Proof of payment</label>
+                <label class="drop pop-drop" for="pop">{{i:upload}}<span id="pop-name">Tap to upload a PDF, photo or screenshot</span><span class="hint">Required · max 10 MB</span></label>
+                <input class="sr-only" type="file" id="pop" name="pop" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic">
+                <span class="error"></span>
+              </div>
+            </div>
+            <div class="pay-step last">
+              <p class="step-label"><span class="n">3</span>We verify and email you</p>
+              <p class="hint" id="approval-note"></p>
+            </div>
+          </div>
+          <button class="btn btn-gold" type="submit">Register {{arrow}}</button>
+          <div class="notice err" data-status hidden></div>
+        </form>
+        <div class="reg-done" id="reg-done" hidden></div>
+      </aside>
+    </div>
+  </main>

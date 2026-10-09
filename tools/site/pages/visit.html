@@ -1,0 +1,62 @@
+
+  <main id="main">
+    <section class="page-hero">
+      <div class="wrap page-hero-grid">
+        <div class="page-hero-copy">
+          <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><span aria-current="page">Visit &amp; contact</span></nav>
+          <p class="eyebrow gold">Visit &amp; contact</p>
+          <h1>Come as you <em>are.</em></h1>
+          <p class="lede">We'd love to meet you. Find us at 17 Humber Street in Woodmead, or send us a message and we'll get back to you.</p>
+        </div>
+        <figure class="photo page-hero-photo" tabindex="0"><picture><source type="image/webp" srcset="/assets/photos/arrival-800.webp 800w, /assets/photos/arrival-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 45vw"><img src="/assets/photos/arrival-1200.jpg" alt="A smiling member arriving at church with her Bible" fetchpriority="high"></picture></figure>
+      </div>
+    </section>
+    <nav class="subnav" aria-label="About us">
+      <div class="wrap"><a href="/about">Overview</a><a href="/our-story">Our story</a><a href="/beliefs">What we believe</a><a href="/get-involved">Get involved</a><a href="/visit">Plan your visit</a></div>
+    </nav>
+    <!-- VISIT -->
+    <section class="block" id="contact">
+      <div class="wrap two-col">
+        <div class="visit-card reveal">
+          <p class="eyebrow gold">Visit us</p>
+          <h2>Come as you are</h2>
+          <div class="row">{{i:mapPin}}<div>17 Humber Street, Woodmead, Sandton<br><a class="explore" data-setting="map_url" data-text="keep" href="https://maps.google.com/?q=17+Humber+Street,+Woodmead,+Sandton" target="_blank" rel="noopener" style="color:var(--gold-2)">Open in Maps</a></div></div>
+          <div class="row">{{i:clock}}<span data-setting="service_summary">Join us every Sunday — see upcoming services for times.</span></div>
+          <div class="row" hidden data-setting-row="contact_email">{{i:mail}}<a data-setting="contact_email" data-hide-empty hidden></a></div>
+          <p class="eyebrow" style="margin-top:8px">Follow along</p>
+          <div class="socials">
+            <a class="btn btn-sm" href="https://www.youtube.com/@aogsandtoncitychurchtv9989" target="_blank" rel="noopener">{{i:youtube}} YouTube</a>
+            <a class="btn btn-sm" href="https://www.instagram.com/aogsandtoncitychurch" target="_blank" rel="noopener">{{i:instagram}} Instagram</a>
+            <a class="btn btn-sm" href="https://www.facebook.com/AOGSandtonCity/" target="_blank" rel="noopener">{{i:facebook}} Facebook</a>
+            <a class="btn btn-sm" href="https://www.tiktok.com/@aog.sandton.city" target="_blank" rel="noopener">{{i:tiktok}} TikTok</a>
+            <a class="btn btn-sm" data-setting="whatsapp_number" data-text="keep" data-hide-empty hidden target="_blank" rel="noopener">WhatsApp</a>
+          </div>
+        </div>
+        <div class="panel reveal">
+          <h3>Send us a message</h3>
+          <form id="contact-form" novalidate>
+            <div class="honeypot" aria-hidden="true"><label>Website <input name="website" tabindex="-1" autocomplete="off"></label></div>
+            <div class="grid-2">
+              <div class="field"><label class="req" for="c-name">Name</label><input class="input" id="c-name" name="name" required autocomplete="name" maxlength="120"><span class="error"></span></div>
+              <div class="field"><label class="req" for="c-email">Email</label><input class="input" id="c-email" name="email" type="email" required autocomplete="email" maxlength="254"><span class="error"></span></div>
+            </div>
+            <div class="field"><label for="c-subject">Subject</label><input class="input" id="c-subject" name="subject" maxlength="160"><span class="error"></span></div>
+            <div class="field"><label class="req" for="c-msg">Message</label><textarea class="input" id="c-msg" name="message" required maxlength="4000"></textarea><span class="error"></span></div>
+            <button class="btn btn-gold" type="submit">Send message</button>
+            <div class="notice" data-status hidden></div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="block slim">
+      <div class="wrap">
+        <div class="map-frame reveal"><iframe title="Map to 17 Humber Street, Woodmead, Sandton" src="https://www.google.com/maps/?q=17+Humber+Street,+Woodmead,+Sandton&amp;output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
+        <div class="howto reveal" style="margin-top:22px">
+          <div>{{i:car}}<b>Getting here</b><p>17 Humber Street, Woodmead, Sandton. Parking is available on site, and our welcome team will help you find your way in.</p></div>
+          <div>{{i:users}}<b>First time?</b><p>Look out for the hospitality team at the door. They'll show you around and introduce you to people.</p></div>
+          <div>{{i:handHeart}}<b>Need prayer or care?</b><p>Use the <a href="/prayer">prayer page</a> or the form above, and a pastor will reach out.</p></div>
+        </div>
+      </div>
+    </section>
+  </main>

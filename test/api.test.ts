@@ -385,3 +385,38 @@ describe("weekly announcement letter", () => {
     assert.equal((await call(`/api/admin/announcements/${id}`, { method: "PUT", headers: { ...A(cookie), ...JSONH }, body: JSON.stringify({ subject: "x", heading: "x", body: "x" }) })).status, 409);
   });
 });
+
+describe("email delivery tools & consent", () => {
+  test("every template previews and test-sends; failed emails are kept and can be resent", async () => {
+    const cookie = await adminCookie();
+    const A = (c: string) => ({ cookie: c, "x-scc-admin": "1" });
+    const { templates } = await (await call("/api/admin/email-templates", { headers: { cookie } })).json() as { templates: { key: string }[] };
+    assert.ok(templates.length >= 14);
+    for (const t of templates) {
+      const html = await (await call(`/api/admin/email-templates/${t.key}/preview`, { headers: { cookie } })).text();
+      assert.ok(html.includes("logo-192.png"), `${t.key} has the logo`);
+    }
+    assert.equal((await post("/api/admin/email-templates/event_approved/test", {}, A(cookie))).status, 200);
+    assert.match(mails("aogsccmedia@gmail.com").at(-1)!.subject, /^\[Test\] Congratulations/);
+
+    // Simulate Cloudflare refusing recipients (domain not onboarded for sending yet).
+    const realSend = env.EMAIL.send;
+    env.EMAIL.send = async () => { throw Object.assign(new Error("destination address is not a verified address"), { code: "E_RECIPIENT_NOT_ALLOWED" }); };
+    await post("/api/prayer", { name: "Retry Me", email: "retry@example.com", request: "Please pray" });
+    const h1 = await (await call("/api/admin/email-health", { headers: { cookie } })).json() as { health: { needs_setup: boolean; resendable: number } };
+    assert.equal(h1.health.needs_setup, true);
+    assert.ok(h1.health.resendable >= 1);
+    env.EMAIL.send = realSend;
+    const r = await (await post("/api/admin/email-log/resend", {}, A(cookie))).json() as { sent: number };
+    assert.ok(r.sent >= 1);
+    assert.ok(mails("retry@example.com").length >= 1, "resent once delivery works");
+    const h2 = await (await call("/api/admin/email-health", { headers: { cookie } })).json() as { health: { needs_setup: boolean; resendable: number } };
+    assert.equal(h2.health.needs_setup, false);
+    assert.equal(h2.health.resendable, 0);
+  });
+
+  test("cookie consent is recorded anonymously", async () => {
+    assert.equal((await post("/api/consent", { visitor_id: "abc12345-visitor", functional: true, version: "2026-10" })).status, 200);
+    assert.equal((await post("/api/consent", { visitor_id: "x", functional: true })).status, 422);
+  });
+});

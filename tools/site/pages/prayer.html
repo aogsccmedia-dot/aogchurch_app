@@ -1,0 +1,41 @@
+
+  <main id="main">
+    <section class="page-hero">
+      <div class="wrap page-hero-grid">
+        <div class="page-hero-copy">
+          <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><span aria-current="page">Prayer</span></nav>
+          <p class="eyebrow gold">Prayer</p>
+          <h1>How can we pray <em>for you?</em></h1>
+          <p class="lede">Share as much or as little as you like. Our prayer team will stand with you, and you can stay anonymous or keep it to the pastors only.</p>
+        </div>
+        <figure class="photo page-hero-photo" tabindex="0"><picture><source type="image/webp" srcset="/assets/photos/prayer-800.webp 800w, /assets/photos/prayer-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 45vw"><img src="/assets/photos/prayer-1200.jpg" alt="Church leaders with heads bowed in prayer" fetchpriority="high"></picture></figure>
+      </div>
+    </section>
+    <!-- PRAYER -->
+    <section class="block" id="prayer">
+      <div class="wrap two-col">
+        <div class="section-head reveal" style="margin:0">
+          <p class="eyebrow gold">We're listening</p>
+          <h2>Send a prayer request</h2>
+          <p class="lede">Share as much or as little as you like. Our prayer team will stand with you — you can stay anonymous or keep it to the pastors only.</p>
+          <p class="scripture">“Cast all your anxiety on him because he cares for you.” — 1 Peter 5:7</p>
+        </div>
+        <div class="panel reveal">
+          <form id="prayer-form" novalidate>
+            <div class="honeypot" aria-hidden="true"><label>Website <input name="website" tabindex="-1" autocomplete="off"></label></div>
+            <div class="grid-2">
+              <div class="field"><label for="p-name">Name</label><input class="input" id="p-name" name="name" autocomplete="name" maxlength="120"><span class="error"></span></div>
+              <div class="field"><label for="p-phone">Phone (optional)</label><input class="input" id="p-phone" name="phone" type="tel" autocomplete="tel" maxlength="30"><span class="error"></span></div>
+            </div>
+            <div class="field"><label for="p-email">Email (optional)</label><input class="input" id="p-email" name="email" type="email" autocomplete="email" maxlength="254"><span class="error"></span></div>
+            <div class="field"><label class="req" for="p-req">Your request</label><textarea class="input" id="p-req" name="request" required maxlength="3000"></textarea><span class="error"></span></div>
+            <label class="check"><input type="checkbox" name="is_anonymous"> Keep me anonymous</label>
+            <label class="check"><input type="checkbox" name="pastors_only"> Only share with the pastors</label>
+            <label class="check"><input type="checkbox" name="wants_contact"> I'd like someone to contact me</label>
+            <button class="btn btn-gold" type="submit">Send prayer request</button>
+            <div class="notice" data-status hidden></div>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>

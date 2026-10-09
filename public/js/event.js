@@ -28,12 +28,12 @@ function done(status, ref, message, already) {
     <span class="tag">Ref ${esc(ref)}${event.price_label ? " · " + esc(event.price_label) : ""}</span>
     ${wait || pendingApproval ? "" : `<p class="eyebrow" style="margin-top:6px">Add it to your calendar</p>
     <div class="cal-buttons"><a class="btn btn-sm" href="${esc(event.calendar_url)}" target="_blank" rel="noopener">${icon("calendarPlus")} Google</a><a class="btn btn-sm" href="${esc(event.ics_url)}">${icon("download")} Apple / iPhone</a><a class="btn btn-sm" href="${esc(event.outlook_url)}" target="_blank" rel="noopener">${icon("calendarPlus")} Outlook</a></div>`}
-    <a class="btn btn-ghost btn-sm" href="/#services">${icon("arrowLeft")} More events</a>`;
+    <a class="btn btn-ghost btn-sm" href="/events">${icon("arrowLeft")} More events</a>`;
 }
 
 function prefill(me) {
   if (!me?.user) return;
-  form.name.value ||= me.user.name || "";
+  form.elements.name.value ||= me.user.name || "";
   $("r-email-field").hidden = true;
   form.email.required = false;
   $("reg-heading").textContent = `Hi ${me.user.given_name || "there"} — save your seat`;
@@ -48,10 +48,11 @@ async function load() {
     event = r.event;
   } catch (e) {
     $("ev-title").textContent = "Event not found";
-    $("reg-card").innerHTML = `<p class="muted-text">${esc(e.message)}</p><a class="btn" href="/#services">See all events</a>`;
+    $("reg-card").innerHTML = `<p class="muted-text">${esc(e.message)}</p><a class="btn" href="/events">See all events</a>`;
     return;
   }
-  document.title = `${event.title} · AOG Sandton City Church`;
+  document.title = `${event.title} · Sandton City Church`;
+  addEventSchema(event);
   $("ev-cat").textContent = event.category;
   $("ev-title").textContent = event.title;
   $("ev-when").textContent = fmtWhen(event.starts_at, event.ends_at);
@@ -129,13 +130,40 @@ function setupPayment() {
     form.querySelector('[type="submit"]').disabled = true;
     return;
   }
-  $("bank-details").textContent = details;
-  $("copy-bank").addEventListener("click", async () => { try { await navigator.clipboard.writeText(details); toast("Banking details copied"); } catch { /* ignore */ } });
+  const rows = details.split(/\n+/).map((l) => l.trim()).filter(Boolean).map((l) => { const i = l.indexOf(":"); return i > 0 ? [l.slice(0, i).trim(), l.slice(i + 1).trim()] : ["", l]; });
+  const bankRows = rows.filter(([k]) => !/reference/i.test(k));
+  const copy = async (text, label) => { try { await navigator.clipboard.writeText(text); toast(`${label} copied`); } catch { toast("Couldn't copy — please copy it manually"); } };
+  $("bank-rows").innerHTML = bankRows.map(([k, v], i) => `<div class="bank-row"><dt>${esc(k)}</dt><dd><span>${esc(v)}</span>${k ? `<button type="button" class="icon-btn copy" data-i="${i}" aria-label="Copy ${esc(k)}">${icon("copy")}</button>` : ""}</dd></div>`).join("");
+  $("bank-rows").addEventListener("click", (e) => { const b = e.target.closest("[data-i]"); if (b) { const [k, v] = bankRows[+b.dataset.i]; copy(v.replace(/\s+/g, k.toLowerCase().includes("number") ? "" : " "), k); } });
+  const refText = () => form.elements.name.value.trim().replace(/\s+/g, " ");
+  const showRef = () => { const r = refText(); $("pay-ref").textContent = r || "Type your full name above"; $("pay-ref").classList.toggle("empty", !r); };
+  form.elements.name.addEventListener("input", showRef); showRef();
+  $("copy-ref").addEventListener("click", () => { const r = refText(); if (!r) { form.elements.name.focus(); toast("Type your full name first"); return; } copy(r, "Reference"); });
+  $("copy-bank").addEventListener("click", () => copy(bankRows.map(([k, v]) => (k ? `${k}: ${v}` : v)).join("\n") + `\nReference: ${refText() || "your full names"}`, "Banking details"));
   const update = () => { $("amount-due").textContent = price ? rand(price * (1 + Number(guests.value || 0))) : "See details above"; };
   guests.addEventListener("change", update); update();
   $("pop").required = true;
-  $("pop").addEventListener("change", () => { const f = $("pop").files[0]; $("pop-name").textContent = f ? f.name : "Upload PDF, photo or screenshot"; $("pop").closest(".field").classList.remove("invalid"); });
-  $("approval-note").textContent = event.auto_approve ? "Your ticket is emailed straight away." : "Our team approves each payment — your ticket and calendar invite arrive by email once it's confirmed.";
+  $("pop").addEventListener("change", () => { const f = $("pop").files[0]; $("pop-name").textContent = f ? `✓ ${f.name}` : "Tap to upload a PDF, photo or screenshot"; $("pop").closest(".pop-drop, .field").querySelector(".pop-drop").classList.toggle("has-file", !!f); $("pop").closest(".field").classList.remove("invalid"); });
+  $("approval-note").textContent = event.auto_approve ? "Your ticket is emailed straight away." : "You'll get an email straight away saying we've received your details. Once our team has verified your payment, a second email confirms your seat with your ticket and a calendar invite.";
 }
 
 load();
+
+// Search engines: describe the event so it can show up in Google's event listings.
+function addEventSchema(e) {
+  try {
+    const url = `${location.origin}/event?e=${encodeURIComponent(e.slug)}`;
+    const data = {
+      "@context": "https://schema.org", "@type": "Event", name: e.title, description: e.description || undefined,
+      startDate: e.starts_at, endDate: e.ends_at || undefined, eventStatus: "https://schema.org/EventScheduled",
+      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+      location: { "@type": "Place", name: "AOG Sandton City Church", address: { "@type": "PostalAddress", streetAddress: "17 Humber Street", addressLocality: "Woodmead, Sandton", addressRegion: "Gauteng", addressCountry: "ZA" } },
+      image: e.cover_url ? [new URL(e.cover_url, location.origin).href] : [`${location.origin}/assets/og.jpg`],
+      organizer: { "@type": "Organization", name: "AOG Sandton City Church", url: location.origin },
+      offers: { "@type": "Offer", url, price: e.ticket_price || 0, priceCurrency: "ZAR", availability: e.spots_left === 0 ? "https://schema.org/SoldOut" : "https://schema.org/InStock" },
+    };
+    const tag = document.createElement("script"); tag.type = "application/ld+json"; tag.textContent = JSON.stringify(data); document.head.append(tag);
+    const canon = document.createElement("link"); canon.rel = "canonical"; canon.href = url; document.head.append(canon);
+    document.querySelector('meta[name="description"]')?.setAttribute("content", (e.description || e.title).slice(0, 160));
+  } catch { /* never block the page */ }
+}

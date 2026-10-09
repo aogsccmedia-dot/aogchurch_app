@@ -1,3 +1,7 @@
+// Always start a fresh load or refresh at the top of the page (unless the link points to a section).
+if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+if (!location.hash) scrollTo(0, 0);
+
 // Shared behaviour for every public page: header, menu, reveal animations,
 // settings, toasts and a tiny API helper.
 
@@ -46,9 +50,10 @@ function initHeader() {
     menu.setAttribute("aria-hidden", String(!open));
     openBtn.setAttribute("aria-expanded", String(open));
     document.body.style.overflow = open ? "hidden" : "";
-    if (open) closeBtn?.focus(); else openBtn.focus();
+    if (open) closeBtn?.focus(); else if (document.activeElement?.closest?.(".menu")) openBtn.focus();
   };
   openBtn.addEventListener("click", () => setOpen(true));
+  document.querySelector("[data-menu-open-tab]")?.addEventListener("click", () => setOpen(true));
   closeBtn?.addEventListener("click", () => setOpen(false));
   menu.querySelectorAll("a").forEach((a) => a.addEventListener("click", () => setOpen(false)));
   addEventListener("keydown", (e) => { if (e.key === "Escape" && menu.classList.contains("open")) setOpen(false); });
@@ -112,29 +117,19 @@ document.getElementById("year")?.replaceChildren(String(new Date().getFullYear()
 
 /** Underline the nav item for the page or home-page section the visitor is on. */
 function initCurrentNav() {
-  const links = [...document.querySelectorAll(".main-nav a, .menu nav a, .site-footer a")];
+  const links = [...document.querySelectorAll(".main-nav a, .menu nav a, .site-footer a, .subnav a, .tabbar a")];
   const mark = (match) => links.forEach((a) => {
     const on = match(new URL(a.href, location.href));
     if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   });
-  const path = location.pathname.replace(/\.html$/, "").replace(/\/$/, "") || "/";
-  if (path !== "/") {
-    const section = { "/event": "#services" }[path];
-    mark((u) => (section ? u.pathname === "/" && u.hash === section : u.pathname.replace(/\/$/, "") === path && !u.hash));
-    return;
-  }
-  const ids = [...new Set(links.map((a) => new URL(a.href, location.href)).filter((u) => u.pathname === "/" && u.hash).map((u) => u.hash.slice(1)))];
-  const sections = ids.map((id) => document.getElementById(id)).filter(Boolean);
-  if (!sections.length) return;
-  // The section crossing the upper third of the screen is "current"; nothing is underlined in the hero.
-  const update = () => {
-    const current = sections.find((sec) => { const r = sec.getBoundingClientRect(); return r.top <= innerHeight * 0.35 && r.bottom > innerHeight * 0.35; });
-    mark((u) => !!current && u.pathname === "/" && u.hash === "#" + current.id);
-  };
-  addEventListener("scroll", update, { passive: true });
-  update();
+  const norm = (p) => p.replace(/\.html$/, "").replace(/\/$/, "") || "/";
+  const path = { "/event": "/events", "/index": "/" }[norm(location.pathname)] || norm(location.pathname);
+  mark((u) => norm(u.pathname) === path && !u.hash);
 }
 initCurrentNav();
 initHeader();
+document.querySelector("[data-reload]")?.addEventListener("click", () => location.reload());
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+import("./consent.js").then(() => import("./install.js")).catch(() => {});
 initReveal();
 fillSettings();

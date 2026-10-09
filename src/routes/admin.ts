@@ -7,7 +7,8 @@ import { getFile } from "../lib/storage.ts";
 import { requireAdmin, type Session } from "../lib/auth.ts";
 import { deleteOwnerFiles, readUpload, storeFiles } from "../lib/uploads.ts";
 import { parseSchema, sanitizeSchema, slugify } from "../lib/forms.ts";
-import { sendMail } from "../lib/email.ts";
+import { emailHealth, resendFailed, sendMail } from "../lib/email.ts";
+import { SAMPLES } from "../emails/samples.ts";
 import { buildAnnouncement, processAnnouncements, renderAnnouncement, type AnnouncementRow } from "../lib/newsletter.ts";
 import { calendarUrl, formatWhen, nextSundayAfternoon } from "../lib/time.ts";
 import * as T from "../emails/templates.ts";
@@ -71,7 +72,7 @@ export function adminRoutes(router: Router, env: Env): void {
     return json({ ok: true, stats: {
       members: n(0), new_members: n(1), this_week: n(2), new_prayers: n(3), new_messages: n(4), upcoming_events: n(5),
       subscribers: n(6), registrations_week: n(7), accounts: n(8), pending_payments: n(9),
-    }, interests: interests.results, next_letter: next, email_enabled: !!env.EMAIL, google_enabled: !!env.GOOGLE_CLIENT_ID });
+    }, interests: interests.results, next_letter: next, email_enabled: !!env.EMAIL, email_health: await emailHealth(env), google_enabled: !!env.GOOGLE_CLIENT_ID });
   }));
 
   // ---------- members ----------
@@ -521,7 +522,30 @@ export function adminRoutes(router: Router, env: Env): void {
   }));
 
   router.get("/api/admin/email-log", guard(async () => {
-    const { results } = await env.DB.prepare("SELECT * FROM email_log ORDER BY id DESC LIMIT 100").all();
-    return json({ ok: true, log: results });
+    const { results } = await env.DB.prepare("SELECT id, to_email, template, subject, status, error, created_at FROM email_log ORDER BY id DESC LIMIT 100").all();
+    return json({ ok: true, log: results, health: await emailHealth(env) });
+  }));
+  router.get("/api/admin/email-health", guard(async () => json({ ok: true, health: await emailHealth(env) })));
+  router.post("/api/admin/email-log/resend", guard(async (_req, _p, s) => {
+    const r = await resendFailed(env);
+    await audit(env, s, "resend_failed_emails", "email_log", undefined, r);
+    return json({ ok: true, ...r });
+  }));
+
+  // Every email template with sample data: preview + send a test to the admin.
+  router.get("/api/admin/email-templates", guard(async () =>
+    json({ ok: true, templates: SAMPLES.map(({ key, group, when, render }) => ({ key, group, when, subject: render(siteUrl(env)).subject })) })));
+  router.get("/api/admin/email-templates/:key/preview", guard(async (_req, { key }) => {
+    const t = SAMPLES.find((x) => x.key === key);
+    if (!t) throw new HttpError(404, "Unknown template.");
+    return new Response(t.render(siteUrl(env)).html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": "default-src 'none'; img-src https: data:; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com" } });
+  }));
+  router.post("/api/admin/email-templates/:key/test", guard(async (_req, { key }) => {
+    const t = SAMPLES.find((x) => x.key === key);
+    if (!t) throw new HttpError(404, "Unknown template.");
+    const m = t.render(siteUrl(env));
+    const ok = await sendMail(env, { to: adminEmail(env), ...m, subject: `[Test] ${m.subject}`, template: `test_${key}` });
+    if (!ok) throw new HttpError(503, "Cloudflare didn't accept the test email. Check Admin → Email log for the reason.");
+    return json({ ok: true, sent_to: adminEmail(env) });
   }));
 }
