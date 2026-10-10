@@ -28,6 +28,7 @@ function memberCard(m) {
 async function render() {
   // Session + profile in parallel so the page fills in quickly after Google sign-in.
   const [me, d] = await Promise.all([getMe(true), api("/api/me").catch(() => null)]);
+  $("me-loading")?.remove();
   if (!me.user || !d) {
     $("me-signin").hidden = false; $("me-view").hidden = true;
     switchReady();

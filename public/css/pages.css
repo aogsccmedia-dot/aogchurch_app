@@ -1079,3 +1079,12 @@ dialog.ob-sheet { width: min(520px, calc(100% - 24px)); max-height: calc(100dvh 
 .values-line { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 4px 0 6px; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-2); }
 .values-line span + span::before { content: "·"; margin-right: 18px; color: var(--muted); }
 #letter .letter { grid-template-columns: minmax(0, 1fr); max-width: 760px; margin-inline: auto; text-align: left; }
+
+/* Google sign-in: calm states, no glitches */
+.me-loading { display: grid; justify-items: center; gap: 14px; padding: 18vh 0 22vh; color: var(--text-2); }
+.me-loading p { margin: 0; }
+.spinner { width: 30px; height: 30px; border-radius: 50%; border: 3px solid color-mix(in srgb, var(--gold, #d6a650) 25%, transparent); border-top-color: var(--gold, #d6a650); animation: spin .8s linear infinite; }
+.google-slot, .gbtn { position: relative; }
+.gsi-wait { position: absolute; inset: 0; z-index: 2; display: none; align-items: center; justify-content: center; gap: 10px; border-radius: 999px; background: var(--bg-2, #fff); border: 1px solid var(--line-strong); font-size: 14px; color: var(--text); cursor: pointer; }
+.gsi-wait .spinner { width: 16px; height: 16px; border-width: 2px; }
+.gsi-waiting .gsi-wait { display: flex; }

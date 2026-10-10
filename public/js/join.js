@@ -3,6 +3,7 @@ import { icon } from "./icons.js";
 import { AVAILABILITY, LABELS, MINISTRIES } from "./options.js";
 import { api, esc } from "./site.js";
 import { getMe, googleButton, whenSignedIn } from "./auth.js";
+import { switchReady } from "./switcher.js";
 
 const form = document.getElementById("join-form");
 const steps = [...form.querySelectorAll(".step")];
@@ -294,7 +295,8 @@ function applyAccount(me) {
   return true;
 }
 getMe().then(async (me) => {
-  if (applyAccount(me)) return;
+  if (applyAccount(me)) { switchReady(); return; }
+  switchReady();
   const shown = await googleButton(document.getElementById("join-google"), { text: "signup_with" });
   document.getElementById("google-join").hidden = !shown;
 });

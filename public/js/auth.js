@@ -1,4 +1,4 @@
-import "./switcher.js";   // data-switch buttons (member ⇄ admin)
+import { veilCarry, veilHide, veilShow } from "./switcher.js";   // also wires data-switch buttons (member ⇄ admin)
 // Sign in with Google (Google Identity Services) + the admin's emailed verification code.
 import { api, esc, toast } from "./site.js";
 import { busy, otpField } from "./otp.js";
@@ -26,20 +26,40 @@ let gsiReady = false;
 /** Register a callback for when someone finishes signing in on this page. */
 export function whenSignedIn(cb) { onSignedIn.push(cb); }
 
+// Google has confirmed the account: from here on a calm "preparing" screen stays up until the person's
+// page is fully ready, so the old "Sign in with Google" button never shows through.
 async function handleCredential(resp) {
-  const done = busy("Signing you in…");
+  document.querySelectorAll(".gsi-waiting").forEach((el) => el.classList.remove("gsi-waiting"));
+  const here = location.pathname.replace(/\.html$/, "");
+  const onMe = here === "/me", midTask = /^\/(join|event|membership|ticket)$/.test(here);
+  veilShow(onMe ? "Preparing your member page…" : "Signing you in…");
   try {
     const r = await api("/api/auth/google", { method: "POST", body: { credential: resp.credential } });
-    done();
-    if (r.needs_code) { await adminCodeDialog(r.challenge, r.sent_to); return; }
+    if (r.needs_code) { veilHide(); await adminCodeDialog(r.challenge, r.sent_to); return; }
     const me = await getMe(true);
-    toast(`Welcome${me.user?.given_name ? ", " + me.user.given_name : ""}!`);
     renderHeaderUser(me);
-    onSignedIn.forEach((cb) => cb(me));
-    // Members go straight to their profile (events, tickets, membership), unless they're mid-task here.
-    const busy = /^\/(join|event|me|membership)(\.html)?$/.test(location.pathname);
-    if (me.member && !busy) location.href = "/me";
-  } catch (e) { toast(e.message); } finally { done(); }
+    if (!onMe && !midTask) {
+      // Members go to their profile; new people go to the join form, already filled in from Google.
+      const label = me.member ? "Preparing your member page…" : "Setting up your sign-up…";
+      veilShow(label); veilCarry(label);
+      location.href = me.member ? "/me" : "/join";
+      return;   // the next page fades the veil out once it has loaded
+    }
+    if (!onMe) veilShow("Filling in your details…");
+    await Promise.all(onSignedIn.map((cb) => Promise.resolve().then(() => cb(me)).catch(() => {})));
+    veilHide();
+    toast(`Welcome${me.user?.given_name ? ", " + me.user.given_name : ""}!`);
+  } catch (e) { veilHide(); toast(e.message); }
+}
+
+// While Google's window is open, the button says so (instead of looking like nothing happened).
+function watchGoogleButton(el) {
+  if (el.dataset.watch) return; el.dataset.watch = "1";
+  let wait = el.querySelector(".gsi-wait");
+  if (!wait) { wait = document.createElement("span"); wait.className = "gsi-wait"; wait.setAttribute("aria-live", "polite"); wait.innerHTML = '<i class="spinner" aria-hidden="true"></i>Waiting for Google…'; el.append(wait); }
+  addEventListener("blur", () => setTimeout(() => { if (el.contains(document.activeElement)) el.classList.add("gsi-waiting"); }, 0));
+  addEventListener("focus", () => setTimeout(() => el.classList.remove("gsi-waiting"), 1500));
+  wait.addEventListener("click", () => el.classList.remove("gsi-waiting"));   // tap to try again
 }
 
 /** Render a Google button into `el`. Returns false if Google sign-in isn't configured. */
@@ -51,6 +71,7 @@ export async function googleButton(el, { text = "continue_with", width } = {}) {
   if (!gsiReady) { google.accounts.id.initialize({ client_id: clientId, callback: handleCredential, ux_mode: "popup", auto_select: false, itp_support: true }); gsiReady = true; }
   google.accounts.id.renderButton(el, { theme: document.body.classList.contains("admin") ? "filled_black" : "outline", size: "large", shape: "pill", text, logo_alignment: "left", width: width || Math.min(360, el.clientWidth || 320) });
   el.hidden = false;
+  watchGoogleButton(el);
   return true;
 }
 

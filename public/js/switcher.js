@@ -14,6 +14,13 @@ function veil(to) {
   return v;
 }
 
+/** Show the veil now with any message (e.g. while Google sign-in finishes). */
+export function veilShow(label) { const v = veil("x"); v.querySelector("p").textContent = label; v.classList.remove("out"); return v; }
+/** Fade the veil out now. */
+export function veilHide() { const v = document.getElementById("switch-veil"); if (!v) return; v.classList.add("out"); setTimeout(() => v.remove(), 380); }
+/** Keep the veil up across a page change: the next page shows it before painting and fades it when ready. */
+export function veilCarry(label) { try { sessionStorage.setItem(KEY, JSON.stringify({ to: "member", label, at: Date.now() })); } catch { /* fine */ } }
+
 /** Start a switch: show the veil, then go. */
 export function switchTo(to) {
   try { sessionStorage.setItem(KEY, JSON.stringify({ to, at: Date.now() })); } catch { /* fine */ }

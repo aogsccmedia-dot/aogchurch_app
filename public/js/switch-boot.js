@@ -9,7 +9,7 @@
     var v = document.createElement("div");
     v.id = "switch-veil"; v.setAttribute("role", "status");
     v.innerHTML = '<div class="sv-mark"><i></i><i></i></div><p></p>';
-    v.querySelector("p").textContent = s.to === "admin" ? "Opening your admin workspace…" : "Switching to your member profile…";
+    v.querySelector("p").textContent = s.label || (s.to === "admin" ? "Opening your admin workspace…" : "Switching to your member profile…");
     document.documentElement.appendChild(v);
     // Never leave anyone stuck behind the veil.
     setTimeout(function () { var x = document.getElementById("switch-veil"); if (x) x.remove(); sessionStorage.removeItem("scc-switch"); }, 8000);
