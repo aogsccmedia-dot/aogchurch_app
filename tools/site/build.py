@@ -252,6 +252,7 @@ PAGES = {
     "app": dict(title="Get the app" + T, crumb="Get the app", desc="Add Sandton City Church to your phone's home screen — iPhone, Android or computer.", canonical="/app", scripts=["site.js", "auth.js"]),
     "ticket": dict(title="Your ticket" + T, desc="Your digital ticket for an event at Sandton City Church.", noindex=True, scripts=["site.js", "auth.js", "ticket.js"]),
     "membership": dict(title="Your membership" + T, body="portal", desc="Confirm or manage your membership at Sandton City Church.", noindex=True, scripts=["site.js", "membership.js"]),
+    "reminders": dict(title="Service reminders" + T, body="portal", desc="Turn weekly service reminder emails on or off.", noindex=True, scripts=["site.js", "reminders.js"]),
     "offline": dict(title="You're offline" + T, desc="You're offline.", noindex=True, scripts=["site.js"]),
     "404": dict(title="Page not found" + T, desc="Page not found.", noindex=True, scripts=["site.js", "auth.js"]),
 }

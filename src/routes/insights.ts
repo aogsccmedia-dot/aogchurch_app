@@ -7,6 +7,7 @@ import { HttpError, Router, json, readJson } from "../lib/http.ts";
 import { requireAdmin, type Session } from "../lib/auth.ts";
 import { uuid } from "../lib/crypto.ts";
 import { readUpload, storeFiles, deleteOwnerFiles } from "../lib/uploads.ts";
+import { reminderRecipients, sendServiceReminder } from "../lib/reminders.ts";
 import { DAYS, GROUP_KEYS, MINISTRY_GROUPS, groupLabel, isServiceDay, nextOccurrence, occurrences, saToday } from "../lib/groups.ts";
 
 type Ctx = { waitUntil(p: Promise<unknown>): void };
@@ -90,7 +91,7 @@ function readService(body: Record<string, unknown>) {
   if (!GROUP_KEYS.includes(ministry_group)) errors.ministry_group = "Choose the ministry group.";
   const frequency = FREQUENCIES.includes(String(body.frequency)) ? String(body.frequency) : "weekly";
   if (Object.keys(errors).length) throw new HttpError(422, "Please check the highlighted fields.", errors);
-  return { title, day, start_time, end_time, note: String(body.note ?? "").trim().slice(0, 200) || null, ministry_group, frequency, active: body.active === false || body.active === "0" ? 0 : 1 };
+  return { title, day, start_time, end_time, note: String(body.note ?? "").trim().slice(0, 200) || null, ministry_group, frequency, active: body.active === false || body.active === "0" ? 0 : 1, reminders: body.reminders === true || body.reminders === "1" || body.reminders === "on" ? 1 : 0 };
 }
 
 /** Parse a service-session form (multipart). Money comes in as Rands ("1250.50"), stored as cents. */
@@ -320,18 +321,30 @@ export function insightsRoutes(router: Router, env: Env): void {
   }));
   router.post("/api/admin/services", guard(async (req, _p, s) => {
     const v = readService(await readJson(req)); const id = uuid();
-    await env.DB.prepare("INSERT INTO weekly_services (id, day, title, start_time, end_time, note, ministry_group, frequency, active, sort) VALUES (?,?,?,?,?,?,?,?,?,?)")
-      .bind(id, v.day, v.title, v.start_time, v.end_time, v.note, v.ministry_group, v.frequency, v.active, 100).run();
+    await env.DB.prepare("INSERT INTO weekly_services (id, day, title, start_time, end_time, note, ministry_group, frequency, active, reminders, sort) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+      .bind(id, v.day, v.title, v.start_time, v.end_time, v.note, v.ministry_group, v.frequency, v.active, v.reminders, 100).run();
     await audit(s, "create", "weekly_service", id);
     return json({ ok: true, id }, 201);
   }));
   router.put("/api/admin/services/:id", guard(async (req, { id }, s) => {
     const v = readService(await readJson(req));
-    const r = await env.DB.prepare("UPDATE weekly_services SET day=?, title=?, start_time=?, end_time=?, note=?, ministry_group=?, frequency=?, active=?, updated_at=? WHERE id = ?")
-      .bind(v.day, v.title, v.start_time, v.end_time, v.note, v.ministry_group, v.frequency, v.active, new Date().toISOString(), id).run();
+    const r = await env.DB.prepare("UPDATE weekly_services SET day=?, title=?, start_time=?, end_time=?, note=?, ministry_group=?, frequency=?, active=?, reminders=?, updated_at=? WHERE id = ?")
+      .bind(v.day, v.title, v.start_time, v.end_time, v.note, v.ministry_group, v.frequency, v.active, v.reminders, new Date().toISOString(), id).run();
     if (!r.meta.changes) throw new HttpError(404, "Service not found.");
     await audit(s, "update", "weekly_service", id);
     return json({ ok: true });
+  }));
+  // Send the reminder for this service's next date now (e.g. a special night). Runs after responding.
+  router.post("/api/admin/services/:id/remind", guard(async (_req, { id }, s, ctx) => {
+    const svc = await env.DB.prepare("SELECT id, day, title, start_time, end_time, frequency FROM weekly_services WHERE id = ?").bind(id)
+      .first<{ id: string; day: number; title: string; start_time: string | null; end_time: string | null; frequency: string }>();
+    if (!svc) throw new HttpError(404, "Service not found.");
+    const date = nextOccurrence(svc.day);
+    const people = (await reminderRecipients(env)).length;
+    const job = sendServiceReminder(env, svc, date, date === saToday(), true).catch((e) => console.error("reminder failed", e));
+    if (ctx?.waitUntil) ctx.waitUntil(job); else await job;
+    await audit(s, "remind", "weekly_service", id);
+    return json({ ok: true, date, people });
   }));
   router.delete("/api/admin/services/:id", guard(async (_req, { id }, s) => {
     // Services with history are retired (kept for reports); empty ones are removed.

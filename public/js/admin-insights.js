@@ -158,6 +158,7 @@ export function initInsights(ctx) {
       const isToday = next === SVC.today;
       return `<article class="svc-card">
         <header><span class="svc-day">${esc(w.day_label.slice(0, 3))}</span><span><b>${esc(w.title)}</b><small>${esc(w.time || "")}${w.time ? " · " : ""}${esc(w.group_label)}</small></span></header>
+        ${w.reminders ? `<div class="svc-remind"><span>Email reminder ${w.start_time && w.start_time < "12:00" ? "the evening before" : "on the morning"}</span><button class="link-btn" type="button" data-remind="${esc(w.id)}">Send now</button></div>` : ""}
         <div class="svc-slot">${sNext ? `${sNext.poster_url ? `<img src="${esc(sNext.poster_url)}" alt="">` : ""}<span><em>${isToday ? "Today" : esc(day(next))}</em>${esc(sNext.topic)}</span><button class="btn btn-sm" data-edit-session="${esc(sNext.id)}">${isToday ? "Add results" : "Edit"}</button>`
           : `<span><em>${isToday ? "Today" : "Next · " + esc(day(next))}</em><span class="muted">No topic yet</span></span><button class="btn btn-sm btn-gold" data-new-session="${esc(w.id)}" data-date="${esc(next)}">Plan</button>`}</div>
         ${prev && !isToday ? (sPrev ? (sPrev.status === "cancelled" ? `<div class="svc-slot done"><span><em>Last · ${esc(day(prev))}</em><span class="muted">No service: ${esc(sPrev.cancel_reason || "")}</span></span><button class="btn btn-sm btn-ghost" data-edit-session="${esc(sPrev.id)}">Edit</button></div>` : sPrev.attendance == null ? `<div class="svc-slot due"><span><em>Last · ${esc(day(prev))}</em>${esc(sPrev.topic)}</span><button class="btn btn-sm btn-gold" data-edit-session="${esc(sPrev.id)}">Add results</button></div>`
@@ -176,6 +177,16 @@ export function initInsights(ctx) {
   $("#svc-filter").addEventListener("change", drawServices);
   $("#svc-new").addEventListener("click", () => openSession(null, SVC.services.find((w) => w.active)?.id, null));
   $("[data-view=services]").addEventListener("click", (e) => {
+    const rm = e.target.closest("[data-remind]");
+    if (rm) {
+      const w = SVC.services.find((x) => x.id === rm.dataset.remind);
+      if (!confirm(`Email the reminder for ${w.title} (${day(w.next_date)}) to everyone who gets service reminders now?`)) return;
+      rm.textContent = "Sending…"; rm.disabled = true;
+      api(`/api/admin/services/${w.id}/remind`, { method: "POST", body: {} })
+        .then((r) => { toast(`Reminder going out to ${r.people} ${r.people === 1 ? "person" : "people"}`); rm.textContent = "Sent"; })
+        .catch((err) => { toast(err.message); rm.textContent = "Send now"; rm.disabled = false; });
+      return;
+    }
     const n = e.target.closest("[data-new-session]"), ed = e.target.closest("[data-edit-session]");
     if (n) openSession(null, n.dataset.newSession, n.dataset.date);
     if (ed) openSession(SESS.find((s) => s.id === ed.dataset.editSession));
@@ -273,13 +284,14 @@ export function initInsights(ctx) {
           <label class="field"><span>How often</span><select class="input" name="frequency">${[["weekly", "Every week"], ["twice_monthly", "Twice a month"], ["monthly", "Monthly"]].map(([k, l]) => `<option value="${k}" ${w?.frequency === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
         </div>
         <div class="actions"><label class="check"><input type="checkbox" name="active" ${!w || w.active ? "checked" : ""}> Show on the website</label>
+          <label class="check"><input type="checkbox" name="reminders" ${w?.reminders ? "checked" : ""}> Email reminders</label>
           ${w ? `<button class="btn btn-sm btn-ghost" type="button" data-remove>Remove</button>` : ""}<button class="btn btn-sm btn-gold" type="submit">${w ? "Save" : "Add service"}</button></div></form>`;
     body.innerHTML = `<header class="vh"><div><p class="eyebrow gold">Weekly services</p><h2>Edit services</h2><p class="muted small">Changes show on the website straight away. Dates for each service follow its day automatically.</p></div><button class="icon-btn" type="button" data-close aria-label="Close">✕</button></header>
       ${SVC.services.map(row).join("")}<h3 class="mini-h">Add a service</h3>${row(null)}`;
     body.onsubmit = safe(async (e) => {
       e.preventDefault();
       const fm = e.target, id = fm.dataset.id;
-      const b = Object.fromEntries(new FormData(fm)); b.active = fm.active.checked; b.day = Number(b.day);
+      const b = Object.fromEntries(new FormData(fm)); b.active = fm.active.checked; b.reminders = fm.reminders.checked; b.day = Number(b.day);
       await api(id ? `/api/admin/services/${id}` : "/api/admin/services", { method: id ? "PUT" : "POST", body: b });
       toast(id ? "Saved" : "Service added"); await loaders.services(); if (!id) openServices();
     });

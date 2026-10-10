@@ -499,3 +499,24 @@ export function checkedIn(b: Brand, o: { name: string; title: string; seq: numbe
     text: `${which} for ${o.title} was checked in at ${o.time}. Booking ${o.ref}. If this wasn't you, reply to this email.` + textFooter(b),
   };
 }
+
+/** Weekly service reminder (sent only for services an admin has switched reminders on for). */
+export function serviceReminder(b: Brand, o: { name: string | null; title: string; when: string; time: string; topic: string | null; speaker: string | null; posterUrl: string | null; stopUrl: string; tonight: boolean }) {
+  const greet = o.name ? `Hi ${esc(o.name)},` : "Hi there,";
+  return {
+    subject: `${o.tonight ? "Tonight" : "Tomorrow"}: ${o.title}${o.topic ? ` · ${o.topic}` : ""}`,
+    html: layout(b, {
+      preheader: `${o.title} ${o.tonight ? "tonight" : "tomorrow"}${o.time ? ` at ${o.time.split(" ")[0]}` : ""}, 17 Humber Street. See you there!`,
+      eyebrow: "Service reminder",
+      heading: o.topic ? esc(o.topic) : `${esc(o.title)} ${o.tonight ? "tonight" : "tomorrow"}`,
+      heroImage: o.posterUrl || undefined,
+      content: p(greet) +
+        p(`A friendly reminder: <strong>${esc(o.title)}</strong> is ${o.tonight ? "tonight" : "tomorrow"}, ${esc(o.when)}${o.time ? `, <strong>${esc(o.time)}</strong>` : ""}${o.speaker ? `, with ${esc(o.speaker)}` : ""}. Come as you are, and bring a friend!`) +
+        p(`<span style="color:${C.muted}">17 Humber Street, Woodmead, Sandton</span>`) +
+        button(b.site + "/events#our-week", "See this week's services"),
+      footerNote: "You're getting this because you're part of the AOG Sandton City Church family.",
+      unsubscribeUrl: o.stopUrl,
+    }).replace(">Unsubscribe</a>", ">Stop service reminders</a>"),
+    text: `${o.name ? `Hi ${o.name}` : "Hi there"},\n\n${o.title} is ${o.tonight ? "tonight" : "tomorrow"}, ${o.when}${o.time ? `, ${o.time}` : ""}.${o.topic ? `\nTopic: ${o.topic}` : ""}${o.speaker ? `\nWith: ${o.speaker}` : ""}\n17 Humber Street, Woodmead, Sandton.\n\nStop service reminders (the weekly letter is unaffected): ${o.stopUrl}` + textFooter(b),
+  };
+}

@@ -843,4 +843,41 @@ describe("door, insights, weekly services and the board report", () => {
     assert.ok(r.totals.out >= 8950 && r.imported);
     assert.equal((await call("/api/admin/reports/ministry?group=youth&year=2026")).status, 401, "admins only");
   });
+
+  test("service reminders: due at the right time, sent once, skip 'no service', one-tap stop that keeps the letter", async () => {
+    const { dueDate, processServiceReminders } = await import("../src/lib/reminders.ts");
+    // Friday 18:00 youth service → 09:00 SAST on the Friday; Sunday 08:45 → 17:00 SAST on the Saturday.
+    const fri0900 = new Date("2026-10-16T07:05:00Z"), fri0800 = new Date("2026-10-16T06:00:00Z"), sat1700 = new Date("2026-10-17T15:10:00Z");
+    const youth = { id: "svc-fri-youth", day: 5, title: "Youth service", start_time: "18:00", end_time: "20:00", frequency: "weekly" };
+    const sunday = { id: "svc-sun-main", day: 0, title: "Main service", start_time: "08:45", end_time: "11:00", frequency: "weekly" };
+    assert.deepEqual(dueDate(youth, fri0900), { date: "2026-10-16", tonight: true });
+    assert.equal(dueDate(youth, fri0800), null);
+    assert.deepEqual(dueDate(sunday, sat1700), { date: "2026-10-18", tonight: false });
+    assert.equal(dueDate(sunday, fri0900), null);
+
+    // Switch reminders on for the youth service; a member + a letter subscriber get it once.
+    env.DB._db.prepare("UPDATE weekly_services SET reminders = 1 WHERE id = 'svc-fri-youth'").run();
+    env.DB._db.prepare("INSERT OR IGNORE INTO subscribers (id, email, name, status, token) VALUES ('sub-rem', 'reader@example.com', 'Reader', 'active', 'tok-reader-rem')").run();
+    const before = mails().filter((m) => m.template === "service_reminder" || /Tonight: Youth service/.test(m.subject)).length;
+    await processServiceReminders(env, fri0900);
+    const sent = mails().filter((m) => /Tonight: Youth service/.test(m.subject));
+    assert.ok(sent.length - before >= 2, "letter subscribers and members are reminded");
+    await processServiceReminders(env, new Date("2026-10-16T07:20:00Z"));
+    assert.equal(mails().filter((m) => /Tonight: Youth service/.test(m.subject)).length, sent.length, "only once per service date");
+
+    // One tap from the email stops reminders only.
+    const mail = mails("reader@example.com").filter((m) => /Tonight: Youth service/.test(m.subject)).at(-1)!;
+    const t = /reminders\?t=([^"&<\s]+)/.exec(mail.html!)![1];
+    const look = await (await post("/api/reminders/lookup", { t: decodeURIComponent(t) })).json() as { on: boolean; email: string };
+    assert.equal(look.on, true); assert.ok(!look.email.includes("reader@"), "email is masked");
+    assert.equal((await call(`/api/reminders/stop?t=${t}`, { method: "POST" })).status, 200, "mail-app one-click works");
+    const row = env.DB._db.prepare("SELECT status, service_reminders FROM subscribers WHERE email = 'reader@example.com'").get() as { status: string; service_reminders: number };
+    assert.equal(row.service_reminders, 0); assert.equal(row.status, "active", "still on the weekly letter");
+    // A 'no service' Friday sends nothing.
+    env.DB._db.prepare("INSERT OR REPLACE INTO service_sessions (id, service_id, date, status, topic, cancel_reason) VALUES ('ns-1', 'svc-fri-youth', '2026-10-23', 'cancelled', 'No youth service', 'Youth Quarterly')").run();
+    const n = mails().length;
+    await processServiceReminders(env, new Date("2026-10-23T07:05:00Z"));
+    assert.equal(mails().length, n);
+    env.DB._db.prepare("UPDATE weekly_services SET reminders = 0 WHERE id = 'svc-fri-youth'").run();
+  });
 });

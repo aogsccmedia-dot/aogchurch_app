@@ -48,6 +48,7 @@ async function render() {
   loadComplaints(d.member);
   maybeWelcome(d.member, u);
   $("me-letter").checked = !!d.subscribed;
+  $("me-reminders").checked = d.service_reminders !== false;
   $("me-events").innerHTML = d.registrations.length ? d.registrations.map((r) => `
     <article class="event-card"><div class="body">
       <span class="eyebrow">${{ waitlist: "Waitlist", pending: "Awaiting payment approval", confirmed: "Confirmed", rejected: "Payment not approved" }[r.status] || r.status} · ${esc(r.ref_code)}</span>
@@ -59,6 +60,11 @@ async function render() {
     : `<div class="events-empty" style="grid-column:1/-1">No events yet. <a class="btn btn-sm" href="/events">Browse what's coming up ${icon("arrowRight", "arr")}</a></div>`;
 }
 
+$("me-reminders").addEventListener("change", async (e) => {
+  const on = e.target.checked;
+  toast(on ? "Service reminders on" : "Service reminders off");   // instant; the server follows
+  try { await api("/api/me/reminders", { method: "PATCH", body: { on } }); } catch (err) { e.target.checked = !on; toast(err.message); }
+});
 $("me-letter").addEventListener("change", async (e) => {
   try { await api("/api/me/letter", { method: "POST", body: { subscribed: e.target.checked } }); toast(e.target.checked ? "You're subscribed 💛" : "Unsubscribed"); }
   catch (err) { toast(err.message); e.target.checked = !e.target.checked; }

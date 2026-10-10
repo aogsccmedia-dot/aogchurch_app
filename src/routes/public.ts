@@ -4,6 +4,7 @@ import { HttpError, Router, clientIp, json, readJson } from "../lib/http.ts";
 import { Validator, ageOn, formToRaw } from "../lib/validate.ts";
 import { rateLimit, ipHash } from "../lib/ratelimit.ts";
 import { confirmMembership, memberByToken, revokeMembership, revokeReason } from "../lib/membership.ts";
+import { emailForReminderToken, remindersOn, setReminders } from "../lib/reminders.ts";
 import { refCode, uuid } from "../lib/crypto.ts";
 import { activeDriver, getFile } from "../lib/storage.ts";
 import { readUpload, storeFiles, type PendingFile } from "../lib/uploads.ts";
@@ -318,6 +319,28 @@ export function publicRoutes(router: Router, env: Env): void {
     await revokeMembership(env, m, why.text, "email check-in", new Date(), why.code);
     return json({ ok: true, first_name: m.preferred_name || m.first_name });
   });
+
+  // Weekly service reminders: one-tap stop/start from the email (POST only, so link scanners can't act).
+  const mask = (e: string) => e.replace(/^(.)(.*)(.@.*)$/, (_m, a, mid, c) => a + "•".repeat(Math.min(6, mid.length)) + c);
+  router.post("/api/reminders/lookup", async (req) => {
+    await rateLimit(env, "reminders", clientIp(req), 60, 3600);
+    const { t } = await readJson<{ t?: string }>(req);
+    const email = await emailForReminderToken(env, t);
+    if (!email) throw new HttpError(404, "This link isn't valid any more. You can change reminders from your profile.");
+    return json({ ok: true, email: mask(email), on: await remindersOn(env, email) });
+  });
+  for (const [path, on] of [["/api/reminders/stop", false], ["/api/reminders/start", true]] as const) {
+    router.post(path, async (req) => {
+      await rateLimit(env, "reminders", clientIp(req), 60, 3600);
+      // Works from our page (JSON body) and from mail apps' one-click unsubscribe (?t= in the URL).
+      const q = new URL(req.url).searchParams.get("t");
+      const t = q || (req.headers.get("content-type")?.includes("json") ? (await readJson<{ t?: string }>(req)).t : null);
+      const email = await emailForReminderToken(env, t);
+      if (!email) throw new HttpError(404, "This link isn't valid any more. You can change reminders from your profile.");
+      await setReminders(env, email, on);
+      return json({ ok: true, on });
+    });
+  }
 
   // Cookie consent: store the visitor's choice (anonymous id, no IP) so we can show what was agreed.
   router.post("/api/consent", async (req) => {

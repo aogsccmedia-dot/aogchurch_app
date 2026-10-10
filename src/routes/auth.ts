@@ -3,6 +3,7 @@ import { adminEmail, siteUrl } from "../env.ts";
 import { voidTickets } from "../lib/tickets.ts";
 import { approvedMember, createComplaint } from "../lib/complaints.ts";
 import { confirmMembership, revokeMembership, revokeReason, type MemberRow } from "../lib/membership.ts";
+import { remindersOn, setReminders } from "../lib/reminders.ts";
 import { HttpError, Router, clientIp, json, readJson } from "../lib/http.ts";
 import { rateLimit } from "../lib/ratelimit.ts";
 import {
@@ -103,7 +104,7 @@ export function authRoutes(router: Router, env: Env): void {
          JOIN events e ON e.id = r.event_id WHERE (r.user_id = ? OR r.email = ?) AND r.status NOT IN ('cancelled') ORDER BY e.starts_at DESC LIMIT 50`,
     ).bind(s.user.id, s.user.email).all();
     const sub = await env.DB.prepare("SELECT status FROM subscribers WHERE email = ?").bind(s.user.email).first<{ status: string }>();
-    return json({ ok: true, user: s.user, member, registrations, subscribed: sub?.status === "active", is_admin: s.kind === "admin" });
+    return json({ ok: true, user: s.user, member, registrations, subscribed: sub?.status === "active", service_reminders: await remindersOn(env, s.user.email), is_admin: s.kind === "admin" });
   });
 
   // Membership: confirm "still a member" or revoke, from the profile page.
@@ -119,6 +120,14 @@ export function authRoutes(router: Router, env: Env): void {
     const why = revokeReason(await readJson<{ reason_code?: string; reason?: string }>(req));
     const m = await myMember(req);
     return json({ ok: true, first_name: m.preferred_name || m.first_name, ...(await revokeMembership(env, m, why.text, "profile", new Date(), why.code)) });
+  });
+
+  router.patch("/api/me/reminders", async (req) => {
+    const s = await getSession(env, req);
+    if (!s) throw new HttpError(401, "Please sign in.");
+    const { on } = await readJson<{ on?: boolean }>(req);
+    await setReminders(env, s.user.email, !!on);
+    return json({ ok: true, on: !!on });
   });
 
   // Complaints (approved members only).
