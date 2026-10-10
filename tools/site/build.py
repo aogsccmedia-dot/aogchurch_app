@@ -91,6 +91,7 @@ def head(title, desc, canonical=None, noindex=False, extra=""):
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css?v={ver('css/base.css')}">
   <link rel="stylesheet" href="/css/pages.css?v={ver('css/pages.css')}">
+  <script src="/js/switch-boot.js?v={ver('js/switch-boot.js')}"></script>
   <script type="speculationrules">{SPECULATION}</script>{extra}
 </head>'''
 
@@ -231,7 +232,7 @@ T = f" · {C}"
 PAGES = {
     "index": dict(title="AOG Sandton City Church · Church in Woodmead, Sandton", desc="AOG Sandton City Church: a community-centred, Bible-based, Spirit-filled church at 17 Humber Street, Woodmead, Sandton. Sunday services, youth ministry, events and a weekly letter.", canonical="/", scripts=["site.js", "auth.js", "pages.js", "word.js"],
                   extra='\n  <link rel="preload" as="image" href="/assets/photos/worship-1600.webp" type="image/webp">' + ld(CHURCH, WEBSITE)),
-    "about": dict(title="About us" + T, crumb="About us", desc="Who we are: AOG Sandton City Church is an Assemblies of God family in Woodmead, Sandton — Bible-based, community-centred and Spirit-filled.", canonical="/about", scripts=["site.js", "auth.js", "pages.js"]),
+    "about": dict(title="About us" + T, crumb="About us", desc="Who we are: AOG Sandton City Church is an Assemblies of God family in Woodmead, Sandton — Bible-based, community-centred and Spirit-filled.", canonical="/about", scripts=["site.js", "auth.js", "pages.js", "programme.js"]),
     "our-story": dict(title="Our story" + T, crumb="Our story", desc="The story of AOG Sandton City Church: part of the worldwide Assemblies of God family, at home in Woodmead, Sandton, with a youth ministry on fire.", canonical="/our-story", scripts=["site.js", "auth.js", "pages.js"]),
     "beliefs": dict(title="What we believe" + T, crumb="What we believe", desc="What AOG Sandton City Church believes about the Bible, God, Jesus, salvation, the Holy Spirit, baptism, healing and the church.", canonical="/beliefs", scripts=["site.js", "auth.js", "pages.js"]),
     "events": dict(title="Services & events" + T, crumb="Services & events", desc="Sunday services and upcoming events at Sandton City Church, Woodmead. Register online, pay by EFT and add events to your calendar.", canonical="/events", scripts=["site.js", "auth.js", "pages.js", "programme.js"]),

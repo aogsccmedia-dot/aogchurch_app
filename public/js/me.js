@@ -2,6 +2,7 @@ import { icon } from "./icons.js";
 import { api, esc, toast } from "./site.js";
 import { getMe, googleButton, signOut, whenSignedIn } from "./auth.js";
 import { revokeFlow } from "./offboard.js";
+import { switchReady } from "./switcher.js";
 
 const $ = (id) => document.getElementById(id);
 const TZ = "Africa/Johannesburg";
@@ -29,6 +30,7 @@ async function render() {
   const [me, d] = await Promise.all([getMe(true), api("/api/me").catch(() => null)]);
   if (!me.user || !d) {
     $("me-signin").hidden = false; $("me-view").hidden = true;
+    switchReady();
     const ok = await googleButton($("me-google"), { text: "signin_with" });
     if (!ok) $("me-google").outerHTML = `<p class="muted-text">Google sign-in is being set up. In the meantime, <a href="/join" style="color:var(--gold-2)">join here</a>.</p>`;
     return;
@@ -41,6 +43,8 @@ async function render() {
   $("me-email").textContent = u.email;
   firstName = d.member?.preferred_name || d.member?.first_name || (d.user?.name || "").split(" ")[0] || "friend";
   $("me-member").innerHTML = memberCard(d.member);
+  roleSwitch(me);
+  switchReady();
   loadComplaints(d.member);
   maybeWelcome(d.member, u);
   $("me-letter").checked = !!d.subscribed;
@@ -71,6 +75,17 @@ $("me-member").addEventListener("click", async (e) => {
   }
   if (e.target.closest("[data-ms-revoke]")) openOffboarding();
 });
+// People with an admin role can hop between this member view and their admin workspace.
+function roleSwitch(me) {
+  let bar = $("role-switch");
+  if (!(me.can_admin || me.is_admin) || me.admin_account) { bar?.remove(); return; }
+  if (!bar) {
+    bar = document.createElement("div"); bar.id = "role-switch"; bar.className = "role-switch";
+    bar.innerHTML = `<span class="rs-opt on" aria-current="true">Member view</span><button type="button" class="rs-opt" data-switch="admin">Admin</button>`;
+    $("me-view").prepend(bar);
+  }
+}
+
 // Revoking membership: a gentle three-step sheet (why → confirm → goodbye).
 
 function openOffboarding() {

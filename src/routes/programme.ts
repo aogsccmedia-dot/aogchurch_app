@@ -1,12 +1,13 @@
 /**
  * Church programme: public items (SCC calendar), members-only items (Germiston Sub-Region planner),
- * leaders-only items (board meetings), plus admin CRUD. Regular weekly services are static.
+ * leaders-only items (board meetings), plus admin CRUD. Weekly services come from Admin → Weekly services.
  */
 import type { Env } from "../env.ts";
 import { HttpError, Router, json, readJson } from "../lib/http.ts";
 import { getSession, requireAdmin } from "../lib/auth.ts";
 import { Validator } from "../lib/validate.ts";
-import { WEEKLY_SERVICES, programmeWhen, type ProgrammeRow } from "../lib/programme.ts";
+import { programmeWhen, type ProgrammeRow } from "../lib/programme.ts";
+import { publicWeekly } from "./insights.ts";
 
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Johannesburg" }).format(new Date());
 const AUDIENCES = ["public", "members", "leaders"] as const;
@@ -27,7 +28,7 @@ export function programmeRoutes(router: Router, env: Env): void {
       `SELECT id, source, audience, start_date, end_date, time_label, title, department, venue, notes FROM church_programme
         WHERE audience IN (${audiences.map(() => "?").join(",")}) AND COALESCE(end_date, start_date) >= ? ORDER BY start_date, title LIMIT ?`)
       .bind(...audiences, from, limit).all<ProgrammeRow>();
-    return json({ ok: true, member, weekly: WEEKLY_SERVICES, items: results.map((p) => ({ ...p, when: programmeWhen(p) })) });
+    return json({ ok: true, member, weekly: await publicWeekly(env), items: results.map((p) => ({ ...p, when: programmeWhen(p) })) });
   });
 
   // ---------- admin ----------

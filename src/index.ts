@@ -13,6 +13,7 @@ import { authRoutes } from "./routes/auth.ts";
 import { faithRoutes } from "./routes/faith.ts";
 import { ticketRoutes } from "./routes/tickets.ts";
 import { programmeRoutes } from "./routes/programme.ts";
+import { insightsRoutes } from "./routes/insights.ts";
 import { processAnnouncements } from "./lib/newsletter.ts";
 import { processCheckins, processWelcomes } from "./lib/membership.ts";
 import { nextSundayAfternoon } from "./lib/time.ts";
@@ -46,6 +47,7 @@ export default {
       faithRoutes(router, env);
       ticketRoutes(router, env);
       programmeRoutes(router, env);
+      insightsRoutes(router, env);
       const res = await router.handle(req, ctx);
       return res ?? json({ ok: false, error: "Not found." }, 404);
     } catch (err) {

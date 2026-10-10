@@ -9,7 +9,8 @@ import { deleteOwnerFiles, readUpload, storeFiles } from "../lib/uploads.ts";
 import { parseSchema, sanitizeSchema, slugify } from "../lib/forms.ts";
 import { emailHealth, resendFailed, sendMail } from "../lib/email.ts";
 import { SAMPLES } from "../emails/samples.ts";
-import { voidTickets } from "../lib/tickets.ts";
+import { ensureTickets, voidTickets } from "../lib/tickets.ts";
+import { GROUP_KEYS } from "../lib/groups.ts";
 import { CHECKIN_MONTHS, addMonths } from "../lib/membership.ts";
 import { buildAnnouncement, processAnnouncements, renderAnnouncement, type AnnouncementRow } from "../lib/newsletter.ts";
 import { calendarUrl, formatWhen, nextSundayAfternoon } from "../lib/time.ts";
@@ -17,7 +18,10 @@ import * as T from "../emails/templates.ts";
 import { notifyRegistration, promoteWaitlist, type EventRow, type RegRow } from "../lib/registrations.ts";
 import { ADMIN_ONLY_SETTINGS, COMPLAINT_STATUSES, EVENT_CATEGORIES, MEMBER_STATUSES, MESSAGE_STATUSES, PRAYER_STATUSES, PUBLIC_SETTINGS } from "../constants.ts";
 
-type H = (req: Request, p: Record<string, string>, s: Session) => Promise<Response>;
+type Ctx = { waitUntil(p: Promise<unknown>): void };
+type H = (req: Request, p: Record<string, string>, s: Session, ctx?: Ctx) => Promise<Response>;
+/** Run slow work (emails, PDFs) after responding, so admin buttons react instantly. */
+const later = (ctx: Ctx | undefined, job: Promise<unknown>) => { const safeJob = job.catch((e) => console.error("background job failed", e)); if (ctx?.waitUntil) ctx.waitUntil(safeJob); else return safeJob; };
 
 async function audit(env: Env, s: Session, action: string, entity?: string, entityId?: string, detail?: unknown) {
   await env.DB.prepare("INSERT INTO audit_log (user_id, action, entity, entity_id, detail) VALUES (?,?,?,?,?)")
@@ -45,14 +49,14 @@ function pageParams(url: URL) {
 export { promoteWaitlist };
 
 export function adminRoutes(router: Router, env: Env): void {
-  const guard = (h: H) => async (req: Request, p: Record<string, string>) => {
+  const guard = (h: H) => async (req: Request, p: Record<string, string>, ctx?: Ctx) => {
     const s = await requireAdmin(env, req);
     if (req.method !== "GET" && req.method !== "HEAD" && req.headers.get("x-scc-admin") !== "1") throw new HttpError(403, "Missing request header.");
-    return h(req, p, s);
+    return h(req, p, s, ctx);
   };
-  const superOnly = (h: H) => guard(async (req, p, s) => {
+  const superOnly = (h: H) => guard(async (req, p, s, ctx) => {
     if (s.role !== "super") throw new HttpError(403, "Only the main church admin can do this.");
-    return h(req, p, s);
+    return h(req, p, s, ctx);
   });
 
   // ---------- dashboard ----------
@@ -116,7 +120,7 @@ export function adminRoutes(router: Router, env: Env): void {
     return json({ ok: true, member, attachments: atts.results });
   }));
 
-  router.patch("/api/admin/members/:id", guard(async (req, { id }, s) => {
+  router.patch("/api/admin/members/:id", guard(async (req, { id }, s, ctx) => {
     const body = await readJson(req);
     const v = new Validator(body);
     const status = v.oneOf("status", MEMBER_STATUSES);
@@ -143,7 +147,7 @@ export function adminRoutes(router: Router, env: Env): void {
     const res = await env.DB.prepare(`UPDATE members SET ${sets.join(", ")} WHERE id = ?`).bind(...args, id).run();
     if (!res.meta.changes) throw new HttpError(404, "Member not found.");
     if (status === "member" && prev && prev.status !== "member" && prev.email) {
-      await sendMail(env, { to: prev.email, toName: `${prev.first_name} ${prev.last_name}`, ...T.memberVerified({ site: siteUrl(env) }, { name: prev.preferred_name || prev.first_name, ref: prev.ref_code }), template: "member_verified" });
+      await later(ctx, sendMail(env, { to: prev.email, toName: `${prev.first_name} ${prev.last_name}`, ...T.memberVerified({ site: siteUrl(env) }, { name: prev.preferred_name || prev.first_name, ref: prev.ref_code }), template: "member_verified" }));
     }
     await audit(env, s, "update", "member", id, { status, assigned });
     return json({ ok: true });
@@ -229,6 +233,7 @@ export function adminRoutes(router: Router, env: Env): void {
       title: v.text("title", { required: true, max: 140, label: "Title" }),
       slug: v.text("slug", { max: 60 }),
       category: v.oneOf("category", EVENT_CATEGORIES) || "other",
+      ministry_group: v.oneOf("ministry_group", GROUP_KEYS, { required: true, label: "Ministry group" }) || "church",
       description: v.text("description", { max: 5000 }),
       starts_at: v.text("starts_at", { required: true, max: 40, label: "Start" }),
       ends_at: v.text("ends_at", { max: 40 }),
@@ -261,7 +266,7 @@ export function adminRoutes(router: Router, env: Env): void {
 
   router.get("/api/admin/events", guard(async () => {
     const { results } = await env.DB.prepare(
-      `SELECT e.id, e.slug, e.title, e.category, e.starts_at, e.ends_at, e.location, e.is_published, e.rsvp_enabled, e.capacity, e.cover_attachment_id, e.cover_image, e.price_label, e.requires_pop,
+      `SELECT e.id, e.slug, e.title, e.category, e.ministry_group, e.starts_at, e.ends_at, e.location, e.is_published, e.rsvp_enabled, e.capacity, e.cover_attachment_id, e.cover_image, e.price_label, e.requires_pop,
         (SELECT COUNT(*) FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'confirmed') AS confirmed,
         (SELECT COUNT(*) FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'waitlist') AS waitlist,
         (SELECT COUNT(*) FROM event_registrations r WHERE r.event_id = e.id AND r.status = 'pending') AS pending,
@@ -280,10 +285,10 @@ export function adminRoutes(router: Router, env: Env): void {
     const e = readEvent(await readJson(req, 256 * 1024));
     const id = uuid();
     const slug = await uniqueSlug(e.slug || e.title!);
-    await env.DB.prepare(`INSERT INTO events (id, slug, title, category, description, starts_at, ends_at, location, is_published, rsvp_enabled,
+    await env.DB.prepare(`INSERT INTO events (id, slug, title, category, ministry_group, description, starts_at, ends_at, location, is_published, rsvp_enabled,
         collect_phone, capacity, registration_closes_at, confirmation_message, form_schema, price_label, ticket_price, requires_pop, auto_approve, payment_instructions)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .bind(id, slug, e.title, e.category, e.description, e.starts_at, e.ends_at, e.location, e.is_published, e.rsvp_enabled,
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(id, slug, e.title, e.category, e.ministry_group, e.description, e.starts_at, e.ends_at, e.location, e.is_published, e.rsvp_enabled,
         e.collect_phone, e.capacity, e.registration_closes_at, e.confirmation_message, e.form_schema, e.price_label,
         e.ticket_price, e.requires_pop, e.auto_approve, e.payment_instructions).run();
     await audit(env, s, "create", "event", id);
@@ -293,10 +298,10 @@ export function adminRoutes(router: Router, env: Env): void {
   router.put("/api/admin/events/:id", guard(async (req, { id }, s) => {
     const e = readEvent(await readJson(req, 256 * 1024));
     const slug = await uniqueSlug(e.slug || e.title!, id);
-    const r = await env.DB.prepare(`UPDATE events SET slug=?, title=?, category=?, description=?, starts_at=?, ends_at=?, location=?, is_published=?, rsvp_enabled=?,
+    const r = await env.DB.prepare(`UPDATE events SET slug=?, title=?, category=?, ministry_group=?, description=?, starts_at=?, ends_at=?, location=?, is_published=?, rsvp_enabled=?,
         collect_phone=?, capacity=?, registration_closes_at=?, confirmation_message=?, form_schema=?, price_label=?, ticket_price=?, requires_pop=?,
         auto_approve=?, payment_instructions=?, updated_at=? WHERE id = ?`)
-      .bind(slug, e.title, e.category, e.description, e.starts_at, e.ends_at, e.location, e.is_published, e.rsvp_enabled, e.collect_phone,
+      .bind(slug, e.title, e.category, e.ministry_group, e.description, e.starts_at, e.ends_at, e.location, e.is_published, e.rsvp_enabled, e.collect_phone,
         e.capacity, e.registration_closes_at, e.confirmation_message, e.form_schema, e.price_label, e.ticket_price, e.requires_pop,
         e.auto_approve, e.payment_instructions, new Date().toISOString(), id).run();
     if (!r.meta.changes) throw new HttpError(404, "Event not found.");
@@ -313,10 +318,10 @@ export function adminRoutes(router: Router, env: Env): void {
     const shift = (iso: string | number | null) => (iso ? new Date(new Date(String(iso)).getTime() + Number(days) * 86400_000).toISOString() : null);
     const nid = uuid();
     const slug = await uniqueSlug(`${e.title}-${String(shift(e.starts_at)).slice(0, 10)}`);
-    await env.DB.prepare(`INSERT INTO events (id, slug, title, category, description, starts_at, ends_at, location, is_published, rsvp_enabled,
+    await env.DB.prepare(`INSERT INTO events (id, slug, title, category, ministry_group, description, starts_at, ends_at, location, is_published, rsvp_enabled,
         collect_phone, capacity, registration_closes_at, confirmation_message, form_schema, cover_attachment_id, cover_image, price_label,
-        ticket_price, requires_pop, auto_approve, payment_instructions) VALUES (?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .bind(nid, slug, e.title, e.category, e.description, shift(e.starts_at), shift(e.ends_at), e.location, e.rsvp_enabled, e.collect_phone,
+        ticket_price, requires_pop, auto_approve, payment_instructions) VALUES (?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(nid, slug, e.title, e.category, e.ministry_group, e.description, shift(e.starts_at), shift(e.ends_at), e.location, e.rsvp_enabled, e.collect_phone,
         e.capacity, shift(e.registration_closes_at), e.confirmation_message, e.form_schema, e.cover_attachment_id, e.cover_image, e.price_label,
         e.ticket_price, e.requires_pop, e.auto_approve, e.payment_instructions).run();
     await audit(env, s, "duplicate", "event", nid, { from: id });
@@ -361,7 +366,7 @@ export function adminRoutes(router: Router, env: Env): void {
    * Change a registration's status. Approving (→ confirmed) emails the ticket + calendar invite;
    * declining (→ rejected) emails a kind note. Freed seats go to the waitlist automatically.
    */
-  router.patch("/api/admin/registrations/:id", guard(async (req, { id }, s) => {
+  router.patch("/api/admin/registrations/:id", guard(async (req, { id }, s, ctx) => {
     const body = await readJson(req);
     const reg = await env.DB.prepare("SELECT * FROM event_registrations WHERE id = ?").bind(id).first<RegRow>();
     if (!reg) throw new HttpError(404, "Registration not found.");
@@ -372,9 +377,11 @@ export function adminRoutes(router: Router, env: Env): void {
       await env.DB.prepare("UPDATE event_registrations SET status = ?, reviewed_at = ?, review_note = COALESCE(?, review_note) WHERE id = ?")
         .bind(next, new Date().toISOString(), note, id).run();
       const e = await env.DB.prepare("SELECT * FROM events WHERE id = ?").bind(reg.event_id).first<EventRow>();
-      if (e && (next === "confirmed" || next === "rejected") && body.notify !== false) await notifyRegistration(env, e, { ...reg, status: next }, { note });
-      if (next !== "confirmed") await voidTickets(env, reg.id);
-      if (["cancelled", "rejected", "waitlist"].includes(next)) await promoteWaitlist(env, reg.event_id);
+      // Tickets exist the moment it's approved (so the door can scan straight away); the email + PDF go out in the background.
+      if (next === "confirmed") await ensureTickets(env, { ...reg, status: next });
+      else await voidTickets(env, reg.id);
+      if (e && (next === "confirmed" || next === "rejected") && body.notify !== false) await later(ctx, notifyRegistration(env, e, { ...reg, status: next }, { note }));
+      if (["cancelled", "rejected", "waitlist"].includes(next)) await later(ctx, promoteWaitlist(env, reg.event_id));
     }
     if (typeof body.checked_in === "boolean") {
       await env.DB.prepare("UPDATE event_registrations SET checked_in_at = ? WHERE id = ?").bind(body.checked_in ? new Date().toISOString() : null, id).run();
@@ -384,15 +391,17 @@ export function adminRoutes(router: Router, env: Env): void {
   }));
 
   // Approve every registration still awaiting approval for an event, in sign-up order.
-  router.post("/api/admin/events/:id/approve-all", guard(async (_req, { id }, s) => {
+  router.post("/api/admin/events/:id/approve-all", guard(async (_req, { id }, s, ctx) => {
     const e = await env.DB.prepare("SELECT * FROM events WHERE id = ?").bind(id).first<EventRow>();
     if (!e) throw new HttpError(404, "Event not found.");
     const { results } = await env.DB.prepare("SELECT * FROM event_registrations WHERE event_id = ? AND status = 'pending' ORDER BY created_at").bind(id).all<RegRow>();
     const now = new Date().toISOString();
     for (const r of results) {
       await env.DB.prepare("UPDATE event_registrations SET status = 'confirmed', reviewed_at = ? WHERE id = ?").bind(now, r.id).run();
-      await notifyRegistration(env, e, { ...r, status: "confirmed" });
+      await ensureTickets(env, { ...r, status: "confirmed" });
     }
+    // Emails (with PDF tickets) are sent one after another in the background.
+    await later(ctx, (async () => { for (const r of results) await notifyRegistration(env, e, { ...r, status: "confirmed" }); })());
     await audit(env, s, "approve_all", "event", id, { count: results.length });
     return json({ ok: true, approved: results.length });
   }));
@@ -568,7 +577,7 @@ export function adminRoutes(router: Router, env: Env): void {
         GROUP BY u.id ORDER BY (m.ref_code IS NULL), u.name LIMIT 50`).bind(adminEmail(env), q, like, like, like).all();
     return json({ ok: true, admins, people });
   }));
-  router.post("/api/admin/team", superOnly(async (req, _p, s) => {
+  router.post("/api/admin/team", superOnly(async (req, _p, s, ctx) => {
     const { user_id } = await readJson<{ user_id?: string }>(req);
     const u = await env.DB.prepare("SELECT id, email, name, given_name FROM users WHERE id = ?").bind(user_id || "").first<{ id: string; email: string; name: string | null; given_name: string | null }>();
     if (!u) throw new HttpError(404, "That person needs to sign in with Google on the website once before they can be made an admin.");
@@ -578,7 +587,7 @@ export function adminRoutes(router: Router, env: Env): void {
     if (await env.DB.prepare("SELECT 1 FROM admin_roles WHERE user_id = ?").bind(u.id).first()) return json({ ok: true, already: true });
     await env.DB.prepare("INSERT OR IGNORE INTO admin_roles (user_id, email, granted_by) VALUES (?, ?, ?)").bind(u.id, u.email.toLowerCase(), s.user.email).run();
     await audit(env, s, "grant_admin", "user", u.id, { email: u.email });
-    await sendMail(env, { to: u.email, toName: u.name || undefined, ...T.adminGranted({ site: siteUrl(env) }, { name: u.given_name || (u.name || "").split(" ")[0] || "friend" }), template: "admin_granted" });
+    await later(ctx, sendMail(env, { to: u.email, toName: u.name || undefined, ...T.adminGranted({ site: siteUrl(env) }, { name: u.given_name || (u.name || "").split(" ")[0] || "friend" }), template: "admin_granted" }));
     return json({ ok: true });
   }));
   router.delete("/api/admin/team/:userId", superOnly(async (_req, { userId }, s) => {
@@ -598,7 +607,7 @@ export function adminRoutes(router: Router, env: Env): void {
     const { results } = await (where ? stmt.bind(status) : stmt).all();
     return json({ ok: true, complaints: results });
   }));
-  router.patch("/api/admin/complaints/:id", guard(async (req, { id }, s) => {
+  router.patch("/api/admin/complaints/:id", guard(async (req, { id }, s, ctx) => {
     const body = await readJson(req);
     const v = new Validator(body);
     const status = v.oneOf("status", COMPLAINT_STATUSES, { required: true, label: "Status" });
@@ -612,8 +621,8 @@ export function adminRoutes(router: Router, env: Env): void {
     await env.DB.prepare("UPDATE complaints SET status = ?, response = COALESCE(?, response), responded_at = CASE WHEN ? IS NOT NULL THEN ? ELSE responded_at END, updated_at = ? WHERE id = ?")
       .bind(status, response, response, now, now, id).run();
     await audit(env, s, "complaint_update", "complaint", id, { status });
-    if (notify && c.email) await sendMail(env, { to: c.email, toName: `${c.first_name} ${c.last_name}`,
-      ...T.complaintUpdate({ site: siteUrl(env) }, { name: c.preferred_name || c.first_name, ref: c.ref_code, subject: c.subject, status: status!, response: response ?? c.response }), template: "complaint_update" });
+    if (notify && c.email) await later(ctx, sendMail(env, { to: c.email, toName: `${c.first_name} ${c.last_name}`,
+      ...T.complaintUpdate({ site: siteUrl(env) }, { name: c.preferred_name || c.first_name, ref: c.ref_code, subject: c.subject, status: status!, response: response ?? c.response }), template: "complaint_update" }));
     return json({ ok: true });
   }));
 

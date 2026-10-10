@@ -5,7 +5,27 @@ if (!location.hash) scrollTo(0, 0);
 // Shared behaviour for every public page: header, menu, reveal animations,
 // settings, toasts and a tiny API helper.
 
-export async function api(path, { method = "GET", body, form } = {}) {
+
+// ---- Instant feedback: the button you pressed shows a spinner the moment a save starts,
+// and can't be pressed twice while it's working. Works for every action without extra code.
+let pressed = null, pressedAt = 0;
+const remember = (el) => { pressed = el; pressedAt = Date.now(); };
+document.addEventListener("pointerdown", (e) => remember(e.target.closest?.("button, .btn")), true);
+document.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") remember(document.activeElement?.closest?.("button, .btn")); }, true);
+document.addEventListener("submit", (e) => remember(e.submitter || e.target.querySelector('[type="submit"]')), true);
+function pressedBusy() {
+  const b = Date.now() - pressedAt < 1500 ? pressed : null;
+  pressed = null;
+  if (!b || b.getAttribute("aria-busy") === "true") return () => {};
+  b.setAttribute("aria-busy", "true");
+  return () => b.removeAttribute("aria-busy");
+}
+
+export async function api(path, opts = {}) {
+  const done = (opts.method || "GET") === "GET" ? () => {} : pressedBusy();
+  try { return await apiRaw(path, opts); } finally { done(); }
+}
+async function apiRaw(path, { method = "GET", body, form } = {}) {
   const opts = { method, headers: {} };
   if (form) opts.body = form;
   else if (body !== undefined) { opts.body = JSON.stringify(body); opts.headers["Content-Type"] = "application/json"; }

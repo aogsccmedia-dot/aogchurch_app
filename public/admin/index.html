@@ -10,9 +10,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/base.css?v=a2f30c2cb0">
-  <link rel="stylesheet" href="/css/pages.css?v=4771f5a892">
-  <link rel="stylesheet" href="/css/admin.css?v=914ae7b218">
+  <link rel="stylesheet" href="/css/base.css?v=71d32040ea">
+  <link rel="stylesheet" href="/css/pages.css?v=f4b776d3c6">
+  <link rel="stylesheet" href="/css/admin.css?v=f65233ecdb">
+  <script src="/js/switch-boot.js?v=8f652f4915"></script>
 </head>
 <body class="admin">
   <!-- Sign in -->
@@ -41,7 +42,7 @@
   <div id="app-view" class="shell" hidden>
     <header class="m-top">
       <a class="brand" href="/" target="_blank"><img src="/assets/logo-64.png" alt="" width="30" height="30"><span>SCC Admin</span></a>
-      <button class="btn btn-sm" type="button" id="m-menu" aria-controls="side" aria-expanded="false">Menu</button>
+      <div class="m-top-actions"><button class="btn btn-sm btn-ghost" type="button" data-switch="member" id="m-switch" hidden>Member view</button><button class="btn btn-sm" type="button" id="m-menu" aria-controls="side" aria-expanded="false">Menu</button></div>
     </header>
     <nav class="m-bar" aria-label="Quick actions">
       <button data-go-tab="events" data-ico="ticket"><span>Events</span></button>
@@ -52,10 +53,13 @@
       <a class="brand" href="/" target="_blank"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>SCC Admin</span></a>
       <nav id="nav">
         <button data-tab="overview" class="active">Overview</button>
+        <button data-tab="insights">Insights</button>
         <button data-tab="members">Members <span class="badge" data-count="new_members"></span></button>
         <button data-tab="events">Events &amp; forms <span class="badge" data-count="pending_payments"></span></button>
         <button data-tab="scan">Door scanner</button>
+        <button data-tab="services">Weekly services</button>
         <button data-tab="programme">Church programme</button>
+        <button data-tab="report">Board report</button>
         <button data-tab="letters">Weekly letter</button>
         <button data-tab="subscribers">Subscribers</button>
         <button data-tab="prayers">Prayer <span class="badge" data-count="prayer_total"></span></button>
@@ -66,7 +70,7 @@
         <button data-tab="emails">Email log</button>
         <button data-tab="team" data-super>Team &amp; roles</button>
       </nav>
-      <div class="side-foot"><span id="who"></span><span class="role-chip" id="role-chip"></span><a class="btn btn-sm btn-ghost" href="/me" id="to-profile" hidden>Switch to my profile</a><button class="btn btn-sm" id="logout">Sign out</button></div>
+      <div class="side-foot"><span id="who"></span><span class="role-chip" id="role-chip"></span><button class="btn btn-sm btn-ghost" type="button" data-switch="member" id="to-profile" hidden>Switch to member view</button><button class="btn btn-sm" id="logout">Sign out</button></div>
     </aside>
 
     <main class="main">
@@ -112,9 +116,10 @@
               <h3>Details</h3>
               <div class="field"><label>Title</label><input class="input" name="title" required maxlength="140" placeholder="Sunday Family Service"></div>
               <div class="grid-2">
+                <div class="field"><label>Ministry group <span class="req"></span></label><select class="input" name="ministry_group" required data-groups><option value="">Choose the group this event is for…</option></select><small class="hint">Money and attendance for this event count towards this group.</small></div>
                 <div class="field"><label>Category</label><select class="input" name="category"><option value="service">Service</option><option value="night">Youth night</option><option value="camp">Camp</option><option value="outreach">Outreach</option><option value="conference">Conference</option><option value="other">Other</option></select></div>
-                <div class="field"><label>Page link</label><input class="input" name="slug" maxlength="60" placeholder="auto from title"></div>
               </div>
+              <div class="field"><label>Page link</label><input class="input" name="slug" maxlength="60" placeholder="auto from title"></div>
               <div class="grid-2">
                 <div class="field"><label>Starts</label><input class="input" name="starts_at" type="datetime-local" required></div>
                 <div class="field"><label>Ends</label><input class="input" name="ends_at" type="datetime-local"></div>
@@ -251,23 +256,74 @@
         <div class="scanner" id="scanner">
           <div class="scan-top">
             <select class="input" id="scan-event" aria-label="Event"></select>
-            <span class="scan-count" id="scan-count"></span>
+            <span class="scan-count" id="scan-count" aria-live="polite"></span>
           </div>
           <div class="scan-stage" id="scan-stage">
             <video id="scan-video" playsinline muted autoplay></video>
             <canvas id="scan-canvas" hidden></canvas>
             <div class="scan-reticle" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
             <div class="scan-msg" id="scan-msg">Starting camera…</div>
+            <button class="scan-start" type="button" id="scan-start" hidden>Tap to start the camera</button>
+            <div class="scan-tools">
+              <button class="scan-tool" type="button" id="scan-switch" data-ico="switchCamera" aria-label="Switch camera" hidden></button>
+              <button class="scan-tool" type="button" id="scan-torch" data-ico="flashlight" aria-label="Torch" hidden></button>
+              <button class="scan-tool" type="button" id="scan-full" data-ico="maximize" aria-label="Full screen"></button>
+            </div>
             <div class="scan-flash" id="scan-flash" hidden></div>
           </div>
-          <div class="scan-controls">
-            <button class="btn btn-gold" type="button" id="scan-start">Start scanning</button>
-            <button class="btn" type="button" id="scan-switch" hidden>Switch camera</button>
-            <button class="btn" type="button" id="scan-torch" hidden>Torch</button>
-            <button class="btn" type="button" id="scan-full">Full screen</button>
-          </div>
-          <div class="scan-log-wrap"><h3>Recent scans</h3><div id="scan-log" class="list"><p class="muted">Scans appear here.</p></div></div>
+          <p class="scan-last" id="scan-last">Hold the ticket's QR code inside the frame.</p>
         </div>
+      </section>
+
+      <section data-view="insights" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Insights</p><h1>Events at a glance</h1><p class="muted">Tickets sold, who actually came, and money collected. Tap an event for the full picture.</p></div>
+          <div class="ins-filters"><select class="input" id="ins-period" aria-label="Period"><option value="year">This year</option><option value="12m">Last 12 months</option><option value="last">Last year</option><option value="all">All time</option></select>
+          <select class="input" id="ins-group" aria-label="Ministry group" data-groups data-groups-all="All groups"></select></div></header>
+        <p class="ins-story" id="ins-story"></p>
+        <div class="kpis" id="ins-kpis"></div>
+        <div class="card"><h3>Money by ministry group</h3><div id="ins-groups" class="hbars"></div></div>
+        <div class="card"><h3>Events</h3><div id="ins-events" class="ins-list"></div></div>
+      </section>
+
+      <section data-view="insight" hidden>
+        <a href="#insights" class="back-link">← All events</a>
+        <header class="vh"><div><p class="eyebrow gold" id="ii-group"></p><h1 id="ii-title"></h1><p class="muted" id="ii-when"></p></div>
+          <div class="actions"><a class="btn btn-sm" id="ii-regs">Registrations</a><a class="btn btn-sm" id="ii-csv">Export CSV</a></div></header>
+        <p class="ins-story" id="ii-story"></p>
+        <div class="kpis" id="ii-kpis"></div>
+        <div class="grid-2 ins-grid">
+          <div class="card"><h3>Who came</h3><div id="ii-came"></div></div>
+          <div class="card"><h3>Money</h3><div id="ii-money"></div>
+            <form id="ii-income" class="ii-income"><label for="ii-extra">Other income (cash at the door, sponsors)</label>
+              <div class="row"><input class="input" id="ii-extra" name="extra_income" inputmode="decimal" placeholder="R0"><input class="input" name="extra_income_note" placeholder="Note (optional)" maxlength="200"><button class="btn btn-sm btn-gold" type="submit">Save</button></div></form></div>
+        </div>
+        <div class="grid-2 ins-grid">
+          <div class="card"><h3>Arrivals</h3><p class="muted small">People scanned in, every 15 minutes</p><div id="ii-arrivals" class="vbars"></div></div>
+          <div class="card"><h3>Bookings over time</h3><p class="muted small">New bookings per day</p><div id="ii-signups" class="vbars"></div></div>
+        </div>
+        <div class="card"><div class="vh" style="align-items:center"><h3>People</h3>
+          <div class="seg" id="ii-filter"><button data-f="" class="on">All</button><button data-f="came">Came</button><button data-f="missed">Didn't come</button><button data-f="pending">Awaiting approval</button></div></div>
+          <div class="table-wrap"><table class="table" id="ii-people"></table></div></div>
+      </section>
+
+      <section data-view="services" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Every week</p><h1>Weekly services</h1><p class="muted">Plan the topic and poster, then record what God did: attendance, salvations and the offering. Dates fill in automatically.</p></div>
+          <div class="actions"><button class="btn btn-sm" type="button" id="svc-manage">Edit services</button><button class="btn btn-sm btn-gold" type="button" id="svc-new">+ Record a service</button></div></header>
+        <div class="kpis" id="svc-kpis"></div>
+        <h3 class="sub-h">This week</h3>
+        <div class="svc-week" id="svc-week"></div>
+        <div class="card"><div class="vh" style="align-items:center"><h3>Records</h3><select class="input" id="svc-filter" aria-label="Service" style="max-width:240px"></select></div>
+          <div id="svc-sessions" class="list"></div></div>
+      </section>
+
+      <section data-view="report" hidden>
+        <header class="vh no-print"><div><p class="eyebrow gold">For the church board</p><h1>Board report</h1><p class="muted">Money per event and ministry, attendance, spiritual growth and membership for any period. Print it or save it as a PDF.</p></div></header>
+        <div class="card report-controls no-print">
+          <div class="seg" id="rep-presets"><button data-p="month">This month</button><button data-p="lastmonth">Last month</button><button data-p="quarter" class="on">This quarter</button><button data-p="lastquarter">Last quarter</button><button data-p="year">This year</button><button data-p="lastyear">Last year</button></div>
+          <div class="row"><label>From <input class="input" type="date" id="rep-from"></label><label>To <input class="input" type="date" id="rep-to"></label>
+            <button class="btn btn-gold" type="button" id="rep-go">Create report</button><button class="btn" type="button" id="rep-print">Print / save PDF</button><a class="btn" id="rep-csv">Download CSV</a></div>
+        </div>
+        <article class="report-doc" id="report-doc"><p class="muted">Choose a period and tap “Create report”.</p></article>
       </section>
 
       <section data-view="programme" hidden>
@@ -316,7 +372,9 @@
     </main>
   </div>
 
+  <dialog class="drawer" id="session-drawer"><form class="drawer-body" id="session-form" novalidate></form></dialog>
+  <dialog class="drawer" id="services-drawer"><div class="drawer-body" id="services-body"></div></dialog>
   <dialog class="drawer" id="member-drawer"><div class="drawer-body" id="member-body"></div></dialog>
-  <script type="module" src="/js/admin.js?v=2d4c87420d"></script>
+  <script type="module" src="/js/admin.js?v=79efc92e3f"></script>
 </body>
 </html>

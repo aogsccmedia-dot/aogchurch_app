@@ -53,10 +53,39 @@ function initTabs() {
 }
 initTabs();
 
+// Weekly services: managed in Admin → Weekly services. Days without a service show as rest days;
+// services on the same day and time share a row; the coming week's topic (and poster) appears underneath.
+const ORDER = [1, 2, 3, 4, 5, 6, 0];
+const DAYNAME = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const FREQ = { twice_monthly: "Twice a month", monthly: "Monthly" };
+function renderWeek(weekly) {
+  const lists = document.querySelectorAll(".week-list");
+  if (!lists.length || !Array.isArray(weekly) || !weekly.length) return;   // keep the built-in list if anything is off
+  const rows = ORDER.map((day) => {
+    const svcs = weekly.filter((w) => w.day_num === day);
+    if (!svcs.length) return `<li class="wk-row rest"><span class="wk-d">${DAYNAME[day]}</span><span class="wk-s">Rest</span><span class="wk-t">—</span></li>`;
+    const byTime = new Map();
+    for (const w of svcs) { if (!byTime.has(w.time)) byTime.set(w.time, []); byTime.get(w.time).push(w); }
+    return [...byTime].map(([time, ws]) => {
+      const freq = [...new Set(ws.map((w) => FREQ[w.frequency]).filter(Boolean))];
+      const extra = day === 0 ? "Everyone welcome" : freq.join(" · ");
+      const next = ws.filter((w) => w.next);
+      const when = (iso) => new Intl.DateTimeFormat("en-ZA", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(iso + "T12:00:00Z"));
+      return `<li class="wk-row${day === 0 ? " main" : ""}"><span class="wk-d">${DAYNAME[day]}</span>
+        <span class="wk-s">${ws.map((w) => esc(w.title)).join(" · ")}${extra ? ` <small>${esc(extra)}</small>` : ""}
+          ${next.map((w) => `<span class="wk-next">${w.next.poster_url ? `<a href="${esc(w.next.poster_url)}" target="_blank" rel="noopener" class="wk-poster"><img src="${esc(w.next.poster_url)}" alt="Poster: ${esc(w.next.topic)}" loading="lazy"></a>` : ""}
+            <span><em>${esc(when(w.next.date))}${ws.length > 1 ? ` · ${esc(w.title)}` : ""}</em>${esc(w.next.topic)}${w.next.speaker ? ` <small>with ${esc(w.next.speaker)}</small>` : ""}</span></span>`).join("")}</span>
+        <span class="wk-t">${esc(time || "—")}</span></li>`;
+    }).join("");
+  }).join("");
+  lists.forEach((ol) => { ol.innerHTML = rows; });
+}
+
 async function load() {
   const els = document.querySelectorAll("[data-programme]");
-  if (!els.length) return;
+  if (!els.length && !document.querySelector(".week-list")) return;
   const d = await api("/api/programme?limit=300").catch(() => null);
+  if (d) renderWeek(d.weekly);
   if (!d) { els.forEach((el) => { el.innerHTML = `<p class="muted-text">We couldn't load the calendar right now.</p>`; }); return; }
   isMember = d.member;
   const sel = document.querySelector('[data-cal][aria-selected="true"]');

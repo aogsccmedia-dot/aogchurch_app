@@ -105,17 +105,21 @@ export function ticketRoutes(router: Router, env: Env): void {
   router.get("/api/admin/tickets/:code", async (req, { code }) => { await admin(req); return json({ ok: true, ticket: adminView(await lookup(env, code)) }); });
   router.post("/api/admin/tickets/check-in", async (req, _p, ctx) => {
     const s = await admin(req);
-    const { code, event_id } = await readJson<{ code?: string; event_id?: string }>(req);
+    const { code, event_id, scan_id } = await readJson<{ code?: string; event_id?: string; scan_id?: string }>(req);
+    const scanId = typeof scan_id === "string" && /^[\w-]{8,64}$/.test(scan_id) ? scan_id : null;
     const t = await lookup(env, code || "");
     const now = new Date().toISOString();
     await env.DB.prepare("UPDATE tickets SET scan_count = scan_count + 1, last_scan_at = ? WHERE id = ?").bind(now, t.id).run();
     const st = state(t);
     if (event_id && event_id !== t.event_id) return json({ ok: true, result: "wrong_event", ticket: adminView(t) });
     if (st === "void") return json({ ok: true, result: "void", ticket: adminView(t) });
-    if (st === "used") return json({ ok: true, result: "already_used", ticket: adminView(t) });
-    // Only the first scan wins (guards against two doors scanning a copy at the same moment).
-    const r = await env.DB.prepare("UPDATE tickets SET checked_in_at = ?, checked_in_by = ? WHERE id = ? AND checked_in_at IS NULL").bind(now, s.user.email, t.id).run();
-    if (!r.meta.changes) return json({ ok: true, result: "already_used", ticket: adminView(await lookup(env, t.code)) });
+    // The same door retrying after a dropped connection: that scan already let them in.
+    const sameScan = (x: Joined) => !!scanId && (x as Joined & { checkin_scan_id?: string | null }).checkin_scan_id === scanId;
+    if (st === "used") return json({ ok: true, result: sameScan(t) ? "ok" : "already_used", ticket: adminView(t), repeat: sameScan(t) });
+    // One ticket, one entry: the database only marks it used if nobody else has (every door, every admin).
+    const r = await env.DB.prepare("UPDATE tickets SET checked_in_at = ?, checked_in_by = ?, checkin_scan_id = ? WHERE id = ? AND checked_in_at IS NULL")
+      .bind(now, s.user.email, scanId, t.id).run();
+    if (!r.meta.changes) { const fresh = await lookup(env, t.code); return json({ ok: true, result: sameScan(fresh) ? "ok" : "already_used", ticket: adminView(fresh) }); }
     await env.DB.prepare("UPDATE event_registrations SET checked_in_at = COALESCE(checked_in_at, ?) WHERE id = ?").bind(now, t.registration_id).run();
     // Let the ticket holder know (also a security alert if someone used a copy of their ticket).
     const time = new Intl.DateTimeFormat("en-ZA", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Africa/Johannesburg" }).format(new Date(now));
@@ -125,10 +129,11 @@ export function ticketRoutes(router: Router, env: Env): void {
     return json({ ok: true, result: "ok", ticket: adminView({ ...t, checked_in_at: now }) });
   });
   router.post("/api/admin/tickets/undo", async (req) => {
-    await admin(req);
+    // Re-opening a used ticket is rare and sensitive: only the main admin can do it.
+    if ((await admin(req)).role !== "super") throw new HttpError(403, "Only the main church admin can undo a check-in.");
     const { code } = await readJson<{ code?: string }>(req);
     const t = await lookup(env, code || "");
-    await env.DB.prepare("UPDATE tickets SET checked_in_at = NULL, checked_in_by = NULL WHERE id = ?").bind(t.id).run();
+    await env.DB.prepare("UPDATE tickets SET checked_in_at = NULL, checked_in_by = NULL, checkin_scan_id = NULL WHERE id = ?").bind(t.id).run();
     return json({ ok: true });
   });
   router.get("/api/admin/events/:id/tickets", async (req, { id }) => {

@@ -52,7 +52,7 @@ export function publicRoutes(router: Router, env: Env): void {
 
   // Public images (event covers only)
   router.get("/api/media/:id", async (_req, { id }) => {
-    const att = await env.DB.prepare("SELECT storage_driver, storage_key, content_type FROM attachments WHERE id = ? AND owner_type = 'event' AND kind = 'image'")
+    const att = await env.DB.prepare("SELECT storage_driver, storage_key, content_type FROM attachments WHERE id = ? AND owner_type IN ('event', 'service_session') AND kind = 'image'")
       .bind(id).first<{ storage_driver: string; storage_key: string; content_type: string }>();
     if (!att) throw new HttpError(404, "Not found.");
     const obj = await getFile(env, att.storage_driver, att.storage_key);

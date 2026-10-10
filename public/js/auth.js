@@ -1,3 +1,4 @@
+import "./switcher.js";   // data-switch buttons (member ⇄ admin)
 // Sign in with Google (Google Identity Services) + the admin's emailed verification code.
 import { api, esc, toast } from "./site.js";
 import { busy, otpField } from "./otp.js";
@@ -117,7 +118,7 @@ export function renderHeaderUser(me) {
   slot.innerHTML = `<details class="user-menu"><summary aria-label="Account menu" class="avatar">${avatar}</summary>
     <div class="user-pop"><b>${esc(u.name || u.email)}</b><small>${esc(u.email)}</small>
       ${me.admin_account ? "" : `<a href="/me">My profile</a>`}
-      ${me.can_admin || me.is_admin || me.admin_account ? `<a href="/admin/">Admin dashboard</a>` : ""}
+      ${me.admin_account ? `<a href="/admin/">Admin dashboard</a>` : me.can_admin || me.is_admin ? `<button type="button" class="switch-row" data-switch="admin"><span>Switch to admin</span><small>${me.is_admin ? "Ready" : "Code by email"}</small></button>` : ""}
       ${!me.member && !me.admin_account ? `<a href="/join">Complete joining</a>` : ""}
       <button type="button" data-signout>Sign out</button></div></details>`;
   slot.querySelector("[data-signout]").addEventListener("click", signOut);

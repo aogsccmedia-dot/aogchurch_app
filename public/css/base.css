@@ -272,3 +272,24 @@ input[type="date"].input::-webkit-calendar-picker-indicator { filter: invert(0.8
   .site-header .brand { justify-self: center; }
   .header-actions .btn { padding: 8px 12px; }
 }
+
+/* Snappy taps everywhere: no double-tap zoom delay, a crisp press, and a spinner while a save is in flight. */
+a, button, .btn, summary, label, input[type="checkbox"], input[type="radio"], select { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.btn { transition: transform .08s ease, background-color .15s, color .15s, opacity .15s; }
+.btn[aria-busy="true"] { pointer-events: none; opacity: .8; position: relative; color: transparent !important; }
+.btn[aria-busy="true"] > * { visibility: hidden; }
+.btn[aria-busy="true"]::after { content: ""; position: absolute; inset: 0; margin: auto; width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-color: rgba(127,127,127,.35); border-top-color: var(--gold, #d6a650); animation: btn-spin .7s linear infinite; }
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+
+/* Profile switch (member ⇄ admin): a calm full-screen veil with two rings gently passing through each other. */
+#switch-veil { position: fixed; inset: 0; z-index: 2147483000; display: grid; place-content: center; justify-items: center; gap: 18px; background: var(--bg, #0b0a09); color: var(--text, #f4efe8); font: 400 15px/1.4 var(--font-sans, system-ui, sans-serif); letter-spacing: .01em; animation: sv-in .28s ease both; }
+#switch-veil.out { animation: sv-out .36s ease both; }
+#switch-veil p { margin: 0; color: var(--text-2, #b9b0a3); }
+.sv-mark { position: relative; width: 56px; height: 36px; }
+.sv-mark i { position: absolute; top: 0; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--gold, #d6a650); animation: sv-pass 1.2s cubic-bezier(.6, 0, .4, 1) infinite alternate; }
+.sv-mark i:first-child { left: 0; }
+.sv-mark i:last-child { right: 0; border-color: color-mix(in srgb, var(--gold, #d6a650) 45%, transparent); animation-direction: alternate-reverse; }
+@keyframes sv-pass { from { transform: translateX(0); } to { transform: translateX(10px); } }
+@keyframes sv-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sv-out { to { opacity: 0; visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) { .sv-mark i { animation: none; } }

@@ -198,7 +198,7 @@ describe("events & form builder", () => {
 
   test("admin builds an event with a custom form", async () => {
     const r = await post("/api/admin/events", {
-      title: "Youth Camp 2030", starts_at: "2030-07-01T08:00:00Z", ends_at: "2030-07-03T14:00:00Z", location: "Magaliesberg",
+      title: "Youth Camp 2030", ministry_group: "youth", starts_at: "2030-07-01T08:00:00Z", ends_at: "2030-07-03T14:00:00Z", location: "Magaliesberg",
       is_published: true, rsvp_enabled: true, collect_phone: true, capacity: 2, confirmation_message: "Pack a sleeping bag!", price_label: "R99 per person",
       form_schema: [
         { type: "statement", label: "Camp fee is R500, payable on arrival." },
@@ -211,7 +211,7 @@ describe("events & form builder", () => {
     assert.equal(r.status, 201);
     ({ id, slug } = await r.json() as { id: string; slug: string });
     assert.equal(slug, "youth-camp-2030");
-    const bad = await post("/api/admin/events", { title: "X", starts_at: "2030-01-01T10:00:00Z", form_schema: [{ type: "select", label: "Pick", options: [] }] }, A(cookie));
+    const bad = await post("/api/admin/events", { title: "X", ministry_group: "church", starts_at: "2030-01-01T10:00:00Z", form_schema: [{ type: "select", label: "Pick", options: [] }] }, A(cookie));
     assert.equal(bad.status, 422);
   });
 
@@ -287,7 +287,7 @@ describe("paid events: EFT + proof of payment + admin approval", () => {
   };
 
   test("paid event without banking details can't take payments yet", async () => {
-    const r = await post("/api/admin/events", { title: "Worship Night", starts_at: "2030-11-27T16:30:00Z", is_published: true, rsvp_enabled: true,
+    const r = await post("/api/admin/events", { title: "Worship Night", ministry_group: "youth", starts_at: "2030-11-27T16:30:00Z", is_published: true, rsvp_enabled: true,
       collect_phone: true, ticket_price: 150, requires_pop: true, auto_approve: false, capacity: 4 }, A(cookie));
     ({ id, slug } = await r.json() as { id: string; slug: string });
     const ev = await (await call(`/api/events/${slug}`)).json() as { event: { price_label: string; ticket_price: number; requires_pop: boolean; payment_instructions: string } };
@@ -580,7 +580,7 @@ describe("Daily Word & Prayer Wall", () => {
 describe("tickets: generator, PDF, door check-in", () => {
   test("approved booking for 3 → 3 unique QR tickets in one PDF; each scans once; copies are caught", async () => {
     const cookie = await adminCookie();
-    const ev = await post("/api/admin/events", { title: "Ticketed Night", category: "night", starts_at: new Date(Date.now() + 9 * 86400_000).toISOString(),
+    const ev = await post("/api/admin/events", { title: "Ticketed Night", category: "night", ministry_group: "youth", starts_at: new Date(Date.now() + 9 * 86400_000).toISOString(),
       location: "Main hall", is_published: true, rsvp_enabled: true, form_schema: [] }, A(cookie));
     const { id: eventId, slug } = await ev.json() as { id: string; slug: string };
     const fd = new FormData(); fd.append("name", "Neo Mokoena"); fd.append("email", "neo@example.com"); fd.append("guests", "2");
@@ -691,9 +691,11 @@ describe("delegated admins (team & roles)", () => {
 describe("church programme", () => {
   test("public sees the SCC calendar; members also see the Sub-Region; board meetings stay with leaders; admin can add", async () => {
     const g = await makeEnv({ GOOGLE_CLIENT_ID: CLIENT_ID });
-    const pub = await (await call("/api/programme?from=2026-01-01&limit=300", {}, g)).json() as { items: { audience: string; source: string; title: string }[]; weekly: { day: string }[]; member: boolean };
+    const pub = await (await call("/api/programme?from=2026-01-01&limit=300", {}, g)).json() as { items: { audience: string; source: string; title: string }[]; weekly: { day: string; title: string; time: string }[]; member: boolean };
     assert.equal(pub.member, false);
-    assert.equal(pub.weekly.length, 7);
+    assert.equal(pub.weekly.length, 8, "weekly services come from the database (Thursday's three ministries are separate)");
+    assert.ok(pub.weekly.some((w) => w.day === "Monday" && w.title === "Prayer" && w.time === "18:00 – 20:00"), "Monday prayer is 18:00 – 20:00");
+    assert.ok(!pub.weekly.some((w) => w.day === "Saturday"), "Saturday is a rest day");
     assert.ok(pub.items.length > 50 && pub.items.every((i) => i.audience === "public"), "only public items");
     assert.ok(!pub.items.some((i) => /Board Meeting/i.test(i.title)), "board meetings hidden");
     assert.equal((await call("/api/join", { method: "POST", body: joinForm({ email: "member@gmail.com" }) }, g)).status, 201);
@@ -702,5 +704,107 @@ describe("church programme", () => {
     assert.equal(mem.member, true);
     assert.ok(mem.items.some((i) => i.source === "germiston" && i.audience === "members"));
     assert.ok(!mem.items.some((i) => i.audience === "leaders"));
+  });
+});
+
+describe("door, insights, weekly services and the board report", () => {
+  let cookie = "", eventId = "", slug = "";
+  const ymd = (d: Date) => d.toISOString().slice(0, 10);
+  const lastWeekday = (day: number) => { const d = new Date(); d.setUTCHours(12); while (d.getUTCDay() !== day) d.setUTCDate(d.getUTCDate() - 1); if (ymd(d) === ymd(new Date())) d.setUTCDate(d.getUTCDate() - 7); return ymd(d); };
+  before(async () => { cookie = await adminCookie(); });
+
+  test("approvals respond with tickets already issued; every ticket admits exactly once across doors; retries are safe", async () => {
+    await call("/api/admin/settings", { method: "PUT", headers: { ...A(cookie), ...JSONH }, body: JSON.stringify({ banking_details: "Capitec · 1623526815" }) });
+    const ev = await post("/api/admin/events", { title: "Insights Night", ministry_group: "youth", starts_at: new Date(Date.now() + 2 * 86400_000).toISOString(),
+      is_published: true, rsvp_enabled: true, ticket_price: 150, requires_pop: true, auto_approve: false, form_schema: [] }, A(cookie));
+    assert.equal(ev.status, 201, await ev.clone().text());
+    ({ id: eventId, slug } = await ev.json() as { id: string; slug: string });
+    // An event without a ministry group is refused.
+    assert.equal((await post("/api/admin/events", { title: "No group", starts_at: "2030-01-01T10:00:00Z" }, A(cookie))).status, 422);
+
+    const fd = new FormData(); Object.entries({ name: "Lerato Dube", email: "lerato@example.com", phone: "0821234567", guests: "1" }).forEach(([k, v]) => fd.append(k, v));
+    fd.append("pop", new File([PDF], "pop.pdf", { type: "application/pdf" }));
+    assert.equal((await call(`/api/events/${slug}/register`, { method: "POST", body: fd })).status, 201);
+    const regId = (env.DB._db.prepare("SELECT id FROM event_registrations WHERE event_id = ?").get(eventId) as { id: string }).id;
+    const ap = await call(`/api/admin/registrations/${regId}`, { method: "PATCH", headers: { ...A(cookie), ...JSONH }, body: JSON.stringify({ status: "confirmed" }) });
+    assert.equal(ap.status, 200);
+    const codes = env.DB._db.prepare("SELECT code FROM tickets WHERE event_id = ? AND status = 'valid' ORDER BY seq").all(eventId) as { code: string }[];
+    assert.equal(codes.length, 2, "tickets exist as soon as the approval returns");
+
+    // Two doors scan the same ticket at the same moment: exactly one admits.
+    const scan = (code: string, scan_id: string) => post("/api/admin/tickets/check-in", { code, event_id: eventId, scan_id }, A(cookie)).then((r) => r.json() as Promise<{ result: string; repeat?: boolean }>);
+    const [a, b] = await Promise.all([scan(codes[0].code, "door-a-0000001"), scan(codes[0].code, "door-b-0000001")]);
+    assert.deepEqual([a.result, b.result].sort(), ["already_used", "ok"]);
+    const winner = a.result === "ok" ? "door-a-0000001" : "door-b-0000001";
+    // The winning door's retry (lost response) still reads "Checked in" and sends no second email.
+    const before = mails("lerato@example.com").filter((m) => /checked in/i.test(m.subject)).length;
+    const retry = await scan(codes[0].code, winner);
+    assert.equal(retry.result, "ok"); assert.equal(retry.repeat, true);
+    assert.equal(mails("lerato@example.com").filter((m) => /checked in/i.test(m.subject)).length, before);
+    assert.equal((await scan(codes[0].code, "door-c-0000001")).result, "already_used");
+    // Only the main admin may re-open a used ticket.
+    assert.equal(env.DB._db.prepare("SELECT checked_in_at IS NOT NULL AS used FROM tickets WHERE code = ?").get(codes[0].code).used, 1);
+  });
+
+  test("event insights: sold, came, no-shows, money incl. other income", async () => {
+    const upcoming = await (await call(`/api/admin/insights/events/${eventId}`, { headers: { cookie } })).json() as { event: Record<string, unknown> };
+    assert.equal(upcoming.event.no_shows, null, "no-shows only count once the event is over");
+    env.DB._db.prepare("UPDATE events SET starts_at = ? WHERE id = ?").run(new Date(Date.now() - 6 * 3600_000).toISOString(), eventId);   // the night has happened
+    assert.equal((await call(`/api/admin/events/${eventId}/income`, { method: "PATCH", headers: { ...A(cookie), ...JSONH }, body: JSON.stringify({ extra_income: "R 500", extra_income_note: "Cash at the door" }) })).status, 200);
+    const r = await (await call(`/api/admin/insights/events/${eventId}`, { headers: { cookie } })).json() as { event: Record<string, number | string | boolean>; registrations: unknown[]; arrivals: [string, number][] };
+    assert.equal(r.event.sold, 2); assert.equal(r.event.came, 1); assert.equal(r.event.no_shows, 1); assert.equal(r.event.attendance_rate, 50);
+    assert.equal(r.event.ticket_income, 300); assert.equal(r.event.extra_income, 500); assert.equal(r.event.income, 800);
+    assert.equal(r.event.group_label, "Youth Ministry");
+    assert.equal(r.arrivals.reduce((t, [, n]) => t + n, 0), 1);
+    const list = await (await call("/api/admin/insights/events", { headers: { cookie } })).json() as { events: { id: string }[] };
+    assert.ok(list.events.some((e) => e.id === eventId));
+    assert.equal((await call(`/api/admin/insights/events/${eventId}`)).status, 401, "admins only");
+  });
+
+  test("weekly services: auto dates, poster required, right weekday, one record per date, shows on the website", async () => {
+    const svc = await (await call("/api/admin/services", { headers: { cookie } })).json() as { services: { id: string; day: number; next_date: string; dates: string[] }[] };
+    const youth = svc.services.find((s) => s.id === "svc-fri-youth")!;
+    assert.ok(youth.dates.every((d) => new Date(d + "T12:00:00Z").getUTCDay() === 5), "dates follow the service's weekday");
+    const form = (o: Record<string, string>, poster = true) => { const f = new FormData(); Object.entries(o).forEach(([k, v]) => f.append(k, v)); if (poster) f.append("poster", new File([PNG], "poster.png", { type: "image/png" })); return f; };
+    const send = (f: FormData, method = "POST", path = "/api/admin/sessions") => call(path, { method, headers: A(cookie), body: f });
+    const friday = lastWeekday(5);
+    assert.equal((await send(form({ service_id: youth.id, date: friday, topic: "Bold faith" }, false))).status, 422, "poster is required");
+    assert.equal((await send(form({ service_id: youth.id, date: lastWeekday(3), topic: "Bold faith" }))).status, 422, "must be on the service's day");
+    const ok = await send(form({ service_id: youth.id, date: friday, topic: "Bold faith", speaker: "Pastor K", attendance: "84", first_time_visitors: "6", salvations: "3", offering: "1250.50", tithes: "4000" }));
+    assert.equal(ok.status, 201, await ok.clone().text());
+    const { id } = await ok.json() as { id: string };
+    assert.equal((await send(form({ service_id: youth.id, date: friday, topic: "Again" }))).status, 409, "one record per service per date");
+    // Edit without a new poster keeps the old one.
+    assert.equal((await send(form({ date: friday, topic: "Bold faith", attendance: "90" }, false), "PUT", `/api/admin/sessions/${id}`)).status, 200);
+    const row = env.DB._db.prepare("SELECT attendance, offering_cents, poster_attachment_id FROM service_sessions WHERE id = ?").get(id) as Record<string, unknown>;
+    assert.equal(row.attendance, 90); assert.equal(row.offering_cents, null, "fields left blank are cleared on edit");
+    assert.ok(row.poster_attachment_id);
+    // A planned topic for the coming Friday shows on the website with its poster.
+    const next = youth.next_date;
+    assert.equal((await send(form({ service_id: youth.id, date: next, topic: "Next week's word" }))).status, 201);
+    const pub = await (await call("/api/programme")).json() as { weekly: { id: string; next: { topic: string; poster_url: string } | null }[] };
+    const y = pub.weekly.find((w) => w.id === youth.id)!;
+    assert.equal(y.next?.topic, "Next week's word");
+    assert.equal((await call(y.next!.poster_url)).status, 200, "poster is public");
+    // Admins can add a service; it needs a ministry group.
+    assert.equal((await post("/api/admin/services", { title: "Men's breakfast", day: 6, start_time: "08:00" }, A(cookie))).status, 422);
+    assert.equal((await post("/api/admin/services", { title: "Men's breakfast", day: 6, start_time: "08:00", end_time: "10:00", ministry_group: "fathers", frequency: "monthly" }, A(cookie))).status, 201);
+    // Put the attendance/money back for the report test.
+    await send(form({ date: friday, topic: "Bold faith", attendance: "84", first_time_visitors: "6", salvations: "3", offering: "1250.50", tithes: "4000" }, false), "PUT", `/api/admin/sessions/${id}`);
+  });
+
+  test("board report: money per event and ministry, services, growth, membership; CSV download", async () => {
+    const from = `${new Date().getUTCFullYear() - 1}-01-01`, to = ymd(new Date(Date.now() + 86400_000));
+    const { report: r } = await (await call(`/api/admin/report?from=${from}&to=${to}`, { headers: { cookie } })).json() as { report: { totals: Record<string, number>; by_group: { group: string; income: number; event_income: number; service_income: number }[]; growth: Record<string, number> } };
+    const youth = r.by_group.find((g) => g.group === "youth")!;
+    assert.ok(youth.event_income >= 800, "youth event income includes Insights Night");
+    assert.ok(Math.abs(youth.service_income - 5250.5) < 0.001, "offering + tithes from the youth service");
+    assert.ok(r.growth.salvations >= 3 && r.growth.first_time_visitors >= 6);
+    assert.ok(Math.abs(r.totals.income - (r.totals.event_income + r.totals.offering + r.totals.tithes + r.totals.other)) < 0.001);
+    const csv = await call(`/api/admin/report.csv?from=${from}&to=${to}`, { headers: { cookie } });
+    assert.equal(csv.status, 200);
+    const text = await csv.text();
+    assert.match(text, /Board report/); assert.match(text, /Youth Ministry/); assert.match(text, /Insights Night/);
+    assert.equal((await call(`/api/admin/report?from=${to}&to=${from}`, { headers: { cookie } })).status, 400, "from must be before to");
   });
 });

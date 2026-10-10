@@ -2,6 +2,8 @@ import { busy, otpField } from "./otp.js";
 import { AVAILABILITY, LABELS, MINISTRIES } from "./options.js";
 import { FIELD_TYPES, renderField } from "./forms.js";
 import { icon } from "./icons.js";
+import { initInsights } from "./admin-insights.js";
+import { arrivedBySwitch, switchReady } from "./switcher.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -16,11 +18,33 @@ const fromLocal = (v) => (v ? new Date(v).toISOString() : "");
 
 let me = null;
 
+
+// ---- Instant feedback: the button you pressed shows a spinner the moment a save starts,
+// and can't be pressed twice while it's working. Works for every action without extra code.
+let pressed = null, pressedAt = 0;
+const remember = (el) => { pressed = el; pressedAt = Date.now(); };
+document.addEventListener("pointerdown", (e) => remember(e.target.closest?.("button, .btn")), true);
+document.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") remember(document.activeElement?.closest?.("button, .btn")); }, true);
+document.addEventListener("submit", (e) => remember(e.submitter || e.target.querySelector('[type="submit"]')), true);
+function pressedBusy() {
+  const b = Date.now() - pressedAt < 1500 ? pressed : null;
+  pressed = null;
+  if (!b || b.getAttribute("aria-busy") === "true") return () => {};
+  b.setAttribute("aria-busy", "true");
+  return () => b.removeAttribute("aria-busy");
+}
+
 async function api(path, { method = "GET", body, form } = {}) {
+  const done = method === "GET" ? () => {} : pressedBusy();
+  try { return await apiRaw(path, { method, body, form }); } finally { done(); }
+}
+async function apiRaw(path, { method = "GET", body, form } = {}) {
   const opts = { method, headers: { "x-scc-admin": "1" }, credentials: "same-origin" };
   if (form) opts.body = form;
   else if (body !== undefined) { opts.body = JSON.stringify(body); opts.headers["Content-Type"] = "application/json"; }
-  const res = await fetch(path, opts);
+  let res;
+  try { res = await fetch(path, opts); }
+  catch { throw new Error("No connection. Please check your internet and try again."); }
   let data = {};
   try { data = await res.json(); } catch { /* ignore */ }
   if (res.status === 401 && !path.startsWith("/api/auth/")) { showLogin(); throw new Error("Please sign in."); }
@@ -51,11 +75,19 @@ async function showLogin() {
   $("#app-view").hidden = true; $("#login-view").hidden = false;
   const { google_client_id: cid, user } = await fetch("/api/auth/me").then((r) => r.json()).catch(() => ({}));
   const meInfo = await fetch("/api/auth/me").then((r) => r.json()).catch(() => ({}));
+  const viaSwitch = new URLSearchParams(location.search).has("switch") || arrivedBySwitch("admin");
+  if (viaSwitch) history.replaceState(null, "", location.pathname + location.hash);
   if (user && user.email && meInfo.can_admin) {
     // Already signed in with Google on the website → just need the emailed code.
     $("#signed-in-admin").hidden = false;
     $("#signed-in-as").textContent = `Signed in as ${user.email}.`;
+    if (viaSwitch) {
+      // Switching from the member view: email the code straight away and go to the code boxes.
+      try { const r = await api("/api/auth/admin/request-code", { method: "POST", body: {} }); showCodeStep(r); $("#code-sent").textContent = `For your security, we emailed a 6-digit code to ${r.sent_to}. Enter it to open your admin workspace.`; }
+      catch (e) { loginErr(e.message); }
+    }
   }
+  switchReady();
   if (cid) {
     const s = document.createElement("script");
     s.src = "https://accounts.google.com/gsi/client"; s.async = true;
@@ -104,15 +136,28 @@ async function boot() {
   document.body.dataset.role = role;
   $("#role-chip").textContent = role === "super" ? "Main admin" : "Admin";
   $("#to-profile").hidden = role === "super";
+  $("#m-switch").hidden = role === "super";
+  if (new URLSearchParams(location.search).has("switch")) history.replaceState(null, "", location.pathname + location.hash);
   const hour = Number(new Intl.DateTimeFormat("en-ZA", { hour: "numeric", hour12: false, timeZone: TZ }).format(new Date()));
   $("#greeting").textContent = `${hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"}${me.given_name ? ", " + me.given_name : ""}`;
+  insights.loadMeta().catch(() => {});   // ministry groups for the event editor
   openTab(location.hash.slice(1) || "overview");
+  switchReady();
+}
+
+/** Update the sidebar counters quietly after an action (no page reload). */
+async function refreshBadges() {
+  const r = await api("/api/admin/stats").catch(() => null); if (!r?.stats) return;
+  const st = { ...r.stats, prayer_total: (r.stats.new_prayers || 0) + (r.stats.wall_pending || 0) };
+  $$("[data-count]").forEach((b) => { b.textContent = st[b.dataset.count] || ""; });
 }
 
 // ================================================================ tabs
 const loaders = {};
+const detailRoutes = {};   // "#insight:<id>" style deep links
 function openTab(tab) {
   const [base, arg] = tab.split(":");
+  if (arg && detailRoutes[base]) return detailRoutes[base](arg);
   if (base === "events-new") return editEvent(null);
   if (base === "letters-new") return editLetter(null);
   if (base === "event" && arg) return editEvent(arg);
@@ -127,6 +172,7 @@ function openTab(tab) {
   safe(loaders[t])();
 }
 function showView(view, hash, navTab) {
+  document.body.dataset.view = view;
   $$("[data-view]").forEach((v) => { v.hidden = v.dataset.view !== view; });
   $$("#nav button").forEach((b) => b.classList.toggle("active", b.dataset.tab === navTab));
   history.replaceState(null, "", "#" + hash);
@@ -218,7 +264,16 @@ async function openMember(id) {
     <dl class="kv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
     ${document.body.dataset.role === "super" ? `<button class="btn btn-sm" id="md-delete" style="justify-self:start;color:var(--danger)">Delete record (POPIA request)</button>` : `<p class="muted" style="font-size:13px">Only the main admin can delete records.</p>`}`;
   const dlg = $("#member-drawer"); dlg.showModal();
-  $("#md-save").onclick = safe(async () => { await api(`/api/admin/members/${id}`, { method: "PATCH", body: { status: $("#md-status").value, admin_notes: $("#md-notes").value, assigned_to: $("#md-assigned").value } }); toast("Saved"); safe(loaders.members)(); });
+  // Save closes straight away and you're back on the list; the row updates instantly, the server catches up.
+  $("#md-save").onclick = () => {
+    const body = { status: $("#md-status").value, admin_notes: $("#md-notes").value, assigned_to: $("#md-assigned").value };
+    dlg.close();
+    $$(`[data-member="${CSS.escape(id)}"] .c-status`).forEach((td) => { td.innerHTML = `<span class="pill ${esc(body.status)}">${esc(body.status)}</span>`; });
+    toast(body.status !== m.status ? `${m.first_name} is now “${body.status}”` : "Saved");
+    api(`/api/admin/members/${id}`, { method: "PATCH", body })
+      .then(() => { safe(loaders.members)(); refreshBadges(); })
+      .catch((e) => { toast(`Couldn't save ${m.first_name}: ${e.message}`); safe(loaders.members)(); });
+  };
   $("#md-delete").onclick = safe(async () => { if (!confirm(`Permanently delete ${m.first_name} ${m.last_name} and their files?`)) return; await api(`/api/admin/members/${id}`, { method: "DELETE" }); dlg.close(); toast("Deleted"); safe(loaders.members)(); });
 }
 $$("dialog.drawer").forEach((d) => d.addEventListener("click", (e) => { if (e.target === d || e.target.closest("[data-close]")) d.close(); }));
@@ -301,12 +356,13 @@ $("#fb-fields").addEventListener("drop", (e) => {
 ef.addEventListener("input", (e) => { if (!e.target.closest("#fb-fields")) renderPreview(); });
 
 async function editEvent(id) {
+  if (ef.ministry_group.options.length <= 1) await insights.loadMeta().catch(() => {});
   currentEvent = null; fields = []; ef.reset();
   $("#eb-cover").hidden = true;
   if (id) {
     const { event } = await api(`/api/admin/events/${id}`);
     currentEvent = event;
-    for (const k of ["title", "slug", "category", "location", "description", "capacity", "confirmation_message", "ticket_price", "payment_instructions"]) ef[k].value = event[k] ?? "";
+    for (const k of ["title", "slug", "category", "ministry_group", "location", "description", "capacity", "confirmation_message", "ticket_price", "payment_instructions"]) ef[k].value = event[k] ?? "";
     ef.requires_pop.checked = !!event.requires_pop; ef.auto_approve.checked = !!event.auto_approve;
     ef.starts_at.value = toLocal(event.starts_at); ef.ends_at.value = toLocal(event.ends_at); ef.registration_closes_at.value = toLocal(event.registration_closes_at);
     ef.is_published.checked = !!event.is_published; ef.rsvp_enabled.checked = !!event.rsvp_enabled; ef.collect_phone.checked = !!event.collect_phone;
@@ -334,7 +390,7 @@ ef.addEventListener("submit", safe(async (e) => {
   const missing = fields.findIndex((f) => !f.label?.trim());
   if (missing >= 0) { toast(`Question ${missing + 1} needs a label`); return; }
   const body = {
-    title: ef.title.value, slug: ef.slug.value, category: ef.category.value, location: ef.location.value, description: ef.description.value,
+    title: ef.title.value, slug: ef.slug.value, category: ef.category.value, ministry_group: ef.ministry_group.value, location: ef.location.value, description: ef.description.value,
     starts_at: fromLocal(ef.starts_at.value), ends_at: fromLocal(ef.ends_at.value), registration_closes_at: fromLocal(ef.registration_closes_at.value),
     capacity: ef.capacity.value, confirmation_message: ef.confirmation_message.value, ticket_price: ef.ticket_price.value,
     requires_pop: ef.requires_pop.checked, auto_approve: ef.auto_approve.checked, payment_instructions: ef.payment_instructions.value,
@@ -367,6 +423,19 @@ async function loadResponses() {
   drawResponses();
 }
 const STATUS_LABEL = { pending: "Awaiting approval", confirmed: "Confirmed", waitlist: "Waitlist", rejected: "Declined", cancelled: "Cancelled" };
+// Approve / decline: the row updates the instant you tap; the server confirms in the background
+// (emails and PDF tickets are sent after it responds). If anything fails, the row goes back and you're told.
+async function review(id, status, note = null) {
+  const r = responses.find((x) => x.id === id); if (!r || r._busy) return;
+  const before = { status: r.status, reviewed_at: r.reviewed_at };
+  Object.assign(r, { status, reviewed_at: new Date().toISOString(), _busy: true });
+  drawResponses();
+  try {
+    await api(`/api/admin/registrations/${id}`, { method: "PATCH", body: { status, note } });
+    toast(status === "confirmed" ? `${r.name.split(" ")[0]} approved · tickets on their way` : `${r.name.split(" ")[0]} declined · they'll be emailed`);
+  } catch (e) { Object.assign(r, before); toast(e.message || "Couldn't save. Please try again."); }
+  finally { r._busy = false; drawResponses(); }
+}
 function drawResponses() {
   const q = $("#resp-q").value.toLowerCase();
   const f = $("#resp-filter").value;
@@ -383,7 +452,8 @@ function drawResponses() {
     <td><b style="font-weight:450">${esc(r.name)}</b>${r.guests ? ` <span class="sub">+${r.guests}</span>` : ""}<div class="sub">${esc(r.email)}${r.phone ? " · " + esc(r.phone) : ""}</div><div class="sub">${esc(r.ref_code)} · ${fmtDate(r.created_at)}</div></td>
     <td>${r.amount_due ? `<b style="font-weight:450">R${Number(r.amount_due).toLocaleString("en-ZA")}</b>` : '<span class="sub">—</span>'}
       ${r.pop_attachment_id ? `<div><a class="pop-link" href="/api/admin/files/${esc(r.pop_attachment_id)}" target="_blank" rel="noopener">${icon("file")} View proof</a></div>` : ""}
-      ${r.status === "pending" ? `<div class="row-actions"><button class="btn btn-sm btn-gold" data-approve="${esc(r.id)}">${icon("check")} Approve</button><button class="btn btn-sm" data-decline="${esc(r.id)}">Decline</button></div>` : ""}
+      ${r.status === "pending" ? `<div class="row-actions approve-row"><button class="btn btn-gold btn-approve" data-approve="${esc(r.id)}">${icon("check")} Approve</button><button class="btn btn-decline" data-decline="${esc(r.id)}">Decline</button></div>` : ""}
+      ${r._busy ? `<div class="sub saving">Saving…</div>` : ""}
       ${r.status === "confirmed" ? `<div class="row-actions"><button class="btn btn-sm" data-resend="${esc(r.id)}">${icon("ticket")} Resend ${1 + Number(r.guests || 0)} ticket${r.guests ? "s" : ""}</button></div>` : ""}
       ${r.reviewed_at ? `<div class="sub">Reviewed ${fmtDate(r.reviewed_at)}</div>` : ""}</td>
     <td><div class="resp-answers">${qs.map((fld) => { const v = r.answers[fld.id]; const fl = r.files.filter((x) => x.kind === `answer:${fld.id}`);
@@ -397,17 +467,20 @@ $("#resp-filter").addEventListener("change", drawResponses);
 $("#approve-all").addEventListener("click", safe(async () => {
   const n = responses.filter((r) => r.status === "pending").length;
   if (!confirm(`Approve all ${n} pending registration(s)? Each person will be emailed their ticket.`)) return;
-  const r = await api(`/api/admin/events/${currentEvent.id}/approve-all`, { method: "POST", body: {} });
-  toast(`${r.approved} approved — tickets emailed`); await loadResponses();
+  const btn = $("#approve-all"); btn.disabled = true; btn.textContent = "Approving…";
+  try {
+    const r = await api(`/api/admin/events/${currentEvent.id}/approve-all`, { method: "POST", body: {} });
+    toast(`${r.approved} approved · tickets on their way`);
+  } finally { btn.disabled = false; await loadResponses(); }
 }));
 $("#resp-table").addEventListener("click", safe(async (e) => {
   const a = e.target.closest("[data-approve]"), d = e.target.closest("[data-decline]"), rs = e.target.closest("[data-resend]");
   if (rs) { rs.disabled = true; const r = await api(`/api/admin/registrations/${rs.dataset.resend}/resend-tickets`, { method: "POST" }); toast(`Tickets sent to ${r.sent_to}`); rs.disabled = false; }
-  if (a) { await api(`/api/admin/registrations/${a.dataset.approve}`, { method: "PATCH", body: { status: "confirmed" } }); toast("Approved: tickets (PDF) emailed"); await loadResponses(); }
+  if (a) await review(a.dataset.approve, "confirmed");
   if (d) {
     const note = prompt("Optional note to the person (e.g. amount didn't match):", "");
     if (note === null) return;
-    await api(`/api/admin/registrations/${d.dataset.decline}`, { method: "PATCH", body: { status: "rejected", note } }); toast("Declined — they've been notified"); await loadResponses();
+    await review(d.dataset.decline, "rejected", note);
   }
 }));
 $("#resp-table").addEventListener("change", safe(async (e) => {
@@ -415,8 +488,8 @@ $("#resp-table").addEventListener("change", safe(async (e) => {
     const st = e.target.value;
     const note = st === "rejected" ? prompt("Optional note to the person:", "") : null;
     if (st === "rejected" && note === null) { drawResponses(); return; }
-    await api(`/api/admin/registrations/${e.target.dataset.reg}`, { method: "PATCH", body: { status: st, note } });
-    toast(st === "confirmed" ? "Approved — ticket emailed" : st === "rejected" ? "Declined — they've been notified" : "Updated");
+    await review(e.target.dataset.reg, st, note);
+    return;
   }
   if (e.target.dataset.checkin) { await api(`/api/admin/registrations/${e.target.dataset.checkin}`, { method: "PATCH", body: { checked_in: e.target.checked } }); }
   await loadResponses();
@@ -559,7 +632,13 @@ $("#msg-list").addEventListener("click", safe(async (e) => { const b = e.target.
 // Camera-first: opens ready to scan on phones, tablets and laptops. Uses the browser's built-in
 // barcode reader where available (Chrome/Android), otherwise the bundled jsQR reader (iPhone/iPad, Firefox).
 const scan = { stream: null, track: null, raf: 0, busy: false, last: { code: "", at: 0 }, detector: null, cams: [], camIdx: 0, torch: false, jsqr: null, lastTick: 0 };
-const SCAN_MSG = { ok: ["Admitted", "ok"], already_used: ["Already used", "bad"], void: ["Not valid", "bad"], wrong_event: ["Different event", "bad"] };
+// Three plain outcomes at the door. Anything that isn't a clean "checked in" goes to the help desk.
+const SCAN_MSG = {
+  ok: ["Checked in", "ok", "check"],
+  already_used: ["Already scanned", "warn", "alert"],
+  void: ["Invalid ticket", "bad", "x"], wrong_event: ["Invalid ticket", "bad", "x"], not_found: ["Invalid ticket", "bad", "x"],
+  offline: ["No connection", "idle", "wifiOff"],
+};
 let audio;
 function beep(ok) {
   try {
@@ -581,34 +660,60 @@ loaders.scan = async () => {
   scanCount();
   startScanner().catch(() => {});
 };
+let scanTotals = { in: 0, total: 0 };
+const drawCount = () => { $("#scan-count").textContent = scanTotals.total ? `${scanTotals.in} / ${scanTotals.total} in` : ""; };
 async function scanCount() {
   const id = $("#scan-event").value; if (!id) return;
   const r = await api(`/api/admin/events/${id}/tickets`).catch(() => null);
-  if (r) $("#scan-count").textContent = `${r.checked_in} / ${r.total} checked in`;
+  if (r) { scanTotals = { in: r.checked_in, total: r.total }; drawCount(); }
 }
 function flash(result, t) {
-  const [label, cls] = SCAN_MSG[result] || ["Not found", "bad"];
+  const [label, cls, ico] = SCAN_MSG[result] || SCAN_MSG.not_found;
   const el = $("#scan-flash");
+  const who = t ? `<span>${esc(t.holder)}</span>` : "";
+  const line = cls === "ok" ? (t && t.quantity > 1 ? `<small>Ticket ${t.seq} of ${t.quantity}</small>` : "")
+    : cls === "idle" ? `<small>Check the internet and scan again.</small>`
+    : `<small class="desk">Please go to the help desk${result === "already_used" ? "" : " so we can assist"}.</small>${result === "wrong_event" && t ? `<small>This ticket is for ${esc(t.event.title)}.</small>` : ""}`;
   el.className = `scan-flash ${cls}`;
-  el.innerHTML = `<div class="sf" role="status"><i class="sf-ico">${icon(cls === "ok" ? "check" : "x")}</i><b>${label}</b>${t ? `<span>${esc(t.holder)}</span><small>Ticket ${t.seq} of ${t.quantity} · ${esc(t.ref)}</small>${result === "already_used" ? `<small class="warn">First scanned ${fmtDate(t.checked_in_at)}. This may be a copy: check ID.</small>` : result === "wrong_event" ? `<small class="warn">This ticket is for ${esc(t.event.title)}</small>` : ""}` : `<small>Not a valid church ticket</small>`}</div>`;
+  el.innerHTML = `<div class="sf" role="status"><i class="sf-ico">${icon(ico)}</i><b>${label}</b>${who}${line}</div>`;
   el.hidden = false;
-  beep(result === "ok");
-  setTimeout(() => { el.hidden = true; scan.busy = false; }, result === "ok" ? 1600 : 2600);
+  beep(cls === "ok");
+  clearTimeout(scan.flashTimer);
+  const done = () => { el.hidden = true; scan.busy = false; };
+  scan.flashTimer = setTimeout(done, cls === "ok" ? 1200 : cls === "idle" ? 1800 : 2600);
+  el.onclick = () => { clearTimeout(scan.flashTimer); done(); };   // tap to move on to the next person
 }
+const scanId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 async function onCode(raw) {
   const code = String(raw || "").trim();
   if (!code || scan.busy) return;
-  // Same QR still in front of the camera: ignore it until it has been out of view for 4 s (no repeated log rows).
+  // Same QR still in front of the camera: ignore it until it has been out of view for 4 s.
   if (code === scan.last.code && Date.now() - scan.last.at < 4000) { scan.last.at = Date.now(); return; }
   scan.busy = true; scan.last = { code, at: Date.now() };
-  try {
-    const r = await api("/api/admin/tickets/check-in", { method: "POST", body: { code, event_id: $("#scan-event").value || undefined } });
-    flash(r.result, r.ticket);
-    const [label, cls] = SCAN_MSG[r.result];
-    $("#scan-log .muted")?.remove();
-    $("#scan-log").insertAdjacentHTML("afterbegin", `<div class="item scan-row"><span class="pill ${cls === "ok" ? "member" : "new"}">${label}</span><span>${esc(r.ticket.holder)} · ${r.ticket.seq}/${r.ticket.quantity}</span><span class="meta">${new Date().toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" })}</span></div>`);
-    scanCount();
-  } catch { flash("not_found", null); }
+  // If the last attempt for this code never got an answer, reuse its id: the server may already have let them in.
+  const id = scan.pending?.code === code ? scan.pending.id : scanId();
+  scan.pending = { code, id };
+  const body = { code, event_id: $("#scan-event").value || undefined, scan_id: id };
+  let r = null;
+  // A weak signal at the door: retry the same scan (same id) so it can never count twice.
+  for (let attempt = 0; attempt < 3 && !r; attempt++) {
+    try { r = await api("/api/admin/tickets/check-in", { method: "POST", body }); }
+    catch (e) {
+      if (/connection|network|fetch/i.test(e.message) && attempt < 2) { await new Promise((ok) => setTimeout(ok, 700 * (attempt + 1))); continue; }
+      if (/connection|network|fetch/i.test(e.message)) { flash("offline", null); scan.last = { code: "", at: 0 }; return; }
+      scan.pending = null; flash("not_found", null); setLast("bad", "Invalid ticket"); return;
+    }
+  }
+  scan.pending = null;
+  flash(r.result, r.ticket);
+  const [label, cls] = SCAN_MSG[r.result] || SCAN_MSG.not_found;
+  if (r.result === "ok" && !r.repeat) { scanTotals.in++; drawCount(); }
+  setLast(cls, `${label} · ${r.ticket?.holder || ""}`);
+}
+function setLast(cls, text) {
+  const time = new Date().toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
+  $("#scan-last").className = `scan-last ${cls}`;
+  $("#scan-last").innerHTML = `<i></i>${esc(text)} <span>${time}</span>`;
 }
 async function tick(ts) {
   scan.raf = requestAnimationFrame(tick);
@@ -658,7 +763,7 @@ function stopScan() {
 $("#scan-event").addEventListener("change", scanCount);
 $("#scan-start").addEventListener("click", () => startScanner());
 $("#scan-switch").addEventListener("click", async () => { scan.camIdx = (scan.camIdx + 1) % Math.max(1, scan.cams.length); stopScan(); await startScanner(); });
-$("#scan-torch").addEventListener("click", async () => { scan.torch = !scan.torch; try { await scan.track.applyConstraints({ advanced: [{ torch: scan.torch }] }); } catch { /* not supported */ } $("#scan-torch").classList.toggle("btn-gold", scan.torch); });
+$("#scan-torch").addEventListener("click", async () => { scan.torch = !scan.torch; try { await scan.track.applyConstraints({ advanced: [{ torch: scan.torch }] }); } catch { /* not supported */ } $("#scan-torch").classList.toggle("on", scan.torch); });
 $("#scan-full").addEventListener("click", () => {
   const el = $("#scanner");
   if (document.fullscreenElement) document.exitFullscreen?.();
@@ -824,5 +929,8 @@ document.addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("side-open")) { setSide(false); $("#m-menu").focus(); } });
 addEventListener("hashchange", () => setSide(false));
 addEventListener("resize", () => { if (innerWidth > 860) setSide(false); });
+$$("[data-ico]:not([data-go-tab])").forEach((b) => { b.innerHTML = icon(b.dataset.ico); });
 $$("[data-go-tab]").forEach((b) => { if (b.dataset.ico) b.insertAdjacentHTML("afterbegin", icon(b.dataset.ico)); b.addEventListener("click", () => { location.hash = b.dataset.goTab; }); });
+// Insights, weekly services and the board report live in their own module.
+const insights = initInsights({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate });
 boot();
