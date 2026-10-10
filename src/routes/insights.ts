@@ -60,7 +60,8 @@ async function eventSummaries(env: Env, from: string, to: string) {
     const ended = new Date(String(e.ends_at || e.starts_at)).getTime() + 3 * 3600_000 < now;
     const came = n(e.came);
     return {
-      id: e.id, slug: e.slug, title: e.title, starts_at: e.starts_at, ends_at: e.ends_at, group: e.ministry_group || "church", group_label: groupLabel(e.ministry_group as string),
+      id: String(e.id), slug: String(e.slug), title: String(e.title), starts_at: String(e.starts_at), ends_at: e.ends_at ? String(e.ends_at) : null,
+      group: String(e.ministry_group || "church"), group_label: groupLabel(e.ministry_group as string),
       ticket_price: n(e.ticket_price), capacity: e.capacity, published: !!e.is_published, ended,
       bookings: n(e.bookings), sold, came, no_shows: ended ? Math.max(0, sold - came) : null, attendance_rate: sold ? Math.round((came / sold) * 100) : null,
       pending: n(e.pending), pending_value: n(e.pending_value), waitlist: n(e.waitlist),
@@ -126,7 +127,8 @@ async function boardReport(env: Env, from: string, to: string) {
     `SELECT ss.*, ws.title AS service_title, ws.day, ws.ministry_group FROM service_sessions ss JOIN weekly_services ws ON ws.id = ss.service_id
       WHERE ss.date BETWEEN ? AND ? ORDER BY ss.date`).bind(from, to).all<Record<string, unknown>>();
 
-  const groups = new Map<string, Record<string, number>>();
+  interface GroupTotals { events: number; tickets: number; came: number; event_income: number; sessions: number; attendance: number; service_income: number; salvations: number; first_time_visitors: number }
+  const groups = new Map<string, GroupTotals>();
   const g = (k: string) => { if (!groups.has(k)) groups.set(k, { events: 0, tickets: 0, came: 0, event_income: 0, sessions: 0, attendance: 0, service_income: 0, salvations: 0, first_time_visitors: 0 }); return groups.get(k)!; };
   for (const e of events) { const x = g(e.group); x.events++; x.tickets += e.sold; x.came += e.came; x.event_income += e.income; }
   const services = new Map<string, Record<string, unknown> & { totals: Record<string, number> }>();
