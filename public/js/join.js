@@ -175,6 +175,13 @@ form.addEventListener("keydown", (e) => {
 });
 form.addEventListener("submit", (e) => e.preventDefault());
 
+// Signature follows the name you typed (until you change it yourself), so nobody types their name twice.
+let autoSig = "";
+["first_name", "last_name"].forEach((k) => form[k]?.addEventListener("input", () => {
+  const full = `${form.first_name.value.trim()} ${form.last_name.value.trim()}`.trim();
+  if (!form.signature_name.value || form.signature_name.value === autoSig) { form.signature_name.value = full; autoSig = full; }
+}));
+
 // ---------- drafts (this device only) ----------
 const saveState = document.getElementById("save-state");
 function saveDraft() {
