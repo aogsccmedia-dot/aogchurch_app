@@ -33,7 +33,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css?v=71d32040ea">
-  <link rel="stylesheet" href="/css/pages.css?v=f4b776d3c6">
+  <link rel="stylesheet" href="/css/pages.css?v=f3042df9fc">
   <script src="/js/switch-boot.js?v=8f652f4915"></script>
   <script type="speculationrules">{"prerender": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/admin/*"}}, {"not": {"href_matches": "/api/*"}}]}, "eagerness": "moderate"}]}</script>
   <link rel="preload" as="image" href="/assets/photos/worship-1600.webp" type="image/webp">
@@ -113,10 +113,6 @@
       </div>
     </section>
 
-    <div class="band" aria-hidden="true"><div class="band-track">
-      <span>Bible-based</span><span>Community-centred</span><span>Spirit-filled</span><span>Prayer</span><span>Fellowship</span><span>Woodmead, Sandton</span>
-      <span>Bible-based</span><span>Community-centred</span><span>Spirit-filled</span><span>Prayer</span><span>Fellowship</span><span>Woodmead, Sandton</span>
-    </div></div>
 
     <!-- FEATURED EVENT (filled from the next upcoming event) -->
     <section class="block featured" id="featured" hidden aria-labelledby="featured-title">
@@ -134,33 +130,17 @@
       </div>
     </section>
 
-    <!-- WHO WE ARE -->
-    <section class="block" id="about">
-      <div class="wrap">
-        <div class="section-head reveal">
-          <p class="eyebrow gold">Who we are</p>
-          <h2>A church that feels like <span class="serif">home.</span></h2>
-          <p class="lede">We're an Assemblies of God family in Woodmead — ordinary people from every walk of life, gathered around the Word of God, the presence of the Holy Spirit and a table where everyone has a seat.</p>
-        </div>
-        <div class="pillars-grid">
-          <article class="pillar reveal"><p class="eyebrow">01 · Bible-based</p><h3>Rooted in the Word</h3><p>Scripture is our foundation. We teach the Bible clearly and practically, so it shapes how we live on Monday, not just on Sunday.</p><p class="ref">“Your word is a lamp to my feet.” — Psalm 119:105</p></article>
-          <article class="pillar reveal"><p class="eyebrow">02 · Community-centred</p><h3>Family before formality</h3><p>We do life together — sharing meals, carrying burdens and celebrating wins. Nobody walks in alone and nobody walks out unseen.</p><p class="ref">“They devoted themselves to fellowship.” — Acts 2:42</p></article>
-          <article class="pillar reveal"><p class="eyebrow">03 · Spirit-filled</p><h3>Alive in worship &amp; prayer</h3><p>We're Pentecostal and expectant. We make room for the Holy Spirit to move, heal and send us into our city.</p><p class="ref">“Not by might, nor by power, but by my Spirit.” — Zechariah 4:6</p></article>
-        </div>
-        <p class="more-link reveal"><a class="btn" href="/about">More about us <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></p>
-      </div>
-    </section>
-
-    <!-- STORY (full-bleed) -->
-    <section class="story">
+    <!-- WHO WE ARE (one calm, full-bleed story) -->
+    <section class="story" id="about">
       <figure class="photo" data-scroll-color>
         <picture><source type="image/webp" srcset="/assets/photos/congregation-800.webp 800w, /assets/photos/congregation-1600.webp 1600w" sizes="100vw"><img src="/assets/photos/congregation-1200.jpg" alt="The congregation gathered and listening during a service" loading="lazy"></picture>
       </figure>
       <div class="wrap story-copy reveal">
-        <p class="eyebrow gold">Community at the centre</p>
-        <h2>Every seat is saved for <span class="serif">someone.</span></h2>
-        <p>Grandmothers and students, families and young professionals, people who've been in church for decades and people walking in for the very first time — this is what the family of God looks like in Sandton.</p>
-        <div class="facts"><div><b>Sundays</b><span>Family service</span></div><div><b>All ages</b><span>Kids · Youth · Adults</span></div><div><b>Woodmead</b><span>17 Humber Street</span></div></div>
+        <p class="eyebrow gold">Who we are</p>
+        <h2>A church that feels like <span class="serif">home.</span></h2>
+        <p>An Assemblies of God family in Woodmead: grandmothers and students, families and young professionals, gathered around the Word, the presence of the Holy Spirit and a table where everyone has a seat.</p>
+        <p class="values-line"><span>Bible-based</span><span>Community-centred</span><span>Spirit-filled</span></p>
+        <p><a class="btn" href="/about">More about us <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></p>
       </div>
     </section>
 
@@ -174,22 +154,6 @@
         </div>
         <div class="event-grid" id="events" data-limit="3" aria-live="polite"><div class="events-empty">Loading…</div></div>
         <p class="more-link reveal"><a class="btn" href="/events">All services &amp; events <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></p>
-      </div>
-    </section>
-
-    <!-- FIND YOUR WAY -->
-    <section class="block">
-      <div class="wrap">
-        <div class="section-head reveal">
-          <p class="eyebrow gold">Find your way</p>
-          <h2>Everything you need, <span class="serif">one tap away.</span></h2>
-        </div>
-        <div class="explore-grid">
-          <a class="explore-card reveal" href="/about"><figure class="photo"><picture><source type="image/webp" srcset="/assets/photos/congregation-800.webp"><img src="/assets/photos/congregation-1200.jpg" alt="" loading="lazy"></picture></figure><div><b>About us</b><span>Who we are, what we believe and what Sunday looks like.</span><svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div></a>
-          <a class="explore-card reveal" href="/events"><figure class="photo"><picture><source type="image/webp" srcset="/assets/photos/worship-800.webp"><img src="/assets/photos/worship-1200.jpg" alt="" loading="lazy"></picture></figure><div><b>Services &amp; events</b><span>See what's coming up and get your ticket.</span><svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div></a>
-          <a class="explore-card reveal" href="/get-involved"><figure class="photo"><picture><source type="image/webp" srcset="/assets/photos/hospitality-800.webp"><img src="/assets/photos/hospitality-1200.jpg" alt="" loading="lazy"></picture></figure><div><b>Get involved</b><span>Find your place on one of our teams.</span><svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div></a>
-          <a class="explore-card reveal" href="/prayer"><figure class="photo"><picture><source type="image/webp" srcset="/assets/photos/prayer-800.webp"><img src="/assets/photos/prayer-1200.jpg" alt="" loading="lazy"></picture></figure><div><b>Prayer</b><span>Share a request. Our prayer team will stand with you.</span><svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div></a>
-        </div>
       </div>
     </section>
 
@@ -212,17 +176,6 @@
                 <button class="btn btn-gold" type="submit">Sign me up</button>
               </div>
             </form>
-          </div>
-          <div class="letter-preview" aria-hidden="true">
-            <div class="lp-head"><img src="/assets/logo-64.png" alt=""><p>AOG Sandton City Church</p></div>
-            <div class="lp-img"></div>
-            <div class="lp-body">
-              <h4>This week at church</h4>
-              <p>Dear friend, what a joy it was to worship together this morning…</p>
-              <div class="lp-row"><b>Sunday service</b><span>Sunday ✦</span></div>
-              <div class="lp-row"><b>Prayer &amp; Bible study</b><span>Midweek ✦</span></div>
-              <div class="lp-row"><b>Upcoming events</b><span>Register ✦</span></div>
-            </div>
           </div>
         </div>
       </div>
@@ -247,12 +200,6 @@
       </div>
     </section>
 
-    <section class="cta-band">
-      <p class="eyebrow gold">Become part of the family</p>
-      <h2>There's a seat saved <span class="serif">for you.</span></h2>
-      <p class="lede" style="text-align:center">Takes about five minutes — or one tap with Google. A leader will reach out personally within the week.</p>
-      <a class="btn btn-gold" href="/join" data-join-cta>Join the church <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
-    </section>
   </main>
 
   <nav class="pager" aria-label="Keep exploring">

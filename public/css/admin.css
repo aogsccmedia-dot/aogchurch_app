@@ -501,3 +501,7 @@ details.card[open] > summary::before { content: "–"; }
 .report-doc .rep-kpis b span.pos { color: #1f7a45; } .report-doc .rep-kpis b span.neg { color: #b4321f; }
 .svc-remind { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12.5px; color: var(--muted); }
 .svc-remind .link-btn { color: var(--gold); }
+/* Admin: switching screens fades in rather than snapping */
+.main > section[data-view]:not([hidden]) { animation: view-in .22s ease both; }
+@keyframes view-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .main > section[data-view] { animation: none !important; } }

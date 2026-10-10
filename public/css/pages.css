@@ -1063,3 +1063,19 @@ dialog.ob-sheet { width: min(520px, calc(100% - 24px)); max-height: calc(100dvh 
 .rs-opt:not(.on):hover { color: var(--text); }
 .user-pop .switch-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; width: 100%; text-align: left; }
 .user-pop .switch-row small { color: var(--text-2); font-size: 12px; }
+
+/* Smooth page-to-page transitions (Chrome, Edge, Safari 18+): the header and bottom bar stay put,
+   the page content gently cross-fades. Browsers without support simply navigate as before. */
+@view-transition { navigation: auto; }
+.site-header { view-transition-name: site-header; }
+.tabbar { view-transition-name: tabbar; }
+::view-transition-old(root) { animation: vt-out .22s ease both; }
+::view-transition-new(root) { animation: vt-in .32s cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes vt-out { to { opacity: 0; transform: translateY(-6px); } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
+
+/* Home: calmer, fewer blocks */
+.values-line { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 4px 0 6px; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-2); }
+.values-line span + span::before { content: "·"; margin-right: 18px; color: var(--muted); }
+#letter .letter { grid-template-columns: minmax(0, 1fr); max-width: 760px; margin-inline: auto; text-align: left; }
