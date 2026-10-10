@@ -746,6 +746,29 @@ describe("door, insights, weekly services and the board report", () => {
     assert.equal(env.DB._db.prepare("SELECT checked_in_at IS NOT NULL AS used FROM tickets WHERE code = ?").get(codes[0].code).used, 1);
   });
 
+  test("admin powers renew while in use, lapse after 12 quiet hours, and come back with just the emailed code", async () => {
+    const c = await adminCookie();
+    const tok = c.split("=")[1];
+    const { createHash } = await import("node:crypto");
+    const hash = createHash("sha256").update(tok).digest("hex");
+    const row = () => env.DB._db.prepare("SELECT kind, admin_until, expires_at FROM sessions WHERE token_hash = ?").get(hash) as { kind: string; admin_until: string; expires_at: string };
+    assert.ok(new Date(row().expires_at).getTime() - Date.now() > 20 * 86400_000, "the sign-in itself lasts weeks");
+    // Nearly out of admin time → the next request renews it.
+    env.DB._db.prepare("UPDATE sessions SET admin_until = ? WHERE token_hash = ?").run(new Date(Date.now() + 3600_000).toISOString(), hash);
+    assert.equal((await call("/api/admin/stats", { headers: { cookie: c } })).status, 200);
+    assert.ok(new Date(row().admin_until).getTime() - Date.now() > 11 * 3600_000, "renewed while in use");
+    // Quiet for 12 hours → still signed in, but not as admin.
+    env.DB._db.prepare("UPDATE sessions SET admin_until = ? WHERE token_hash = ?").run(new Date(Date.now() - 1000).toISOString(), hash);
+    assert.equal((await call("/api/admin/stats", { headers: { cookie: c } })).status, 401);
+    const me = await (await call("/api/auth/me", { headers: { cookie: c } })).json() as { user: unknown; is_admin: boolean; can_admin: boolean };
+    assert.ok(me.user && !me.is_admin && me.can_admin, "still signed in, can get admin back");
+    // Just the emailed code brings admin back (no Google).
+    const r = await (await post("/api/auth/admin/request-code", {}, { cookie: c })).json() as { challenge: string };
+    const v = await post("/api/auth/admin/verify", { challenge: r.challenge, code: lastCode() }, { cookie: c });
+    assert.equal(v.status, 200);
+    assert.equal((await call("/api/admin/stats", { headers: { cookie: cookieOf(v) } })).status, 200);
+  });
+
   test("event insights: sold, came, no-shows, money incl. other income", async () => {
     const upcoming = await (await call(`/api/admin/insights/events/${eventId}`, { headers: { cookie } })).json() as { event: Record<string, unknown> };
     assert.equal(upcoming.event.no_shows, null, "no-shows only count once the event is over");
@@ -798,7 +821,7 @@ describe("door, insights, weekly services and the board report", () => {
     const { report: r } = await (await call(`/api/admin/report?from=${from}&to=${to}`, { headers: { cookie } })).json() as { report: { totals: Record<string, number>; by_group: { group: string; income: number; event_income: number; service_income: number }[]; growth: Record<string, number> } };
     const youth = r.by_group.find((g) => g.group === "youth")!;
     assert.ok(youth.event_income >= 800, "youth event income includes Insights Night");
-    assert.ok(Math.abs(youth.service_income - 5250.5) < 0.001, "offering + tithes from the youth service");
+    assert.ok(youth.service_income >= 5250.5, "offering + tithes from the youth service (plus imported history)");
     assert.ok(r.growth.salvations >= 3 && r.growth.first_time_visitors >= 6);
     assert.ok(Math.abs(r.totals.income - (r.totals.event_income + r.totals.offering + r.totals.tithes + r.totals.other)) < 0.001);
     const csv = await call(`/api/admin/report.csv?from=${from}&to=${to}`, { headers: { cookie } });
@@ -806,5 +829,18 @@ describe("door, insights, weekly services and the board report", () => {
     const text = await csv.text();
     assert.match(text, /Board report/); assert.match(text, /Youth Ministry/); assert.match(text, /Insights Night/);
     assert.equal((await call(`/api/admin/report?from=${to}&to=${from}`, { headers: { cookie } })).status, 400, "from must be before to");
+  });
+
+  test("youth report: the spreadsheet history reads correctly (incl. the R1 945,20 the sheet left out)", async () => {
+    const { report: r } = await (await call("/api/admin/reports/ministry?group=youth&year=2026", { headers: { cookie } })).json() as { report: { totals: Record<string, number>; months: { month: string; offerings: number; out: number }[]; best: { attendance: number; topic: string }; imported: boolean; sessions: { status: string; source: string | null }[] } };
+    const imported = r.sessions.filter((x) => x.source === "spreadsheet");
+    assert.equal(imported.filter((x) => x.status === "held").length, 16);
+    assert.equal(imported.filter((x) => x.status === "cancelled").length, 10);
+    const feb = r.months.find((m) => m.month === "02")!;
+    assert.ok(Math.abs(feb.offerings - 3749.2) < 0.001, "Feb Fridays incl. R1 945,20 (the 2 Jan monthly counts in January)");
+    assert.equal(feb.out, 2950);
+    assert.ok(r.best.attendance >= 70, "best night (70 at the Youth Monthly, unless a bigger one was recorded since)");
+    assert.ok(r.totals.out >= 8950 && r.imported);
+    assert.equal((await call("/api/admin/reports/ministry?group=youth&year=2026")).status, 401, "admins only");
   });
 });

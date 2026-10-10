@@ -47,7 +47,7 @@ async function apiRaw(path, { method = "GET", body, form } = {}) {
   catch { throw new Error("No connection. Please check your internet and try again."); }
   let data = {};
   try { data = await res.json(); } catch { /* ignore */ }
-  if (res.status === 401 && !path.startsWith("/api/auth/")) { showLogin(); throw new Error("Please sign in."); }
+  if (res.status === 401 && !path.startsWith("/api/auth/")) { showLogin({ resume: true }); throw new Error("Your admin session timed out. Enter the code we've emailed you to carry on."); }
   if (!res.ok || data.ok === false) throw Object.assign(new Error(data.error || `Error ${res.status}`), { details: data.details });
   return data;
 }
@@ -71,8 +71,11 @@ function showCodeStep(r) {
   $("#code-verify").code.focus();
 }
 
-async function showLogin() {
+let autoCodeSent = false;
+async function showLogin({ resume = false } = {}) {
+  if (!$("#login-view").hidden) return;   // already showing
   $("#app-view").hidden = true; $("#login-view").hidden = false;
+  document.body.dataset.view = "login";
   const { google_client_id: cid, user } = await fetch("/api/auth/me").then((r) => r.json()).catch(() => ({}));
   const meInfo = await fetch("/api/auth/me").then((r) => r.json()).catch(() => ({}));
   const viaSwitch = new URLSearchParams(location.search).has("switch") || arrivedBySwitch("admin");
@@ -81,10 +84,16 @@ async function showLogin() {
     // Already signed in with Google on the website → just need the emailed code.
     $("#signed-in-admin").hidden = false;
     $("#signed-in-as").textContent = `Signed in as ${user.email}.`;
-    if (viaSwitch) {
-      // Switching from the member view: email the code straight away and go to the code boxes.
-      try { const r = await api("/api/auth/admin/request-code", { method: "POST", body: {} }); showCodeStep(r); $("#code-sent").textContent = `For your security, we emailed a 6-digit code to ${r.sent_to}. Enter it to open your admin workspace.`; }
-      catch (e) { loginErr(e.message); }
+    if (!autoCodeSent) {   // signed in already: switching over, opening /admin, or admin time ran out
+      // Still signed in (switching over, or admin time ran out): email the code straight away and show the boxes.
+      // No Google pop-up needed, which matters in the installed iPhone app.
+      autoCodeSent = true;
+      try {
+        const r = await api("/api/auth/admin/request-code", { method: "POST", body: {} }); showCodeStep(r);
+        $("#code-sent").textContent = resume || !viaSwitch
+          ? `Welcome back. For your security, we emailed a 6-digit code to ${r.sent_to}. Enter it to carry on where you left off.`
+          : `For your security, we emailed a 6-digit code to ${r.sent_to}. Enter it to open your admin workspace.`;
+      } catch (e) { loginErr(e.message); }
     }
   }
   switchReady();
@@ -169,8 +178,17 @@ function openTab(tab) {
   document.body.dataset.view = t;
   $$("[data-view]").forEach((v) => { v.hidden = v.dataset.view !== t; });
   history.replaceState(null, "", "#" + t);
-  safe(loaders[t])();
+  Promise.resolve().then(() => loaders[t]()).catch((e) => {
+    toast(e.message);
+    const sec = $(`[data-view="${t}"]`);
+    if (sec && !sec.querySelector(".load-error")) sec.insertAdjacentHTML("beforeend", `<div class="empty load-error">This page didn't load. <button class="btn btn-sm" type="button" onclick="location.reload()">Try again</button></div>`);
+  });
 }
+// Safety net: a script error never leaves a blank screen.
+let lastCrash = 0;
+const crash = (msg) => { if (Date.now() - lastCrash < 4000) return; lastCrash = Date.now(); console.error(msg); toast("Something went wrong there. If the page looks stuck, pull down to refresh."); if ($("#app-view").hidden && $("#login-view").hidden) $("#login-view").hidden = false; };
+addEventListener("error", (e) => crash(e.message));
+addEventListener("unhandledrejection", (e) => crash(e.reason?.message || String(e.reason)));
 function showView(view, hash, navTab) {
   document.body.dataset.view = view;
   $$("[data-view]").forEach((v) => { v.hidden = v.dataset.view !== view; });
@@ -274,7 +292,7 @@ async function openMember(id) {
       .then(() => { safe(loaders.members)(); refreshBadges(); })
       .catch((e) => { toast(`Couldn't save ${m.first_name}: ${e.message}`); safe(loaders.members)(); });
   };
-  $("#md-delete").onclick = safe(async () => { if (!confirm(`Permanently delete ${m.first_name} ${m.last_name} and their files?`)) return; await api(`/api/admin/members/${id}`, { method: "DELETE" }); dlg.close(); toast("Deleted"); safe(loaders.members)(); });
+  if ($("#md-delete")) $("#md-delete").onclick = safe(async () => { if (!confirm(`Permanently delete ${m.first_name} ${m.last_name} and their files?`)) return; await api(`/api/admin/members/${id}`, { method: "DELETE" }); dlg.close(); toast("Deleted"); safe(loaders.members)(); });
 }
 $$("dialog.drawer").forEach((d) => d.addEventListener("click", (e) => { if (e.target === d || e.target.closest("[data-close]")) d.close(); }));
 
@@ -826,10 +844,17 @@ $("[data-view=team]").addEventListener("click", safe(async (e) => {
   if (g) {
     const who = g.closest(".team-row").querySelector("b").textContent;
     if (!confirm(`Give ${who} admin access?\n\nThey'll be able to approve registrations, verify members, send and scan tickets, and handle prayer requests and complaints. They can't delete people or change roles.\n\nWe'll email them a welcome with sign-in steps.`)) return;
-    const r = await api("/api/admin/team", { method: "POST", body: { user_id: g.dataset.grant } });
-    toast(r.already ? "They're already an admin" : `${who} is now an admin. Welcome email sent.`); loadTeam();
+    // Instant: the row shows the new role straight away; the server and welcome email follow.
+    g.outerHTML = `<span class="pill member">Admin</span>`;
+    toast(`${who} is now an admin. Welcome email on its way.`);
+    api("/api/admin/team", { method: "POST", body: { user_id: g.dataset.grant } })
+      .then((r) => { if (r.already) toast("They're already an admin"); safe(loadTeam)(); })
+      .catch((err) => { toast(`Couldn't add ${who}: ${err.message}`); safe(loadTeam)(); });
   }
-  if (r && confirm("Remove this person's admin access? They'll keep their normal member profile.")) { await api(`/api/admin/team/${r.dataset.revoke}`, { method: "DELETE" }); toast("Admin access removed"); loadTeam(); }
+  if (r && confirm("Remove this person's admin access? They'll keep their normal member profile.")) {
+    r.closest(".team-row")?.remove(); toast("Admin access removed");
+    api(`/api/admin/team/${r.dataset.revoke}`, { method: "DELETE" }).then(() => safe(loadTeam)()).catch((err) => { toast(err.message); safe(loadTeam)(); });
+  }
 }));
 
 // ================================================================ complaints

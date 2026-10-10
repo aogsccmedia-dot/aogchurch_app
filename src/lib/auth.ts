@@ -84,9 +84,10 @@ export function isAdminEmail(env: Env, email: string) { return email.toLowerCase
 
 export async function createSession(env: Env, req: Request, userId: string, kind: "user" | "admin"): Promise<string> {
   const token = randomToken();
-  const ms = kind === "admin" ? ADMIN_HOURS * 3600_000 : USER_DAYS * 86400_000;
-  await env.DB.prepare("INSERT INTO sessions (token_hash, user_id, kind, expires_at) VALUES (?,?,?,?)")
-    .bind(await sha256Hex(token), userId, kind, new Date(Date.now() + ms).toISOString()).run();
+  const ms = USER_DAYS * 86400_000;   // the sign-in itself; admin powers have their own shorter, renewing window
+  const adminUntil = kind === "admin" ? new Date(Date.now() + ADMIN_HOURS * 3600_000).toISOString() : null;
+  await env.DB.prepare("INSERT INTO sessions (token_hash, user_id, kind, expires_at, admin_until) VALUES (?,?,?,?,?)")
+    .bind(await sha256Hex(token), userId, kind, new Date(Date.now() + ms).toISOString(), adminUntil).run();
   const secure = new URL(req.url).protocol === "https:";
   return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(ms / 1000)}${secure ? "; Secure" : ""}`;
 }
@@ -99,13 +100,23 @@ export function clearSessionCookie(req: Request) {
 export async function getSession(env: Env, req: Request): Promise<Session | null> {
   const token = getCookie(req, SESSION_COOKIE);
   if (!token) return null;
+  const hash = await sha256Hex(token);
+  const now = Date.now();
   const row = await env.DB.prepare(
-    `SELECT s.kind, u.id, u.email, u.name, u.given_name, u.family_name, u.picture FROM sessions s JOIN users u ON u.id = s.user_id
+    `SELECT s.kind, s.admin_until, u.id, u.email, u.name, u.given_name, u.family_name, u.picture FROM sessions s JOIN users u ON u.id = s.user_id
       WHERE s.token_hash = ? AND s.expires_at > ?`,
-  ).bind(await sha256Hex(token), new Date().toISOString()).first<User & { kind: "user" | "admin" }>();
+  ).bind(hash, new Date(now).toISOString()).first<User & { kind: "user" | "admin"; admin_until: string | null }>();
   if (!row) return null;
-  const { kind, ...user } = row;
+  const { kind, admin_until, ...user } = row;
   if (kind !== "admin") return { user, kind };
+  // Admin powers lapse after 12 quiet hours (the person stays signed in as a member) and renew while in use.
+  if (admin_until) {
+    const left = new Date(admin_until).getTime() - now;
+    if (left <= 0) return { user, kind: "user" };
+    if (left < (ADMIN_HOURS / 2) * 3600_000) {
+      await env.DB.prepare("UPDATE sessions SET admin_until = ? WHERE token_hash = ?").bind(new Date(now + ADMIN_HOURS * 3600_000).toISOString(), hash).run();
+    }
+  }
   // Admin sessions: the super admin (ADMIN_EMAIL), or someone the super admin has given a role.
   // If a role is removed, the session quietly drops back to a normal member session.
   if (isAdminEmail(env, user.email)) return { user, kind, role: "super" };

@@ -100,9 +100,13 @@ function readSession(fd: FormData, service: ServiceRow) {
   const date = get("date");
   if (!DATE.test(date) || isNaN(Date.parse(date))) errors.date = "Choose the date of the service.";
   else if (!isServiceDay(date, service.day) && get("other_day") !== "1") errors.date = `${service.title} is on ${DAYS[service.day]}s. Tick “held on a different day” if it moved this time.`;
-  const topic = get("topic").slice(0, 200);
+  const cancelled = get("status") === "cancelled";
+  const cancel_reason = cancelled ? get("cancel_reason").slice(0, 200) : "";
+  if (cancelled && !cancel_reason) errors.cancel_reason = "Why was there no service? (e.g. Easter weekend)";
+  const topic = cancelled ? `No ${service.title.toLowerCase()}` : get("topic").slice(0, 200);
   if (!topic) errors.topic = "What was the topic or theme?";
-  const out: Record<string, string | number | null> = { date, topic, speaker: get("speaker").slice(0, 120) || null, scripture: get("scripture").slice(0, 160) || null, summary: get("summary").slice(0, 3000) || null, notes: get("notes").slice(0, 2000) || null };
+  const out: Record<string, string | number | null> = { date, topic, status: cancelled ? "cancelled" : "held", cancel_reason: cancel_reason || null, mc: get("mc").slice(0, 120) || null,
+    speaker: get("speaker").slice(0, 120) || null, scripture: get("scripture").slice(0, 160) || null, summary: get("summary").slice(0, 3000) || null, notes: get("notes").slice(0, 2000) || null };
   for (const [k, label] of SESSION_COUNTS) {
     const v = get(k);
     if (v === "") { out[k] = null; continue; }
@@ -116,6 +120,7 @@ function readSession(fd: FormData, service: ServiceRow) {
     if (!isFinite(num) || num < 0 || num > 100_000_000) errors[k.replace("_cents", "")] = `${label}: enter an amount in Rands.`; else out[k] = Math.round(num * 100);
   }
   if (Object.keys(errors).length) throw new HttpError(422, "Please check the highlighted fields.", errors);
+  if (cancelled) for (const [k] of [...SESSION_COUNTS, ...SESSION_MONEY]) out[k] = null;
   return out;
 }
 
@@ -125,7 +130,7 @@ async function boardReport(env: Env, from: string, to: string) {
   const events = await eventSummaries(env, from, to);
   const { results: sessions } = await env.DB.prepare(
     `SELECT ss.*, ws.title AS service_title, ws.day, ws.ministry_group FROM service_sessions ss JOIN weekly_services ws ON ws.id = ss.service_id
-      WHERE ss.date BETWEEN ? AND ? ORDER BY ss.date`).bind(from, to).all<Record<string, unknown>>();
+      WHERE ss.date BETWEEN ? AND ? AND ss.status = 'held' ORDER BY ss.date`).bind(from, to).all<Record<string, unknown>>();
 
   interface GroupTotals { events: number; tickets: number; came: number; event_income: number; sessions: number; attendance: number; service_income: number; salvations: number; first_time_visitors: number }
   const groups = new Map<string, GroupTotals>();
@@ -177,6 +182,67 @@ async function boardReport(env: Env, from: string, to: string) {
     },
     growth, membership, care, by_group: byGroup, services: serviceList, events,
     sessions: sessions.map((s) => ({ date: s.date, service: s.service_title, group_label: groupLabel(s.ministry_group as string), topic: s.topic, speaker: s.speaker, attendance: s.attendance, first_time_visitors: s.first_time_visitors, salvations: s.salvations, income: (n(s.offering_cents) + n(s.tithes_cents) + n(s.other_income_cents)) / 100 })),
+  };
+}
+
+// ---------------------------------------------------------------- ministry report (e.g. Youth, year so far)
+
+async function ministryReport(env: Env, group: string, year: number) {
+  const from = `${year}-01-01`, today = saToday(), to = `${year}-12-31` < today ? `${year}-12-31` : today;
+  const { results: svcs } = await env.DB.prepare("SELECT * FROM weekly_services WHERE ministry_group = ? ORDER BY sort").bind(group).all<ServiceRow>();
+  const ids = svcs.map((x) => x.id);
+  const sessions = ids.length ? (await env.DB.prepare(
+    `SELECT ss.*, ws.title AS service_title FROM service_sessions ss JOIN weekly_services ws ON ws.id = ss.service_id
+      WHERE ss.service_id IN (${ids.map(() => "?").join(",")}) AND ss.date BETWEEN ? AND ? ORDER BY ss.date`).bind(...ids, from, to).all<Record<string, unknown>>()).results : [];
+  const { results: ledger } = await env.DB.prepare("SELECT * FROM ministry_ledger WHERE ministry_group = ? AND date BETWEEN ? AND ? ORDER BY date, created_at")
+    .bind(group, from, `${year}-12-31`).all<Record<string, unknown>>();
+  const events = (await eventSummaries(env, from, `${year}-12-31`)).filter((e) => e.group === group);
+  const held = sessions.filter((x) => x.status !== "cancelled"), cancelled = sessions.filter((x) => x.status === "cancelled");
+  const money = (x: Record<string, unknown>) => (n(x.offering_cents) + n(x.tithes_cents) + n(x.other_income_cents)) / 100;
+  // Expected dates with no record at all (so gaps are visible, not hidden).
+  const recorded = new Set(sessions.map((x) => `${x.service_id}|${x.date}`));
+  const missing: { date: string; service: string }[] = [];
+  for (const sv of svcs.filter((x) => x.active)) {
+    let d = nextOccurrence(sv.day, from);
+    while (d <= to && d < today) { if (!recorded.has(`${sv.id}|${d}`)) missing.push({ date: d, service: sv.title }); d = occurrences(sv.day, 0, 1, d)[1]; }
+  }
+  const lastMonth = Number(to.slice(5, 7));
+  let running = 0;
+  const months = Array.from({ length: lastMonth }, (_, i) => {
+    const m = String(i + 1).padStart(2, "0"), inMonth = (d: unknown) => String(d).slice(5, 7) === m;
+    const hs = held.filter((x) => inMonth(x.date)), counted = hs.filter((x) => x.attendance != null);
+    const offerings = hs.reduce((t, x) => t + money(x), 0);
+    const ledgerIn = ledger.filter((l) => inMonth(l.date) && l.direction === "in").reduce((t, l) => t + n(l.amount_cents) / 100, 0);
+    const out = ledger.filter((l) => inMonth(l.date) && l.direction === "out").reduce((t, l) => t + n(l.amount_cents) / 100, 0);
+    const eventIncome = events.filter((e) => e.starts_at.slice(5, 7) === m).reduce((t, e) => t + e.income, 0);
+    const net = offerings + ledgerIn + eventIncome - out;
+    running += net;
+    return { month: m, services: hs.length, cancelled: cancelled.filter((x) => inMonth(x.date)).length, attendance: counted.reduce((t, x) => t + n(x.attendance), 0),
+      average: counted.length ? Math.round(counted.reduce((t, x) => t + n(x.attendance), 0) / counted.length) : null, offerings, other_in: ledgerIn + eventIncome, out, net, running };
+  });
+  const withAtt = held.filter((x) => x.attendance != null);
+  const best = withAtt.slice().sort((a, b) => n(b.attendance) - n(a.attendance))[0];
+  const people = (k: string) => {
+    const c: Record<string, number> = {};
+    for (const x of held) for (const name of String(x[k] || "").split(/\s*\/\s*/).map((v) => v.trim()).filter((v) => v && !/^(discussion|youth monthly|reflection night|discussion night)$/i.test(v))) c[name] = (c[name] || 0) + 1;
+    return Object.entries(c).sort((a, b) => b[1] - a[1]);
+  };
+  const totalIn = months.reduce((t, x) => t + x.offerings + x.other_in, 0), totalOut = months.reduce((t, x) => t + x.out, 0);
+  return {
+    group, group_label: groupLabel(group), year, from, to, generated_at: new Date().toISOString(),
+    services: svcs.map((x) => ({ id: x.id, title: x.title, day: DAYS[x.day] })),
+    totals: {
+      held: held.length, cancelled: cancelled.length, unrecorded: missing.length,
+      attendance: withAtt.reduce((t, x) => t + n(x.attendance), 0), counted: withAtt.length,
+      average: withAtt.length ? Math.round(withAtt.reduce((t, x) => t + n(x.attendance), 0) / withAtt.length) : null,
+      offerings: held.reduce((t, x) => t + money(x), 0), other_in: totalIn - held.reduce((t, x) => t + money(x), 0), out: totalOut, left: totalIn - totalOut,
+      salvations: held.reduce((t, x) => t + n(x.salvations), 0), first_time_visitors: held.reduce((t, x) => t + n(x.first_time_visitors), 0), events: events.length,
+    },
+    best: best ? { date: best.date, topic: best.topic, attendance: n(best.attendance) } : null,
+    months, ledger, events,
+    sessions: sessions.map((x) => ({ id: x.id, date: x.date, service: x.service_title, status: x.status, topic: x.topic, speaker: x.speaker, mc: x.mc, attendance: x.attendance, money: x.status === "cancelled" ? null : (x.offering_cents == null && x.tithes_cents == null && x.other_income_cents == null ? null : money(x)), reason: x.cancel_reason, source: x.source })),
+    missing, speakers: people("speaker"), mcs: people("mc"),
+    imported: sessions.some((x) => x.source === "spreadsheet") || ledger.some((l) => l.source === "spreadsheet"),
   };
 }
 
@@ -296,7 +362,7 @@ export function insightsRoutes(router: Router, env: Env): void {
     const v = readSession(fd, service);
     const poster = fd.get("poster");
     const hasPoster = poster && typeof poster !== "string" && poster.size > 0;
-    if (!hasPoster && !existing?.poster_attachment_id) throw new HttpError(422, "Please add the poster for this service.", { poster: "The poster image is required." });
+    if (!hasPoster && !existing && v.status === "held") throw new HttpError(422, "Please add the poster for this service.", { poster: "The poster image is required." });
     const clash = await env.DB.prepare("SELECT id FROM service_sessions WHERE service_id = ? AND date = ? AND id != ?").bind(serviceId, v.date, id ?? "").first();
     if (clash) throw new HttpError(409, "This service already has a record for that date. Edit that one instead.", { date: "Already recorded for this date." });
     const sid = id ?? uuid();
@@ -309,7 +375,7 @@ export function insightsRoutes(router: Router, env: Env): void {
       const stored = await storeFiles(env, "service_session", sid, [up]);
       stmts.push(...stored.stmts); posterId = stored.ids[0]; rollback = async () => { await stored.rollback(); };
     }
-    const cols = ["date", "topic", "speaker", "scripture", "summary", "notes", ...SESSION_COUNTS.map(([k]) => k), ...SESSION_MONEY.map(([k]) => k)];
+    const cols = ["date", "topic", "status", "cancel_reason", "mc", "speaker", "scripture", "summary", "notes", ...SESSION_COUNTS.map(([k]) => k), ...SESSION_MONEY.map(([k]) => k)];
     const now = new Date().toISOString();
     if (existing) stmts.push(env.DB.prepare(`UPDATE service_sessions SET ${cols.map((c) => `${c} = ?`).join(", ")}, poster_attachment_id = ?, updated_by = ?, updated_at = ? WHERE id = ?`)
       .bind(...cols.map((c) => v[c] ?? null), posterId, s.user.email, now, sid));
@@ -324,6 +390,35 @@ export function insightsRoutes(router: Router, env: Env): void {
   router.delete("/api/admin/sessions/:id", guard(async (_req, { id }, s) => {
     await env.DB.batch([await deleteOwnerFiles(env, "service_session", id), env.DB.prepare("DELETE FROM service_sessions WHERE id = ?").bind(id)]);
     await audit(s, "delete", "service_session", id);
+    return json({ ok: true });
+  }));
+
+  // ---- ministry report + money in/out ledger (admins only)
+  router.get("/api/admin/reports/ministry", guard(async (req) => {
+    const url = new URL(req.url);
+    const group = GROUP_KEYS.includes(url.searchParams.get("group") || "") ? url.searchParams.get("group")! : "youth";
+    const year = Math.min(2100, Math.max(2020, Number(url.searchParams.get("year")) || Number(saToday().slice(0, 4))));
+    return json({ ok: true, report: await ministryReport(env, group, year) });
+  }));
+  router.post("/api/admin/ledger", guard(async (req, _p, s) => {
+    const b = await readJson<Record<string, unknown>>(req);
+    const errors: Record<string, string> = {};
+    const group = String(b.ministry_group || ""), date = String(b.date || ""), category = String(b.category || "").trim().slice(0, 120);
+    const amount = Number(String(b.amount ?? "").replace(/[R\s,]/gi, ""));
+    if (!GROUP_KEYS.includes(group)) errors.ministry_group = "Choose the ministry.";
+    if (!DATE.test(date)) errors.date = "Choose the date.";
+    if (!category) errors.category = "What was it for?";
+    if (!isFinite(amount) || amount <= 0 || amount > 100_000_000) errors.amount = "Enter an amount in Rands.";
+    if (Object.keys(errors).length) throw new HttpError(422, "Please check the highlighted fields.", errors);
+    const id = uuid();
+    await env.DB.prepare("INSERT INTO ministry_ledger (id, ministry_group, date, direction, category, note, amount_cents, created_by) VALUES (?,?,?,?,?,?,?,?)")
+      .bind(id, group, date, b.direction === "in" ? "in" : "out", category, String(b.note || "").trim().slice(0, 300) || null, Math.round(amount * 100), s.user.email).run();
+    await audit(s, "create", "ledger", id);
+    return json({ ok: true, id }, 201);
+  }));
+  router.delete("/api/admin/ledger/:id", guard(async (_req, { id }, s) => {
+    await env.DB.prepare("DELETE FROM ministry_ledger WHERE id = ?").bind(id).run();
+    await audit(s, "delete", "ledger", id);
     return json({ ok: true });
   }));
 
