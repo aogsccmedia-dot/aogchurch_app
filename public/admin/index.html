@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css?v=71d32040ea">
   <link rel="stylesheet" href="/css/pages.css?v=f4b776d3c6">
-  <link rel="stylesheet" href="/css/admin.css?v=f65233ecdb">
+  <link rel="stylesheet" href="/css/admin.css?v=c63439dfdf">
   <script src="/js/switch-boot.js?v=8f652f4915"></script>
 </head>
 <body class="admin">
@@ -59,7 +59,7 @@
         <button data-tab="scan">Door scanner</button>
         <button data-tab="services">Weekly services</button>
         <button data-tab="programme">Church programme</button>
-        <button data-tab="report">Board report</button>
+        <button data-tab="report">Reports <span class="admin-only-dot" title="Admins only"></span></button>
         <button data-tab="letters">Weekly letter</button>
         <button data-tab="subscribers">Subscribers</button>
         <button data-tab="prayers">Prayer <span class="badge" data-count="prayer_total"></span></button>
@@ -317,13 +317,23 @@
       </section>
 
       <section data-view="report" hidden>
-        <header class="vh no-print"><div><p class="eyebrow gold">For the church board</p><h1>Board report</h1><p class="muted">Money per event and ministry, attendance, spiritual growth and membership for any period. Print it or save it as a PDF.</p></div></header>
+        <header class="vh no-print"><div><p class="eyebrow gold">Reports <span class="admins-only">Admins only</span></p><h1>Reports</h1><p class="muted">Clear, printable reports for leaders. Only signed-in admins can see these.</p></div>
+          <div class="seg" id="rep-kind"><button data-k="ministry" class="on">Ministry report</button><button data-k="board">Church board</button></div></header>
+        <div id="rep-ministry">
+          <div class="card report-controls no-print">
+            <div class="row"><label>Ministry <select class="input" id="mr-group" data-groups></select></label><label>Year <select class="input" id="mr-year"></select></label>
+              <button class="btn" type="button" id="mr-print">Print / save PDF</button></div>
+          </div>
+          <article class="report-doc" id="ministry-doc"><p class="muted">Loading…</p></article>
+        </div>
+        <div id="rep-board" hidden>
         <div class="card report-controls no-print">
           <div class="seg" id="rep-presets"><button data-p="month">This month</button><button data-p="lastmonth">Last month</button><button data-p="quarter" class="on">This quarter</button><button data-p="lastquarter">Last quarter</button><button data-p="year">This year</button><button data-p="lastyear">Last year</button></div>
           <div class="row"><label>From <input class="input" type="date" id="rep-from"></label><label>To <input class="input" type="date" id="rep-to"></label>
             <button class="btn btn-gold" type="button" id="rep-go">Create report</button><button class="btn" type="button" id="rep-print">Print / save PDF</button><a class="btn" id="rep-csv">Download CSV</a></div>
         </div>
         <article class="report-doc" id="report-doc"><p class="muted">Choose a period and tap “Create report”.</p></article>
+        </div>
       </section>
 
       <section data-view="programme" hidden>
@@ -375,6 +385,6 @@
   <dialog class="drawer" id="session-drawer"><form class="drawer-body" id="session-form" novalidate></form></dialog>
   <dialog class="drawer" id="services-drawer"><div class="drawer-body" id="services-body"></div></dialog>
   <dialog class="drawer" id="member-drawer"><div class="drawer-body" id="member-body"></div></dialog>
-  <script type="module" src="/js/admin.js?v=79efc92e3f"></script>
+  <script type="module" src="/js/admin.js?v=949e49018c"></script>
 </body>
 </html>

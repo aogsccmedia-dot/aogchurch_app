@@ -465,3 +465,37 @@ details.card[open] > summary::before { content: "–"; }
 .scanner .scan-controls, .scanner .scan-log-wrap { display: none; }
 .m-top-actions { display: flex; gap: 6px; align-items: center; }
 #to-profile { width: 100%; }
+
+/* Reports: admins-only marking + the ministry report */
+.admins-only { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(214, 166, 80, .5); color: var(--gold); font-size: 10.5px; letter-spacing: .12em; vertical-align: 1px; }
+.admin-only-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); margin-left: 6px; vertical-align: 2px; }
+.rep-badge { margin-left: auto; align-self: start; padding: 5px 10px; border-radius: 999px; background: #1c1712; color: #f6d28b; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+@media (max-width: 560px) { .rep-head { flex-wrap: wrap; } .rep-badge { margin-left: 0; } }
+.report-doc .pos { color: #1f7a45; }
+.report-doc .neg { color: #b4321f; }
+.rep-bars { display: flex; align-items: flex-end; gap: 6px; height: 190px; padding: 18px 0 0; overflow-x: auto; border-bottom: 1px solid #eadfcd; }
+.rb { flex: 1 0 34px; display: grid; grid-template-rows: auto 1fr auto; justify-items: center; height: 100%; min-width: 34px; }
+.rb i { align-self: end; width: 70%; max-width: 30px; border-radius: 6px 6px 2px 2px; background: linear-gradient(#d6a650, #b9853a); }
+.rb-v { font-size: 11px; color: #5e544a; font-variant-numeric: tabular-nums; }
+.rb-l { font-size: 10.5px; color: #7b7064; margin-top: 4px; white-space: nowrap; }
+.rep-note { margin: 10px 0 0; font-size: 13px; color: #7b7064; }
+.rep-note.warn { padding: 10px 12px; border-radius: 10px; background: #fbf3e4; color: #6b4d12; }
+.rep-note a { color: #9a6a1f; }
+.mini-bar { display: block; height: 4px; border-radius: 4px; margin: 4px 0 0 auto; }
+.mini-bar.in { background: #3fae6d; }
+.mini-bar.out { background: #d0604d; }
+.rep-table tr.cancelled td { background: #faf6ef; }
+.ledger-add { display: grid; gap: 8px; margin-top: 14px; padding: 14px; border-radius: 12px; background: #fbf7f0; border: 1px dashed #d6c7ad; color: #3a322a; font-size: 14px; }
+.ledger-add .row { display: flex; flex-wrap: wrap; gap: 8px; }
+.ledger-add .input { background: #fff; color: #1c1712; border-color: #d6c7ad; min-height: 40px; width: auto; flex: 1 1 130px; }
+.link-btn { background: none; border: 0; color: #9a6a1f; font: inherit; font-size: 12.5px; cursor: pointer; text-decoration: underline; padding: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.chips span { padding: 5px 10px; border-radius: 999px; background: #f3ece0; font-size: 13px; color: #3a322a; }
+.chips b { color: #9a6a1f; font-weight: 600; }
+.rep-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; color: #3a322a; }
+.rep-two { gap: 28px; align-items: start; }
+.rep-notes { padding: 16px 18px; border-radius: 12px; background: #fbf7f0; border: 1px solid #eadfcd; font-size: 14px; color: #3a322a; }
+.rep-notes p { margin: 0 0 8px; }
+@media print { .rep-badge { background: none; color: #1c1712; border: 1px solid #1c1712; } .rep-bars { break-inside: avoid; } #rep-board[hidden], #rep-ministry[hidden] { display: none !important; } }
+.rep-kpis b span.pos, .rep-kpis b span.neg { font-size: inherit; letter-spacing: normal; text-transform: none; }
+.report-doc .rep-kpis b span.pos { color: #1f7a45; } .report-doc .rep-kpis b span.neg { color: #b4321f; }

@@ -3,9 +3,13 @@
 
 export function initInsights(ctx) {
   const { api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate } = ctx;
-  const R = (n) => "R" + Math.round(Number(n || 0)).toLocaleString("en-ZA").replace(/,/g, " ");
-  const R2 = (n) => "R" + Number(n || 0).toLocaleString("en-ZA", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).replace(/,/g, " ");
-  const num = (n) => Number(n || 0).toLocaleString("en-ZA").replace(/,/g, " ");
+  const R = (n) => R2(Math.round(Number(n || 0)));
+  // Rands, formatted by hand so every browser shows "R10 536.20" the same way.
+  const R2 = (n) => {
+    const v = Math.round(Number(n || 0) * 100) / 100, abs = Math.abs(v), whole = Math.floor(abs), cents = Math.round((abs - whole) * 100);
+    return (v < 0 ? "−R" : "R") + String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + (cents ? "." + String(cents).padStart(2, "0") : "");
+  };
+  const num = (n) => String(Math.round(Number(n || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
   const day = (iso) => new Intl.DateTimeFormat("en-ZA", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(iso.slice(0, 10) + "T12:00:00Z"));
   const longDay = (iso) => new Intl.DateTimeFormat("en-ZA", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Johannesburg" }).format(new Date(iso));
@@ -156,7 +160,7 @@ export function initInsights(ctx) {
         <header><span class="svc-day">${esc(w.day_label.slice(0, 3))}</span><span><b>${esc(w.title)}</b><small>${esc(w.time || "")}${w.time ? " · " : ""}${esc(w.group_label)}</small></span></header>
         <div class="svc-slot">${sNext ? `${sNext.poster_url ? `<img src="${esc(sNext.poster_url)}" alt="">` : ""}<span><em>${isToday ? "Today" : esc(day(next))}</em>${esc(sNext.topic)}</span><button class="btn btn-sm" data-edit-session="${esc(sNext.id)}">${isToday ? "Add results" : "Edit"}</button>`
           : `<span><em>${isToday ? "Today" : "Next · " + esc(day(next))}</em><span class="muted">No topic yet</span></span><button class="btn btn-sm btn-gold" data-new-session="${esc(w.id)}" data-date="${esc(next)}">Plan</button>`}</div>
-        ${prev && !isToday ? (sPrev ? (sPrev.attendance == null ? `<div class="svc-slot due"><span><em>Last · ${esc(day(prev))}</em>${esc(sPrev.topic)}</span><button class="btn btn-sm btn-gold" data-edit-session="${esc(sPrev.id)}">Add results</button></div>`
+        ${prev && !isToday ? (sPrev ? (sPrev.status === "cancelled" ? `<div class="svc-slot done"><span><em>Last · ${esc(day(prev))}</em><span class="muted">No service: ${esc(sPrev.cancel_reason || "")}</span></span><button class="btn btn-sm btn-ghost" data-edit-session="${esc(sPrev.id)}">Edit</button></div>` : sPrev.attendance == null ? `<div class="svc-slot due"><span><em>Last · ${esc(day(prev))}</em>${esc(sPrev.topic)}</span><button class="btn btn-sm btn-gold" data-edit-session="${esc(sPrev.id)}">Add results</button></div>`
           : `<div class="svc-slot done"><span><em>Last · ${esc(day(prev))}</em>${num(sPrev.attendance)} people${sPrev.salvations ? ` · ${num(sPrev.salvations)} saved` : ""}${money(sPrev) ? ` · ${R2(money(sPrev))}` : ""}</span><button class="btn btn-sm btn-ghost" data-edit-session="${esc(sPrev.id)}">View</button></div>`)
           : `<div class="svc-slot due"><span><em>Last · ${esc(day(prev))}</em><span class="muted">Not recorded</span></span><button class="btn btn-sm" data-new-session="${esc(w.id)}" data-date="${esc(prev)}">Record</button></div>`) : ""}
       </article>`;
@@ -166,7 +170,7 @@ export function initInsights(ctx) {
     $("#svc-sessions").innerHTML = list.length ? list.map((s) => `<button class="item svc-rec" type="button" data-edit-session="${esc(s.id)}">
         ${s.poster_url ? `<img src="${esc(s.poster_url)}" alt="" loading="lazy">` : `<span class="ph"></span>`}
         <span class="svc-rec-main"><b>${esc(s.topic)}</b><small>${esc(day(s.date))} · ${esc(s.service_title)}${s.speaker ? ` · ${esc(s.speaker)}` : ""}</small></span>
-        <span class="svc-rec-nums">${s.attendance != null ? `<span><b>${num(s.attendance)}</b> came</span>` : s.date > SVC.today ? `<span class="pill new">Planned</span>` : `<span class="pill pending">Add results</span>`}${s.salvations ? `<span><b>${num(s.salvations)}</b> saved</span>` : ""}${money(s) ? `<span><b>${R2(money(s))}</b></span>` : ""}</span></button>`).join("")
+        <span class="svc-rec-nums">${s.status === "cancelled" ? `<span class="pill">No service</span>` : s.attendance != null ? `<span><b>${num(s.attendance)}</b> came</span>` : s.date > SVC.today ? `<span class="pill new">Planned</span>` : `<span class="pill pending">Add results</span>`}${s.salvations ? `<span><b>${num(s.salvations)}</b> saved</span>` : ""}${money(s) ? `<span><b>${R2(money(s))}</b></span>` : ""}</span></button>`).join("")
       : `<div class="empty">No services recorded yet.</div>`;
   }
   $("#svc-filter").addEventListener("change", drawServices);
@@ -193,15 +197,18 @@ export function initInsights(ctx) {
             <input class="input" type="date" name="date_other" hidden style="margin-top:8px">
             <label class="check" data-otherday hidden><input type="checkbox" name="other_day" value="1"> Held on a different day this time</label></div>
         </div>
-        <div class="field"><label>Topic or theme <span class="req"></span></label><input class="input" name="topic" maxlength="200" required value="${val("topic")}" placeholder="e.g. Walking by faith"></div>
-        <div class="grid-2"><div class="field"><label>Speaker</label><input class="input" name="speaker" maxlength="120" value="${val("speaker")}" placeholder="Pastor …"></div>
-          <div class="field"><label>Scripture</label><input class="input" name="scripture" maxlength="160" value="${val("scripture")}" placeholder="Hebrews 11:1–6"></div></div>
-        <div class="field"><label>Poster <span class="req"></span></label>
+        <label class="check no-svc"><input type="checkbox" name="cancelled" ${sess?.status === "cancelled" ? "checked" : ""}> No service this week</label>
+        <div class="field" data-when-cancelled hidden><label>Why was there no service? <span class="req"></span></label><input class="input" name="cancel_reason" maxlength="200" value="${val("cancel_reason")}" placeholder="e.g. Easter weekend, Youth Quarterly, church prayer night"></div>
+        <div class="field" data-when-held><label>Topic or theme <span class="req"></span></label><input class="input" name="topic" maxlength="200" required value="${val("topic")}" placeholder="e.g. Walking by faith"></div>
+        <div class="grid-2" data-when-held><div class="field"><label>Speaker</label><input class="input" name="speaker" maxlength="120" value="${val("speaker")}" placeholder="Pastor …"></div>
+          <div class="field"><label>MC</label><input class="input" name="mc" maxlength="120" value="${val("mc")}" placeholder="Who led the night"></div></div>
+        <div class="field" data-when-held><label>Scripture</label><input class="input" name="scripture" maxlength="160" value="${val("scripture")}" placeholder="Hebrews 11:1–6"></div>
+        <div class="field" data-when-held><label>Poster <span class="req"></span></label>
           <div class="poster-pick"><img alt="" ${sess?.poster_url ? `src="${esc(sess.poster_url)}"` : "hidden"}><label class="btn btn-sm"><input type="file" name="poster" accept="image/jpeg,image/png,image/webp" hidden>${sess?.poster_url ? "Change poster" : "Choose poster image"}</label></div>
           <small class="hint">JPG, PNG or WebP. Shown on the website for the coming week.</small></div>
-        <div class="field"><label>Summary</label><textarea class="input" name="summary" maxlength="3000" rows="3" placeholder="Key points from the message">${val("summary")}</textarea></div>
+        <div class="field" data-when-held><label>Summary</label><textarea class="input" name="summary" maxlength="3000" rows="3" placeholder="Key points from the message">${val("summary")}</textarea></div>
       </div>
-      <details class="card" ${sess && sess.date <= SVC.today ? "open" : ""}><summary><b>How it went</b> <span class="muted small">add after the service</span></summary>
+      <details class="card" data-when-held ${sess && sess.date <= SVC.today ? "open" : ""}><summary><b>How it went</b> <span class="muted small">add after the service</span></summary>
         <h4 class="mini-h">Attendance</h4><div class="num-grid">${COUNTS.map(([k, l]) => `<label class="field"><span>${l}</span><input class="input" name="${k}" type="number" inputmode="numeric" min="0" step="1" value="${val(k)}"></label>`).join("")}</div>
         <h4 class="mini-h">Spiritual growth</h4><div class="num-grid">${GROWTH.map(([k, l]) => `<label class="field"><span>${l}</span><input class="input" name="${k}" type="number" inputmode="numeric" min="0" step="1" value="${val(k)}"></label>`).join("")}</div>
         <h4 class="mini-h">Money received (Rands)</h4><div class="num-grid">${MONEY.map(([k, l]) => `<label class="field"><span>${l}</span><input class="input" name="${k}" inputmode="decimal" placeholder="0.00" value="${esc(moneyVal(k))}"></label>`).join("")}</div>
@@ -218,6 +225,8 @@ export function initInsights(ctx) {
     };
     svcSel.addEventListener("change", fillDates); fillDates();
     pick.addEventListener("change", () => { const o = pick.value === "other"; other.hidden = !o; $("[data-otherday]", f).hidden = !o; if (o) other.focus(); });
+    const syncCancelled = () => { const c = f.cancelled.checked; $$("[data-when-held]", f).forEach((el) => { el.hidden = c; }); $$("[data-when-cancelled]", f).forEach((el) => { el.hidden = !c; }); };
+    f.cancelled.addEventListener("change", syncCancelled); syncCancelled();
     const file = f.poster, img = $(".poster-pick img", f);
     file.addEventListener("change", () => { const x = file.files[0]; if (x) { img.src = URL.createObjectURL(x); img.hidden = false; file.closest("label").lastChild.textContent = "Change poster"; } });
     f.onsubmit = (e) => { e.preventDefault(); saveSession(sess); };
@@ -231,14 +240,16 @@ export function initInsights(ctx) {
   function saveSession(sess) {
     const dlg = $("#session-drawer"), f = $("#session-form"), err = $("#ss-error", f);
     const date = f.date_pick.value === "other" ? f.date_other.value : f.date_pick.value;
-    const problems = [];
-    if (!f.topic.value.trim()) problems.push("the topic");
+    const problems = [], noService = f.cancelled.checked;
+    if (noService && !f.cancel_reason.value.trim()) problems.push("why there was no service");
+    if (!noService && !f.topic.value.trim()) problems.push("the topic");
     if (!date) problems.push("the date");
-    if (!sess?.poster_url && !f.poster.files.length) problems.push("the poster image");
+    if (!noService && !sess && !f.poster.files.length) problems.push("the poster image");
     if (problems.length) { err.textContent = `Please add ${problems.join(", ")}.`; err.hidden = false; err.scrollIntoView({ block: "nearest" }); return; }
     const fd = new FormData(f);
     fd.set("date", date); fd.delete("date_pick"); fd.delete("date_other");
     if (sess) fd.set("service_id", sess.service_id);
+    fd.set("status", noService ? "cancelled" : "held"); fd.delete("cancelled");
     if (!f.poster.files.length) fd.delete("poster");
     // Close straight away; the upload finishes in the background. If it fails, the form comes back as you left it.
     dlg.close();
@@ -299,7 +310,97 @@ export function initInsights(ctx) {
     if (!META.groups.length) await loadMeta();
     if (!$("#rep-from").value) { const [a, b] = preset("quarter"); $("#rep-from").value = a; $("#rep-to").value = b; }
     syncCsv();
+    const ys = $("#mr-year");
+    if (!ys.options.length) { const y = Number(META.today.slice(0, 4)); ys.innerHTML = [y, y - 1, y - 2].map((v) => `<option>${v}</option>`).join(""); }
+    if (!$("#mr-group").dataset.init) { $("#mr-group").value = "youth"; $("#mr-group").dataset.init = "1"; }   // Youth by default
+    if (!$("#rep-ministry").hidden) await ministryReport();
   };
+  $("#rep-kind").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-k]"); if (!b) return;
+    $$("#rep-kind button").forEach((x) => x.classList.toggle("on", x === b));
+    $("#rep-ministry").hidden = b.dataset.k !== "ministry"; $("#rep-board").hidden = b.dataset.k !== "board";
+    if (b.dataset.k === "ministry") safe(ministryReport)();
+  });
+  ["mr-group", "mr-year"].forEach((id) => $("#" + id).addEventListener("change", () => safe(ministryReport)()));
+  $("#mr-print").addEventListener("click", () => window.print());
+
+  // ------------------------------------------------------------ ministry report (Youth by default), admins only
+  const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const shortDay = (d) => new Intl.DateTimeFormat("en-ZA", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(d + "T12:00:00Z"));
+  async function ministryReport() {
+    const doc = $("#ministry-doc");
+    const group = $("#mr-group").value || "youth", year = $("#mr-year").value || META.today.slice(0, 4);
+    doc.innerHTML = `<p class="muted">Preparing the report…</p>`;
+    const { report: r } = await api(`/api/admin/reports/ministry?group=${encodeURIComponent(group)}&year=${year}`);
+    const t = r.totals, sessionsHeld = r.sessions.filter((x) => x.status !== "cancelled");
+    const fmtD = (d) => new Intl.DateTimeFormat("en-ZA", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(d + "T12:00:00Z"));
+    const label = r.group_label;
+    const so = r.to.slice(0, 4) === META.today.slice(0, 4) ? "so far" : "";
+    const leftCls = t.left >= 0 ? "pos" : "neg";
+    const bars = sessionsHeld.filter((x) => x.attendance != null);
+    const maxA = Math.max(1, ...bars.map((x) => x.attendance));
+    const maxM = Math.max(1, ...r.months.map((m) => Math.max(m.offerings + m.other_in, m.out)));
+    const reasons = r.sessions.filter((x) => x.status === "cancelled");
+    const table = (head, rows, foot = "") => `<table class="rep-table"><thead><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.length ? rows.join("") : `<tr><td colspan="${head.length}" class="muted">Nothing recorded yet.</td></tr>`}</tbody>${foot ? `<tfoot>${foot}</tfoot>` : ""}</table>`;
+    doc.innerHTML = `
+      <header class="rep-head"><img src="/assets/logo-192.png" alt="" width="56" height="56"><div><p>AOG Sandton City Church · ${esc(label)}</p><h1>${esc(label)} report ${esc(r.year)}${so ? " (so far)" : ""}</h1><span>${esc(fmtD(r.from))} to ${esc(fmtD(r.to))}</span></div><span class="rep-badge">Admins only · Confidential</span></header>
+
+      <section><h2>At a glance</h2>
+        <p class="rep-story">${t.held ? `${esc(label)} met <b>${plural(t.held, "time")}</b> this year${so ? " so far" : ""}${t.counted ? `, reaching <b>${num(t.attendance)} people</b> in total (about <b>${num(t.average)} a night</b>)` : ""}.` : `Nothing has been recorded for ${esc(label)} yet this year.`}
+          ${r.best ? ` The biggest night was <b>${esc(r.best.topic)}</b> on ${esc(shortDay(r.best.date))} with ${num(r.best.attendance)} people.` : ""}
+          ${t.offerings || t.out ? ` Offerings brought in <b>${R2(t.offerings)}</b>${t.other_in ? ` (plus ${R2(t.other_in)} other income)` : ""}, ${R2(t.out)} went out to monthlies, quarterlies and conventions, leaving <b class="${leftCls}">${R2(t.left)}</b> to spend.` : ""}
+          ${t.cancelled ? ` On ${plural(t.cancelled, "Friday")} there was no service (church-wide events, holidays and other reasons, listed below).` : ""}</p>
+        <div class="rep-kpis">${[[num(t.held), "Services held"], [num(t.attendance), "People reached"], [t.average != null ? num(t.average) : "—", "Average a night"], [r.best ? num(r.best.attendance) : "—", "Best night"],
+          [R2(t.offerings + t.other_in), "Money in"], [R2(t.out), "Money out"], [`<span class="${leftCls}">${R2(t.left)}</span>`, "Left to spend"], [num(t.cancelled), "No-service Fridays"]].map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join("")}</div>
+      </section>
+
+      <section><h2>Attendance, night by night</h2>
+        ${bars.length ? `<div class="rep-bars" role="img" aria-label="Attendance per service">${bars.map((x) => `<div class="rb" title="${esc(x.topic)}: ${x.attendance}"><span class="rb-v">${x.attendance}</span><i style="height:${(x.attendance / maxA) * 100}%"></i><span class="rb-l">${esc(shortDay(x.date))}</span></div>`).join("")}</div>
+          <p class="rep-note">Each bar is one service. Nights without a head count aren't shown.</p>` : `<p class="muted">No head counts recorded yet.</p>`}
+      </section>
+
+      <section><h2>Month by month</h2>
+        ${table(["Month", "Services", "No service", "People", "Avg", "Money in", "Money out", "Net", "Balance"], r.months.filter((m) => m.services || m.cancelled || m.offerings || m.out || m.other_in).map((m) => `<tr><td>${MONTHS[Number(m.month) - 1]}</td><td class="n">${num(m.services)}</td><td class="n">${m.cancelled ? num(m.cancelled) : "—"}</td><td class="n">${m.attendance ? num(m.attendance) : "—"}</td><td class="n">${m.average ?? "—"}</td>
+          <td class="n">${R2(m.offerings + m.other_in)}<span class="mini-bar in" style="width:${((m.offerings + m.other_in) / maxM) * 60}px"></span></td><td class="n">${m.out ? R2(m.out) : "—"}${m.out ? `<span class="mini-bar out" style="width:${(m.out / maxM) * 60}px"></span>` : ""}</td>
+          <td class="n ${m.net >= 0 ? "pos" : "neg"}">${R2(m.net)}</td><td class="n ${m.running >= 0 ? "pos" : "neg"}"><b>${R2(m.running)}</b></td></tr>`),
+          `<tr><th>Total</th><th class="n">${num(t.held)}</th><th class="n">${num(t.cancelled)}</th><th class="n">${num(t.attendance)}</th><th class="n">${t.average ?? "—"}</th><th class="n">${R2(t.offerings + t.other_in)}</th><th class="n">${R2(t.out)}</th><th class="n ${leftCls}" colspan="2">${R2(t.left)} left</th></tr>`)}
+      </section>
+
+      <section><h2>Where the money went</h2>
+        ${table(["Date", "What for", "Amount", ""], r.ledger.map((l) => `<tr><td>${esc(shortDay(l.date))}</td><td>${esc(l.category)}${l.note ? ` <span class="muted">· ${esc(l.note)}</span>` : ""}</td><td class="n ${l.direction === "in" ? "pos" : ""}">${l.direction === "in" ? "+" : "−"}${R2(l.amount_cents / 100)}</td><td class="n no-print"><button class="link-btn" data-del-ledger="${esc(l.id)}">Remove</button></td></tr>`))}
+        <form class="ledger-add no-print" id="ledger-add"><b>Add money in or out</b>
+          <div class="row"><input class="input" type="date" name="date" value="${esc(META.today)}" required><select class="input" name="direction"><option value="out">Money out</option><option value="in">Money in</option></select>
+          <input class="input" name="category" placeholder="e.g. Youth Monthly bag" required maxlength="120"><input class="input" name="amount" inputmode="decimal" placeholder="Amount (R)" required><button class="btn btn-gold btn-sm" type="submit">Add</button></div></form>
+      </section>
+
+      <section><h2>The programme</h2>
+        ${table(["Date", "Theme / activity", "Speaker", "MC", "People", "Offering"], r.sessions.map((x) => x.status === "cancelled"
+          ? `<tr class="cancelled"><td>${esc(shortDay(x.date))}</td><td colspan="5"><span class="muted">No service: ${esc(x.reason || "")}</span></td></tr>`
+          : `<tr><td>${esc(shortDay(x.date))}</td><td>${esc(x.topic)}</td><td>${esc(x.speaker || "—")}</td><td>${esc(x.mc || "—")}</td><td class="n">${x.attendance ?? "—"}</td><td class="n">${x.money != null ? R2(x.money) : "—"}</td></tr>`))}
+        ${r.missing.length ? `<p class="rep-note warn"><b>${plural(r.missing.length, "date")} not recorded yet:</b> ${r.missing.map((m) => esc(shortDay(m.date))).join(", ")}. <a class="no-print" href="#services">Record them in Weekly services →</a></p>` : ""}
+      </section>
+
+      <section class="grid-2 rep-two"><div><h2>Who served</h2>
+          ${r.speakers.length || r.mcs.length ? `<h3>Speakers & facilitators</h3><p class="chips">${r.speakers.map(([n2, c]) => `<span>${esc(n2)}${c > 1 ? ` <b>×${c}</b>` : ""}</span>`).join("")}</p><h3>MCs</h3><p class="chips">${r.mcs.map(([n2, c]) => `<span>${esc(n2)}${c > 1 ? ` <b>×${c}</b>` : ""}</span>`).join("") || "<span class='muted'>None recorded</span>"}</p>` : `<p class="muted">Not recorded yet.</p>`}</div>
+        <div><h2>Fridays with no service</h2>${reasons.length ? `<ul class="rep-list">${reasons.map((x) => `<li><b>${esc(shortDay(x.date))}</b> ${esc(x.reason || "")}</li>`).join("")}</ul>` : `<p class="muted">None.</p>`}</div>
+      </section>
+
+      ${r.imported ? `<section class="rep-notes"><h2>About these figures</h2>
+        <p>Records up to August were imported from the youth team's spreadsheet. Newer services are recorded in Weekly services, so this report stays up to date on its own.</p>
+        <p><b>One correction:</b> in the spreadsheet, the 27 February Prayer Night offering (R1 945,20) was typed with a comma, so it was saved as text and left out of the sheet's totals. The sheet therefore showed February as R3 754 and a year balance of −R359. With it included, February's offerings (with the 2 January Youth Monthly) were R5 699.20 and the balance is a <b>positive</b> R1 586.20 (before anything recorded since).</p>
+        <p>The 2 January Youth Monthly sits in the sheet's February block; here it counts in January.</p></section>` : ""}
+      <footer class="rep-foot">Prepared ${esc(fmtDate(r.generated_at))} for church leaders. Admins only: please don't share outside the leadership.</footer>`;
+    $("#ledger-add").onsubmit = safe(async (e) => {
+      e.preventDefault(); const f = e.target;
+      await api("/api/admin/ledger", { method: "POST", body: { ministry_group: group, date: f.date.value, direction: f.direction.value, category: f.category.value, amount: f.amount.value } });
+      toast("Added"); ministryReport();
+    });
+    doc.onclick = safe(async (e) => {
+      const b = e.target.closest("[data-del-ledger]"); if (!b || !confirm("Remove this line?")) return;
+      b.closest("tr").remove();
+      await api(`/api/admin/ledger/${b.dataset.delLedger}`, { method: "DELETE" }); toast("Removed"); ministryReport();
+    });
+  }
   const syncCsv = () => { $("#rep-csv").href = `/api/admin/report.csv?from=${$("#rep-from").value}&to=${$("#rep-to").value}`; };
   $("#rep-presets").addEventListener("click", (e) => {
     const b = e.target.closest("[data-p]"); if (!b) return;

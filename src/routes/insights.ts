@@ -202,8 +202,10 @@ async function ministryReport(env: Env, group: string, year: number) {
   // Expected dates with no record at all (so gaps are visible, not hidden).
   const recorded = new Set(sessions.map((x) => `${x.service_id}|${x.date}`));
   const missing: { date: string; service: string }[] = [];
+  // Count gaps from the first service recorded this year (e.g. the youth year started in February).
+  const firstHeld = sessions.map((x) => String(x.date)).filter((d) => d > `${year}-01-05`).sort()[0] || from;
   for (const sv of svcs.filter((x) => x.active)) {
-    let d = nextOccurrence(sv.day, from);
+    let d = nextOccurrence(sv.day, firstHeld);
     while (d <= to && d < today) { if (!recorded.has(`${sv.id}|${d}`)) missing.push({ date: d, service: sv.title }); d = occurrences(sv.day, 0, 1, d)[1]; }
   }
   const lastMonth = Number(to.slice(5, 7));
