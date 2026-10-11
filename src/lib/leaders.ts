@@ -22,7 +22,13 @@ const FIRST_ASK_HOURS = 24, REASK_DAYS = 3, ESCALATE_AFTER = 4;
 export interface Leader { id: string; email: string; name: string; caring: number }
 
 /** Admins who can be leaders, with how many confirmed members each already cares for. */
+/** "kagiso moloto" → "Kagiso Moloto" (Google names are sometimes typed in lowercase). */
+export const niceName = (n: string) => (n.includes("@") ? n : n.trim().replace(/\s+/g, " ").replace(/(^|[\s'-])(\p{Ll})/gu, (_m, a, c) => a + c.toUpperCase()));
+
 export async function leaders(env: Env): Promise<Leader[]> {
+  return (await leadersRaw(env)).map((l) => ({ ...l, name: niceName(l.name) }));
+}
+async function leadersRaw(env: Env): Promise<Leader[]> {
   const { results } = await env.DB.prepare(
     `SELECT u.id, u.email, COALESCE(NULLIF(u.given_name, ''), NULLIF(u.name, ''), u.email) AS name,
        (SELECT COUNT(*) FROM members m WHERE m.leader_user_id = u.id AND m.status = 'member') AS caring
