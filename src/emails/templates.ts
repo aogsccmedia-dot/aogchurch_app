@@ -589,3 +589,53 @@ export function memberLeaderIntro(b: Brand, o: { name: string; leader: string })
     text: `Hi ${o.name},\n\n${o.leader} from our leadership team will be your leader at AOG Sandton City Church and will be in touch soon.\n\n"Carry each other's burdens." Galatians 6:2\n\n${b.site}/me` + textFooter(b),
   };
 }
+
+// ---------------------------------------------------------------- SCC Presenter beta
+
+export function accountCode(b: Brand, code: string) {
+  const spaced = code.split("").join(" ");
+  return {
+    subject: `${code} is your verification code`,
+    html: layout(b, {
+      preheader: `Your code is ${code}. It expires in 10 minutes.`,
+      eyebrow: "Confirm your email",
+      heading: "Here's your code",
+      content: p("Enter this code to confirm your email and set your password:") +
+        `<p style="margin:22px 0;font:600 34px/1 ${SANS};letter-spacing:.24em;color:${C.ink};background:${C.goldSoft};border-radius:12px;padding:20px;text-align:center">${esc(spaced)}</p>` +
+        p("The code expires in 10 minutes. If this wasn't you, you can ignore this email."),
+    }),
+    text: `Your verification code is ${code}. It expires in 10 minutes.` + textFooter(b),
+  };
+}
+
+export function presenterWelcome(b: Brand, o: { name: string; slot: number; key: string }) {
+  return {
+    subject: `You're beta tester #${o.slot} for SCC Presenter`,
+    html: layout(b, {
+      preheader: `Your beta key is ${o.key}. Download SCC Presenter for Windows or Mac.`,
+      eyebrow: "SCC Presenter beta",
+      heading: `Welcome to the beta, ${esc(o.name)}`,
+      content: p(`Thank you for helping us test SCC Presenter. You're tester <strong>#${o.slot} of 20</strong>.`) +
+        p(`Your beta key: <strong style="font-size:18px;letter-spacing:.06em">${esc(o.key)}</strong>. Type it in the app under Settings → Beta so your feedback reaches us.`) +
+        p("Please try it at a real service or rehearsal, then tap <strong>Feedback</strong> in the app's top bar. Tell us what worked, what was confusing and what broke. The beta runs until 31 December 2026; the full release arrives on 31 January 2027.") +
+        button(b.site + "/presenter", "Download SCC Presenter"),
+    }),
+    text: `Welcome to the SCC Presenter beta, ${o.name}! You're tester #${o.slot} of 20.\nYour beta key: ${o.key}\nDownload: ${b.site}/presenter\nSend feedback from the app's top bar. The beta runs until 31 December 2026.` + textFooter(b),
+  };
+}
+
+export function presenterFeedbackAdmin(b: Brand, o: { tester: string; slot: number; overall: number | null; ease: number | null; good: string; problems: string; missing: string; recommend: string; install: string; source: string }) {
+  const stars = (n: number | null) => (n ? "★".repeat(n) + "☆".repeat(5 - n) : "—");
+  const row = (k: string, v: string) => v ? `<tr><td style="padding:6px 10px 6px 0;color:#7a6f60;vertical-align:top;white-space:nowrap">${esc(k)}</td><td style="padding:6px 0">${esc(v).replace(/\n/g, "<br>")}</td></tr>` : "";
+  return {
+    subject: `Presenter beta feedback from ${o.tester} (${stars(o.overall)})`,
+    html: layout(b, {
+      preheader: `${o.tester} sent beta feedback.`,
+      eyebrow: "SCC Presenter beta",
+      heading: `New feedback from tester #${o.slot}`,
+      content: `<table style="font:15px/1.5 ${SANS};border-collapse:collapse">${row("Tester", o.tester)}${row("From", o.source === "app" ? "The app" : "The website")}${row("Overall", stars(o.overall))}${row("Ease of use", stars(o.ease))}${row("Installed OK", o.install)}${row("Worked well", o.good)}${row("Problems", o.problems)}${row("Missing", o.missing)}${row("Recommend", o.recommend)}</table>` +
+        button(b.site + "/admin#report", "See all feedback"),
+    }),
+    text: `Presenter beta feedback from ${o.tester} (#${o.slot})\nOverall: ${o.overall ?? "-"}/5  Ease: ${o.ease ?? "-"}/5\nWorked well: ${o.good}\nProblems: ${o.problems}\nMissing: ${o.missing}\nRecommend: ${o.recommend}` + textFooter(b),
+  };
+}

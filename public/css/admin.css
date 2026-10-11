@@ -525,3 +525,7 @@ details.card[open] > summary::before { content: "–"; }
 .chip-radio span { display: inline-block; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line-strong, var(--line)); cursor: pointer; font-size: 14px; }
 .chip-radio input:checked + span { border-color: var(--gold); color: var(--gold); background: rgba(214, 166, 80, .1); }
 .chip-radio input:focus-visible + span { outline: 2px solid var(--gold); outline-offset: 2px; }
+#presenter-doc { display: grid; gap: 14px; }
+#presenter-doc .row-item { padding: 12px 0; border-bottom: 1px solid var(--line); display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+#presenter-doc .row-item:last-child { border-bottom: 0; }
+#presenter-doc .fb-item p { margin: 2px 0; }

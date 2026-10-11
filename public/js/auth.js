@@ -31,7 +31,7 @@ export function whenSignedIn(cb) { onSignedIn.push(cb); }
 async function handleCredential(resp) {
   document.querySelectorAll(".gsi-waiting").forEach((el) => el.classList.remove("gsi-waiting"));
   const here = location.pathname.replace(/\.html$/, "");
-  const onMe = here === "/me", midTask = /^\/(join|event|membership|ticket)$/.test(here);
+  const onMe = here === "/me", midTask = /^\/(join|event|membership|ticket|presenter)$/.test(here);
   veilShow(onMe ? "Preparing your member page…" : "Signing you in…");
   try {
     const r = await api("/api/auth/google", { method: "POST", body: { credential: resp.credential } });

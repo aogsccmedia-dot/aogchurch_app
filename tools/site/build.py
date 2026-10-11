@@ -100,6 +100,7 @@ MENU_GROUPS = [
     ("Explore", [("/", "Home"), ("/about", "About us"), ("/our-story", "Our story"), ("/beliefs", "What we believe")]),
     ("Church life", [("/events", "Services &amp; events"), ("/get-involved", "Get involved"), ("/prayer", "Prayer"), ("/visit", "Visit &amp; contact")]),
     ("For you", [("/me", "My profile"), ("/me#complaints", "Raise a concern"), ("/#letter", "Weekly letter"), ("/app", "Get the app")]),
+    ("Tools", [("/tools", "All tools"), ("/presenter", "SCC Presenter · Beta")]),
 ]
 
 
@@ -249,6 +250,8 @@ PAGES = {
     "code-of-conduct": dict(title="Code of conduct" + T, crumb="Code of conduct", desc="How we treat one another at Sandton City Church: respect, honesty, safety, and keeping children and young people safe.", canonical="/code-of-conduct", scripts=["site.js", "auth.js"]),
     "complaints": dict(title="Complaints policy" + T, crumb="Complaints policy", desc="How to raise a complaint at Sandton City Church and what to expect: acknowledgement, a response within 7 working days, confidentiality.", canonical="/complaints", scripts=["site.js", "auth.js"]),
     "data-protection": dict(title="Data protection, POPIA & PAIA" + T, crumb="Data protection", desc="Sandton City Church's data protection standards: Information Officer, security, retention, breach notification and your POPIA/PAIA rights.", canonical="/data-protection", scripts=["site.js", "auth.js"]),
+    "presenter": dict(title="SCC Presenter (Beta) · Free church presentation software" + T, crumb="SCC Presenter", desc="SCC Presenter: free, open-source presentation software for churches. Songs, scripture, video, stage screen, phone remote and OBS output for Windows and Mac. Beta open to the first 20 testers.", canonical="/presenter", scripts=["site.js", "auth.js", "presenter.js"]),
+    "tools": dict(title="Tools" + T, crumb="Tools", desc="Free tools from AOG Sandton City Church: SCC Presenter for Windows and Mac, and the church app.", canonical="/tools", scripts=["site.js", "auth.js"]),
     "app": dict(title="Get the app" + T, crumb="Get the app", desc="Add Sandton City Church to your phone's home screen — iPhone, Android or computer.", canonical="/app", scripts=["site.js", "auth.js"]),
     "ticket": dict(title="Your ticket" + T, desc="Your digital ticket for an event at Sandton City Church.", noindex=True, scripts=["site.js", "auth.js", "ticket.js"]),
     "membership": dict(title="Your membership" + T, body="portal", desc="Confirm or manage your membership at Sandton City Church.", noindex=True, scripts=["site.js", "membership.js"]),

@@ -14,6 +14,7 @@ import { faithRoutes } from "./routes/faith.ts";
 import { ticketRoutes } from "./routes/tickets.ts";
 import { programmeRoutes } from "./routes/programme.ts";
 import { insightsRoutes } from "./routes/insights.ts";
+import { presenterRoutes } from "./routes/presenter.ts";
 import { processAnnouncements } from "./lib/newsletter.ts";
 import { processCheckins, processWelcomes } from "./lib/membership.ts";
 import { processServiceReminders } from "./lib/reminders.ts";
@@ -50,6 +51,7 @@ export default {
       ticketRoutes(router, env);
       programmeRoutes(router, env);
       insightsRoutes(router, env);
+      presenterRoutes(router, env);
       const res = await router.handle(req, ctx);
       return res ?? json({ ok: false, error: "Not found." }, 404);
     } catch (err) {

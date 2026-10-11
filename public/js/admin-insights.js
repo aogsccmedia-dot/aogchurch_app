@@ -358,11 +358,34 @@ export function initInsights(ctx) {
   $("#rep-kind").addEventListener("click", (e) => {
     const b = e.target.closest("[data-k]"); if (!b) return;
     $$("#rep-kind button").forEach((x) => x.classList.toggle("on", x === b));
-    $("#rep-ministry").hidden = b.dataset.k !== "ministry"; $("#rep-board").hidden = b.dataset.k !== "board";
+    $("#rep-ministry").hidden = b.dataset.k !== "ministry"; $("#rep-board").hidden = b.dataset.k !== "board"; $("#rep-presenter").hidden = b.dataset.k !== "presenter";
     if (b.dataset.k === "ministry") safe(ministryReport)();
+    if (b.dataset.k === "presenter") safe(presenterBeta)();
   });
   ["mr-group", "mr-year"].forEach((id) => $("#" + id).addEventListener("change", () => safe(ministryReport)()));
   $("#mr-print").addEventListener("click", () => window.print());
+
+  // ------------------------------------------------------------ SCC Presenter beta: testers, downloads and feedback
+  async function presenterBeta() {
+    const d = await api("/api/admin/presenter");
+    const st = (n) => (n ? "★".repeat(n) + "☆".repeat(5 - n) : "—");
+    const fbs = d.feedback || [], avg = (k) => { const v = fbs.map((f) => f[k]).filter(Boolean); return v.length ? (v.reduce((a, b) => a + b, 0) / v.length).toFixed(1) : "—"; };
+    const dl = Object.fromEntries((d.downloads || []).map((x) => [x.os, x.n]));
+    const tdate = (iso) => iso ? longDay(iso) : "—";
+    $("#presenter-doc").innerHTML = `
+      <div class="kpis">${kpi(`${d.testers.length} / ${d.beta.slots}`, "Testers")}${kpi(num((dl.windows || 0) + (dl.mac || 0)), "Downloads", `Windows ${num(dl.windows || 0)} · Mac ${num(dl.mac || 0)}`)}${kpi(num(fbs.length), "Feedback")}${kpi(avg("overall"), "Average rating", `Ease ${avg("ease")}`)}</div>
+      <p class="muted">Beta runs until ${esc(d.beta.ends)} · full release ${esc(d.beta.fullRelease)} · latest build ${d.release ? "v" + esc(d.release.version) : "being prepared"}.</p>
+      <div class="card"><h3>Testers</h3>${d.testers.length ? `<div class="list">${d.testers.map((t) => `<div class="row-item"><b>#${t.slot} ${esc(t.name || "")}</b> <span class="muted">${esc(t.email)}</span><br><small class="muted">${esc(t.church || "")}${t.role ? " · " + esc(t.role) : ""} · ${esc(t.os || "")} · ${num(t.downloads)} download${t.downloads === 1 ? "" : "s"} · ${num(t.feedback)} feedback · joined ${tdate(t.created_at)}</small></div>`).join("")}</div>` : `<p class="muted">No testers yet. Share aogsccyouth.com/presenter.</p>`}</div>
+      <div class="card"><h3>Feedback</h3>${fbs.length ? fbs.map((f) => {
+        let sys = null; try { sys = f.system ? JSON.parse(f.system) : null; } catch { /* ignore */ }
+        const used = (() => { try { return JSON.parse(f.used || "[]"); } catch { return []; } })();
+        return `<div class="row-item fb-item"><div><b>#${f.slot} ${esc(f.name || f.email)}</b> <span class="muted">${tdate(f.created_at)} · ${f.source === "app" ? "from the app" : "from the website"}${f.version ? " · v" + esc(f.version) : ""}</span></div>
+          <div>Overall <b>${st(f.overall)}</b> · Ease <b>${st(f.ease)}</b>${f.install_ok ? ` · Installed: <b>${esc(f.install_ok)}</b>` : ""}${f.recommend ? ` · Recommend: <b>${esc(f.recommend)}</b>` : ""}</div>
+          ${used.length ? `<div class="muted">Used: ${used.map(esc).join(", ")}</div>` : ""}
+          ${f.good ? `<p><b>Worked well:</b> ${esc(f.good)}</p>` : ""}${f.problems ? `<p><b>Problems:</b> ${esc(f.problems)}</p>` : ""}${f.missing ? `<p><b>Missing:</b> ${esc(f.missing)}</p>` : ""}
+          ${sys ? `<details><summary class="muted">Computer details</summary><small class="muted">${esc([sys.os, sys.cpu && `${sys.cpu} (${sys.cores} cores)`, sys.memoryGB && `${sys.memoryGB} GB`, (sys.gpu || []).map((g) => g.name).filter(Boolean).join(", "), (sys.screens || []).join(", ")].filter(Boolean).join(" · "))}</small></details>` : ""}</div>`;
+      }).join("") : `<p class="muted">No feedback yet.</p>`}</div>`;
+  }
 
   // ------------------------------------------------------------ ministry report (Youth by default), admins only
   const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];

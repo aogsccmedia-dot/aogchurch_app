@@ -29,17 +29,12 @@ export async function leaders(env: Env): Promise<Leader[]> {
   return (await leadersRaw(env)).map((l) => ({ ...l, name: niceName(l.name) }));
 }
 async function leadersRaw(env: Env): Promise<Leader[]> {
+  // Only people with an Admin role are leaders. The main (super) admin account is never given members to look after.
   const { results } = await env.DB.prepare(
     `SELECT u.id, u.email, COALESCE(NULLIF(u.given_name, ''), NULLIF(u.name, ''), u.email) AS name,
        (SELECT COUNT(*) FROM members m WHERE m.leader_user_id = u.id AND m.status = 'member') AS caring
-     FROM admin_roles r JOIN users u ON u.id = r.user_id ORDER BY name`).all<Leader>();
-  if (results.length) return results;
-  // No delegated admins yet: the main admin account looks after everyone.
-  const sup = await env.DB.prepare(
-    `SELECT u.id, u.email, COALESCE(NULLIF(u.given_name, ''), NULLIF(u.name, ''), 'Church admin') AS name,
-       (SELECT COUNT(*) FROM members m WHERE m.leader_user_id = u.id AND m.status = 'member') AS caring
-     FROM users u WHERE lower(u.email) = lower(?)`).bind(adminEmail(env)).first<Leader>();
-  return sup ? [sup] : [];
+     FROM admin_roles r JOIN users u ON u.id = r.user_id WHERE lower(u.email) != lower(?) ORDER BY name`).bind(adminEmail(env)).all<Leader>();
+  return results;
 }
 
 /** Fair pick: fewest people in their care; ties at random. */
