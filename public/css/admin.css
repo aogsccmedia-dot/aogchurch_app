@@ -529,3 +529,21 @@ details.card[open] > summary::before { content: "–"; }
 #presenter-doc .row-item { padding: 12px 0; border-bottom: 1px solid var(--line); display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
 #presenter-doc .row-item:last-child { border-bottom: 0; }
 #presenter-doc .fb-item p { margin: 2px 0; }
+/* Code changes */
+#code-body { display: grid; gap: 14px; }
+#code-body .repo-h { font-size: 18px; margin: 10px 0 0; }
+#code-body .pr { display: grid; gap: 8px; min-width: 0; }
+#code-body .pr-head { display: flex; gap: 10px; align-items: center; min-width: 0; }
+#code-body .pr-head img { border-radius: 50%; flex: none; }
+#code-body .pr-head > div { flex: 1; min-width: 0; display: grid; overflow-wrap: anywhere; }
+#code-body .pill.ok { background: color-mix(in srgb, var(--green, #3ecf8e) 18%, transparent); }
+#code-body .pill.bad { background: color-mix(in srgb, var(--danger, #e5484d) 18%, transparent); }
+#code-body .pill.warn { background: color-mix(in srgb, var(--gold) 18%, transparent); }
+#code-body .checks, #code-body .events { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+#code-body .checks .bad a { color: var(--danger, #e5484d); }
+#code-body .pre { white-space: pre-wrap; }
+#code-body .diff { overflow: auto; max-height: 340px; font-size: 12px; background: var(--bg-2); padding: 8px; border-radius: 8px; }
+#code-body .diff .add { color: #2f9e62; } #code-body .diff .del { color: #d1494e; }
+#code-body .file { margin: 8px 0; }
+#code-body .note ol, #code-body .setup { padding-left: 20px; display: grid; gap: 8px; }
+#code-body code { overflow-wrap: anywhere; }

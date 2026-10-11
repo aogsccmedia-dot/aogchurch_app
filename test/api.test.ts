@@ -972,3 +972,48 @@ describe("door, insights, weekly services and the board report", () => {
     assert.equal(await backfillLeaders(env), 0, "nothing twice");
   });
 });
+
+describe("presenter beta & code changes", () => {
+  test("beta: email + password account, 20 places only, feedback needs a real beta key", async () => {
+    const start = await post("/api/auth/password/start", { email: "tester.a@example.com", password: "longenough1", name: "Tester A" });
+    const { challenge } = await start.json() as { challenge: string };
+    const code = /(\d{6}) is your verification code/.exec(mails("tester.a@example.com").at(-1)!.subject)![1];
+    const v = await post("/api/auth/password/verify", { challenge, code });
+    assert.equal(v.status, 200);
+    const cookie = cookieOf(v);
+    // Fill the other 19 places directly, then try to take a 21st.
+    for (let i = 0; i < 19; i++) {
+      env.DB._db.prepare("INSERT INTO users (id, email) VALUES (?, ?)").run(`bt-${i}`, `bt${i}@example.com`);
+      env.DB._db.prepare("INSERT INTO beta_testers (id, user_id, email, slot, beta_key) VALUES (?,?,?,?,?)").run(`t-${i}`, `bt-${i}`, `bt${i}@example.com`, i + 1, `SCC-TEST-${String(i).padStart(4, "0")}`);
+    }
+    const j = await post("/api/presenter/join", { church: "Test" }, { cookie });
+    assert.equal(j.status, 200);
+    const { tester } = await j.json() as { tester: { slot: number; beta_key: string } };
+    assert.equal(tester.slot, 20);
+    env.DB._db.prepare("INSERT INTO users (id, email, google_sub) VALUES ('late', 'late@example.com', 'g-late')").run();
+    const lateLogin = await post("/api/auth/password/start", { email: "late@example.com", password: "longenough1" });
+    const lc = (await lateLogin.json() as { challenge: string }).challenge;
+    const lcode = /(\d{6}) is your verification code/.exec(mails("late@example.com").at(-1)!.subject)![1];
+    const lateCookie = cookieOf(await post("/api/auth/password/verify", { challenge: lc, code: lcode }));
+    assert.equal((await post("/api/presenter/join", {}, { cookie: lateCookie })).status, 409, "no 21st tester");
+    assert.equal((await post("/api/presenter/feedback", { key: "SCC-NOPE-NOPE", overall: 5 })).status, 403);
+    assert.equal((await post("/api/presenter/feedback", { key: tester.beta_key, overall: 4, good: "Easy", source: "app" })).status, 200);
+    assert.ok(mails("aogsccmedia@gmail.com").some((m) => /Presenter beta feedback/.test(m.subject)));
+  });
+
+  test("GitHub alerts need a valid signature; a new pull request emails the main admin", async () => {
+    const body = JSON.stringify({ action: "opened", repository: { full_name: "aogsccmedia-dot/scc-presenter" }, pull_request: { number: 7, title: "Better slides", user: { login: "helper" }, html_url: "https://github.com/x/pull/7", draft: false, head: { label: "helper:fix" }, base: { ref: "main" }, additions: 3, deletions: 1, changed_files: 1 } });
+    const bad = await call("/api/hooks/github", { method: "POST", headers: { "x-github-event": "pull_request", "x-hub-signature-256": "sha256=00" }, body });
+    assert.equal(bad.status, 401);
+    const secret = (env.DB._db.prepare("SELECT value FROM settings WHERE key = 'github_webhook_secret'").get() as { value: string }).value;
+    const { createHmac } = await import("node:crypto");
+    const sig = "sha256=" + createHmac("sha256", secret).update(body).digest("hex");
+    const ok = await call("/api/hooks/github", { method: "POST", headers: { "x-github-event": "pull_request", "x-hub-signature-256": sig }, body });
+    assert.equal(ok.status, 200);
+    assert.ok(mails("aogsccmedia@gmail.com").some((m) => /New change to review: “Better slides”/.test(m.subject)));
+    const { checksSummary } = await import("../src/routes/code.ts");
+    assert.equal(checksSummary([{ status: "completed", conclusion: "success" }]), "passed");
+    assert.equal(checksSummary([{ status: "completed", conclusion: "failure" }]), "failed");
+    assert.equal(checksSummary([{ status: "in_progress", conclusion: null }]), "running");
+  });
+});

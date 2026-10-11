@@ -365,6 +365,61 @@ export function initInsights(ctx) {
   ["mr-group", "mr-year"].forEach((id) => $("#" + id).addEventListener("change", () => safe(ministryReport)()));
   $("#mr-print").addEventListener("click", () => window.print());
 
+  // ------------------------------------------------------------ Code changes (main admin): pull requests, checks, approve / decline
+  const agoCode = (iso) => { const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`; };
+  const CHECK = { passed: ["ok", "All checks passed"], failed: ["bad", "Checks failed"], running: ["warn", "Checks running…"], none: ["", "No checks yet"] };
+  loaders.code = async () => {
+    const d = await api("/api/admin/code");
+    const total = d.repos.reduce((n, r) => n + r.pulls.filter((p) => !p.draft).length, 0);
+    $("#code-badge").textContent = total || "";
+    const pr = (repo, p) => {
+      const [cls, label] = CHECK[p.checks] || CHECK.none;
+      const ready = p.checks === "passed" && !p.draft && p.to === "main";
+      return `<article class="card pr" data-repo="${esc(repo)}" data-n="${p.number}">
+        <div class="pr-head"><img src="${esc(p.avatar || "")}" alt="" width="28" height="28" loading="lazy"><div><b>#${p.number} ${esc(p.title)}</b><small class="muted">${esc(p.author)} · ${esc(p.from)} → ${esc(p.to)}${p.fromFork ? " · from a fork" : ""} · ${agoCode(p.updated)}</small></div>
+          <span class="pill ${cls}">${p.draft ? "Draft" : label}</span></div>
+        <p class="muted">+${p.additions ?? "?"} −${p.deletions ?? "?"} in ${p.files ?? "?"} files · ${p.commits ?? "?"} commits${p.mergeableState === "dirty" ? " · <b>has conflicts</b>" : ""}</p>
+        ${p.body ? `<details><summary>Description</summary><p class="pre">${esc(p.body)}</p></details>` : ""}
+        ${p.checkList.length ? `<details><summary>Checks (${p.checkList.length})</summary><ul class="checks">${p.checkList.map((c) => `<li class="${c.conclusion === "success" ? "ok" : c.status !== "completed" ? "warn" : c.conclusion === "skipped" || c.conclusion === "neutral" ? "" : "bad"}"><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a> — ${esc(c.status === "completed" ? c.conclusion : c.status)}</li>`).join("")}</ul></details>` : ""}
+        <details class="pr-files"><summary>See the changes</summary><div class="files muted">Loading…</div></details>
+        <div class="row"><button class="btn btn-gold" data-act="approve" ${ready && d.canMerge ? "" : "disabled"} title="${ready ? "" : "Only changes into main with all checks passed can be approved"}">Approve &amp; publish</button>
+          <button class="btn" data-act="decline" ${d.canMerge ? "" : "disabled"}>Ask for changes / decline</button><a class="btn btn-ghost" href="${esc(p.url)}" target="_blank" rel="noopener">Open on GitHub</a></div>
+      </article>`;
+    };
+    $("#code-body").innerHTML = `
+      ${d.canMerge ? "" : `<div class="card note"><b>One more step to approve from here.</b> Until then, approve on GitHub. <ol><li>GitHub → Settings → Developer settings → Fine-grained tokens → Generate. Repository access: <i>aogchurch_app</i> and <i>scc-presenter</i>. Permissions: <i>Contents</i>, <i>Pull requests</i> → Read and write.</li><li>Cloudflare → Workers → aogchurch-app → Settings → Variables and Secrets → Add secret <code>GITHUB_TOKEN</code> → paste → Deploy.</li></ol></div>`}
+      ${d.repos.map((r) => `<h2 class="repo-h">${esc(r.repo.split("/")[1] === "aogchurch_app" ? "Website & admin (aogchurch_app)" : "SCC Presenter app (scc-presenter)")}</h2>
+        ${r.error ? `<p class="muted">Couldn't load: ${esc(r.error)}</p>` : r.pulls.length ? r.pulls.map((p) => pr(r.repo, p)).join("") : `<p class="muted">No changes waiting.</p>`}`).join("")}
+      <div class="card"><h3>Recent activity</h3>${d.events.length ? `<ul class="events">${d.events.map((e) => `<li><span class="muted">${agoCode(e.created_at)}</span> <b>${esc(e.repo.split("/")[1])}</b> ${esc(e.action)} ${e.number ? `#${e.number}` : ""} ${esc(e.title || "")} <span class="muted">${esc(e.author || "")}</span> ${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">open</a>` : ""}</li>`).join("")}</ul>` : `<p class="muted">No activity yet. Connect GitHub alerts below.</p>`}</div>
+      <details class="card"><summary><b>Alerts &amp; collaboration set-up</b> (once per repository)</summary>
+        <ol class="setup">
+          <li><b>Email alerts:</b> on GitHub open each repository → Settings → Webhooks → Add webhook. Payload URL <code>${esc(d.webhook.url)}</code>, Content type <code>application/json</code>, Secret <code class="secret">${esc(d.webhook.secret)}</code> <button class="btn btn-sm" type="button" id="copy-secret">Copy secret</button>. Choose “Let me select individual events”: Pull requests, Pull request reviews, Check suites, Issues, Pushes, Forks.</li>
+          <li><b>Only you approve:</b> Settings → Rules → Rulesets → New branch ruleset for <code>main</code>: Require a pull request before merging (1 approval, require review from Code Owners), Require status checks to pass, Block force pushes. Bypass list: <i>Repository admin</i>, and the Claude GitHub app if Claude should keep deploying directly.</li>
+          <li><b>Helpers:</b> they fork the repository, make a branch, and open a pull request. CONTRIBUTING.md in each repository explains the steps.</li>
+        </ol></details>`;
+    $("#copy-secret")?.addEventListener("click", () => navigator.clipboard.writeText(d.webhook.secret).then(() => toast("Secret copied")));
+    $$("#code-body .pr").forEach((card) => {
+      const [owner, repo] = card.dataset.repo.split("/"), n = card.dataset.n;
+      card.querySelector(".pr-files").addEventListener("toggle", async (e) => {
+        if (!e.target.open || e.target.dataset.loaded) return; e.target.dataset.loaded = "1";
+        const f = await api(`/api/admin/code/${owner}/${repo}/${n}/files`).catch((err) => ({ files: [], error: err.message }));
+        e.target.querySelector(".files").innerHTML = f.error ? esc(f.error) : f.files.map((x) => `<div class="file"><b>${esc(x.name)}</b> <span class="muted">${esc(x.status)} +${x.additions} −${x.deletions}</span>${x.patch ? `<pre class="diff">${esc(x.patch).split("\n").map((l) => `<span class="${l.startsWith("+") ? "add" : l.startsWith("-") ? "del" : ""}">${l}</span>`).join("\n")}</pre>` : ""}</div>`).join("") || "No file changes.";
+      });
+      card.querySelector('[data-act="approve"]').addEventListener("click", safe(async () => {
+        if (!confirm(`Approve and publish #${n}? It goes live on the next deploy (about 2 minutes).`)) return;
+        await api(`/api/admin/code/${owner}/${repo}/${n}/approve`, { method: "POST", body: {} });
+        toast("Approved and merged. Deploying now."); loaders.code();
+      }));
+      card.querySelector('[data-act="decline"]').addEventListener("click", safe(async () => {
+        const reason = prompt("What should the author change? (They see this on GitHub.)"); if (!reason) return;
+        const close = confirm("Close this change completely? (Cancel = keep it open so they can fix it.)");
+        await api(`/api/admin/code/${owner}/${repo}/${n}/decline`, { method: "POST", body: { reason, close } });
+        toast(close ? "Declined and closed." : "Changes requested."); loaders.code();
+      }));
+    });
+  };
+  $("#code-refresh")?.addEventListener("click", () => safe(loaders.code)());
+
   // ------------------------------------------------------------ SCC Presenter beta: testers, downloads and feedback
   async function presenterBeta() {
     const d = await api("/api/admin/presenter");

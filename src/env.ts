@@ -51,6 +51,8 @@ export interface Env {
   WHATSAPP_TEMPLATE_LANG?: string;     // default "en"
   /** Optional: lets the WhatsApp helper answer free-form questions with Claude (otherwise built-in answers). */
   ANTHROPIC_API_KEY?: string;
+  /** Optional GitHub fine-grained token (Contents + Pull requests: read & write on the two repos) so the main admin can approve and merge from the admin portal. */
+  GITHUB_TOKEN?: string;
   /** Google Identity Services web client ID (public). Empty = Google sign-in hidden. */
   GOOGLE_CLIENT_ID?: string;
 }

@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css?v=71d32040ea">
-  <link rel="stylesheet" href="/css/pages.css?v=7ccf35eb4c">
-  <link rel="stylesheet" href="/css/admin.css?v=9cff3b0315">
+  <link rel="stylesheet" href="/css/pages.css?v=516631dbb6">
+  <link rel="stylesheet" href="/css/admin.css?v=6e59381ca8">
   <script src="/js/switch-boot.js?v=1411ce24b0"></script>
 </head>
 <body class="admin">
@@ -70,6 +70,7 @@
         <button data-tab="templates">Email templates</button>
         <button data-tab="emails">Email log</button>
         <button data-tab="team" data-super>Team &amp; roles</button>
+        <button data-tab="code" data-super>Code changes <span class="badge" id="code-badge"></span></button>
       </nav>
       <div class="side-foot"><span id="who"></span><span class="role-chip" id="role-chip"></span><button class="btn btn-sm btn-ghost" type="button" data-switch="member" id="to-profile" hidden>Switch to member view</button><button class="btn btn-sm" id="logout">Sign out</button></div>
     </aside>
@@ -359,6 +360,12 @@
         </form>
         <div class="toolbar" style="margin-top:16px"><select class="input" id="prog-aud" style="max-width:220px"><option value="">All items</option><option value="public">Everyone</option><option value="members">Members only</option><option value="leaders">Leaders only</option></select></div>
         <div id="prog-list" class="list"></div>
+      </section>
+
+      <section data-view="code" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Main admin only</p><h1>Code changes</h1><p class="muted">Helpers can copy (fork) the website or SCC Presenter, make changes and send them as a pull request. Checks run automatically. Nothing reaches the live site or app until you approve it here or on GitHub.</p></div>
+          <button class="btn" type="button" id="code-refresh">Refresh</button></header>
+        <div id="code-body"><p class="muted">Loading…</p></div>
       </section>
 
       <section data-view="team" hidden>

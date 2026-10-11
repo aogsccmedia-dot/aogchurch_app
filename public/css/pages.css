@@ -1160,6 +1160,7 @@ dialog.ob-sheet { width: min(520px, calc(100% - 24px)); max-height: calc(100dvh 
 .pres-features .fi { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--gold) 14%, transparent); color: var(--gold); }
 .pres-gallery { display: grid; grid-template-columns: 1fr 1fr 260px; gap: 16px; align-items: start; }
 .pres-gallery figure { margin: 0; display: grid; gap: 8px; }
+.pres-gallery figure.wide { grid-column: 1 / -1; }
 .pres-gallery img { width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--line); background: #0d0f13; }
 .pres-gallery figcaption { font-size: 14px; color: var(--muted); }
 .pres-faq { max-width: 760px; display: grid; gap: 10px; }
