@@ -31,8 +31,17 @@ export async function latestRelease(): Promise<Release> {
       const r = list.find((x) => !x.draft && x.assets.some((a) => a.name === ASSETS.windows || a.name === ASSETS.mac));
       if (r) rel = { version: r.tag_name.replace(/^v/, ""), published_at: r.published_at, windows: r.assets.some((a) => a.name === ASSETS.windows), mac: r.assets.some((a) => a.name === ASSETS.mac) };
     }
-  } catch { /* GitHub unreachable: show "being prepared" */ }
-  await cache?.put(cacheKey, new Response(JSON.stringify(rel), { headers: { "cache-control": "max-age=300", "content-type": "application/json" } })).catch(() => {});
+  } catch { /* fall through to the feed below */ }
+  if (!rel) {
+    // The GitHub API limits anonymous calls; the public releases feed doesn't. Releases are only published after
+    // the Windows and Mac installers have both been installed and opened in testing, so both files are there.
+    try {
+      const feed = await fetch(`https://github.com/${REPO}/releases.atom`, { headers: { "user-agent": "aogsccyouth.com" } });
+      const tag = feed.ok ? /\/releases\/tag\/v([\w.-]+)/.exec(await feed.text())?.[1] : null;
+      if (tag) rel = { version: tag, published_at: "", windows: true, mac: true };
+    } catch { /* GitHub unreachable: show "being prepared" */ }
+  }
+  await cache?.put(cacheKey, new Response(JSON.stringify(rel), { headers: { "cache-control": `max-age=${rel ? 300 : 60}`, "content-type": "application/json" } })).catch(() => {});
   return rel;
 }
 
