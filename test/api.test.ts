@@ -952,4 +952,23 @@ describe("door, insights, weekly services and the board report", () => {
     assert.equal(sum2.coming, 1); assert.equal(sum2.not_coming, 0, "changing your mind updates the answer");
     assert.equal((await call("/api/whatsapp/webhook", { method: "POST", body: "{}" })).status, 401, "WhatsApp webhook rejects unsigned calls");
   });
+
+  test("leader catch-up: confirmed non-admin members without a leader get one and are told who; admins never get a leader", async () => {
+    const { backfillLeaders } = await import("../src/lib/leaders.ts");
+    env.DB._db.prepare("INSERT OR IGNORE INTO users (id, email, name, given_name) VALUES ('u-lead-c', 'lead.c@example.com', 'Chipo', 'Chipo')").run();
+    env.DB._db.prepare("INSERT OR IGNORE INTO admin_roles (user_id, email, granted_by) VALUES ('u-lead-c', 'lead.c@example.com', 'x')").run();
+    const add = (id: string, email: string, first: string, uid: string | null) => env.DB._db.prepare(
+      "INSERT INTO members (id, ref_code, status, membership_type, first_name, last_name, date_of_birth, phone, email, signature_name, user_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+      .run(id, `SCCY-T-${id}`, "member", "new_member", first, "Test", "1999-01-01", "0820000000", email, first, uid);
+    add("old-1", "old.member@example.com", "Lerato", null);          // confirmed before leaders existed
+    add("adm-1", "lead.c@example.com", "Chipo", "u-lead-c");          // an admin who is also a member
+    const n = await backfillLeaders(env);
+    assert.ok(n >= 1);
+    const old = env.DB._db.prepare("SELECT leader_user_id, assigned_to FROM members WHERE id = 'old-1'").get() as { leader_user_id: string; assigned_to: string };
+    assert.ok(old.leader_user_id && old.leader_user_id !== "u-lead-c" || old.leader_user_id === "u-lead-c");
+    const intro = mails("old.member@example.com").find((m) => /meet your leader/i.test(m.subject))!;
+    assert.ok(intro, "member is told who their leader is"); assert.match(intro.html!, new RegExp(old.assigned_to));
+    assert.equal((env.DB._db.prepare("SELECT leader_user_id FROM members WHERE id = 'adm-1'").get() as { leader_user_id: string | null }).leader_user_id, null, "admins don't get a leader");
+    assert.equal(await backfillLeaders(env), 0, "nothing twice");
+  });
 });

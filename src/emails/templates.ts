@@ -572,3 +572,20 @@ export function adminFollowupOverdue(b: Brand, o: { member: string; ref: string;
     text: `${o.member} (${o.ref}) was assigned to ${o.leader} ${o.days} days ago and hasn't been contacted yet. ${b.site}/admin/#people` + textFooter(b),
   };
 }
+
+/** To a member: introducing their leader (for members confirmed before leaders were assigned, or after a handover). */
+export function memberLeaderIntro(b: Brand, o: { name: string; leader: string }) {
+  return {
+    subject: `${o.name}, meet your leader at AOG Sandton City Church`,
+    html: layout(b, {
+      preheader: `${o.leader} will be your leader and will be in touch soon.`,
+      eyebrow: "Your leader",
+      heading: `Meet your leader, ${esc(o.name)}`,
+      content: p(`We want every member of our church family to have someone walking alongside them. <strong>${esc(o.leader)}</strong> from our leadership team will be your leader.`) +
+        p(`${esc(o.leader)} will be in touch soon to say hello. They're here to pray with you, answer your questions and help you find your place. Feel free to reach out to them anytime.`) +
+        scripture("Carry each other's burdens, and in this way you will fulfil the law of Christ.", "Galatians 6:2") +
+        button(b.site + "/me", "Open my profile"),
+    }),
+    text: `Hi ${o.name},\n\n${o.leader} from our leadership team will be your leader at AOG Sandton City Church and will be in touch soon.\n\n"Carry each other's burdens." Galatians 6:2\n\n${b.site}/me` + textFooter(b),
+  };
+}

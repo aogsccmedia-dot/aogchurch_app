@@ -10,7 +10,7 @@ import { parseSchema, sanitizeSchema, slugify } from "../lib/forms.ts";
 import { emailHealth, resendFailed, sendMail } from "../lib/email.ts";
 import { SAMPLES } from "../emails/samples.ts";
 import { ensureTickets, voidTickets } from "../lib/tickets.ts";
-import { CONTACT_METHODS, assignLeader, leaders, logContact, reassignFrom } from "../lib/leaders.ts";
+import { CONTACT_METHODS, assignLeader, backfillLeaders, leaders, logContact, reassignFrom } from "../lib/leaders.ts";
 import { GROUP_KEYS } from "../lib/groups.ts";
 import { CHECKIN_MONTHS, addMonths } from "../lib/membership.ts";
 import { buildAnnouncement, processAnnouncements, renderAnnouncement, type AnnouncementRow } from "../lib/newsletter.ts";
@@ -616,7 +616,8 @@ export function adminRoutes(router: Router, env: Env): void {
        FROM members m WHERE m.status = 'member' AND ${all ? "1 = 1" : "m.leader_user_id = ?"} ORDER BY CASE m.followup_status WHEN 'met' THEN 1 ELSE 0 END, m.leader_assigned_at DESC LIMIT 500`)
       .bind(...(all ? [] : [s.user.id])).all();
     return json({ ok: true, people: results, leaders: await leaders(env), me: s.user.id, methods: CONTACT_METHODS,
-      unassigned: (await env.DB.prepare("SELECT COUNT(*) AS n FROM members WHERE status = 'member' AND leader_user_id IS NULL").first<{ n: number }>())?.n ?? 0 });
+      unassigned: (await env.DB.prepare(`SELECT COUNT(*) AS n FROM members m WHERE m.status = 'member' AND m.leader_user_id IS NULL
+        AND NOT (m.user_id IS NOT NULL AND m.user_id IN (SELECT user_id FROM admin_roles) OR lower(COALESCE(m.email, '')) IN (SELECT lower(email) FROM admin_roles)) AND lower(COALESCE(m.email, '')) != lower(?)`).bind(adminEmail(env)).first<{ n: number }>())?.n ?? 0 });
   }));
   router.get("/api/admin/people/:id/contacts", guard(async (_req, { id }) => {
     const { results } = await env.DB.prepare(
@@ -639,8 +640,7 @@ export function adminRoutes(router: Router, env: Env): void {
     return json({ ok: true, leader: leader?.name ?? null });
   }));
   router.post("/api/admin/people/assign-unassigned", superOnly(async (_req, _p, s) => {
-    const { results } = await env.DB.prepare("SELECT id FROM members WHERE status = 'member' AND leader_user_id IS NULL ORDER BY created_at LIMIT 200").all<{ id: string }>();
-    let n = 0; for (const r of results) if (await assignLeader(env, r.id)) n++;
+    let n = 0; for (let i = 0; i < 10; i++) { const k = await backfillLeaders(env); n += k; if (k < 20) break; }
     await audit(env, s, "assign_unassigned", "member", "", { count: n });
     return json({ ok: true, assigned: n });
   }));

@@ -49,11 +49,19 @@ interface MemberRowLite { id: string; first_name: string; last_name: string; pre
 
 const ageOf = (dob: string | null) => { if (!dob) return null; const d = new Date(dob), n = new Date(); let a = n.getFullYear() - d.getFullYear(); if (n < new Date(n.getFullYear(), d.getMonth(), d.getDate())) a--; return isFinite(a) ? a : null; };
 
+/** Admins (the main admin or anyone with an admin role) lead; they're never assigned a leader themselves. */
+export async function isAdminMember(env: Env, m: { user_id: string | null; email: string | null }) {
+  if (m.email && m.email.toLowerCase() === adminEmail(env)) return true;
+  return !!(await env.DB.prepare("SELECT 1 FROM admin_roles WHERE user_id = ? OR lower(email) = lower(?)").bind(m.user_id || "", m.email || "").first());
+}
+const NOT_ADMIN_SQL = `m.user_id IS NOT NULL AND m.user_id IN (SELECT user_id FROM admin_roles) OR lower(COALESCE(m.email, '')) IN (SELECT lower(email) FROM admin_roles)`;
+
 /** Assign (or hand over to) a leader and email them. Returns the leader, or null if there's nobody to assign. */
 export async function assignLeader(env: Env, memberId: string, opts: { toUserId?: string; handedBy?: string | null; now?: Date } = {}): Promise<Leader | null> {
   const m = await env.DB.prepare("SELECT id, first_name, last_name, preferred_name, ref_code, phone, whatsapp, email, date_of_birth, interests, user_id, leader_user_id FROM members WHERE id = ?")
     .bind(memberId).first<MemberRowLite>();
   if (!m) throw new HttpError(404, "Member not found.");
+  if (!opts.toUserId && await isAdminMember(env, m)) return null;   // admins lead; they don't get a leader
   const all = await leaders(env);
   const leader = opts.toUserId ? all.find((l) => l.id === opts.toUserId) ?? null : pickLeader(all, m.user_id);
   if (opts.toUserId && !leader) throw new HttpError(422, "That person isn't on the admin team.");
@@ -143,4 +151,25 @@ export async function reassignFrom(env: Env, leaderUserId: string, handedBy: str
     if (await assignLeader(env, r.id, { handedBy })) moved++;
   }
   return moved;
+}
+
+/**
+ * Cron catch-up: every confirmed member who isn't an admin has a leader. Anyone without one
+ * (confirmed before leaders existed, or if an assignment failed) gets one now, and both they and
+ * their leader are told by email.
+ */
+export async function backfillLeaders(env: Env): Promise<number> {
+  const { results } = await env.DB.prepare(
+    `SELECT m.id, m.email, m.first_name, m.preferred_name, m.last_name FROM members m
+      WHERE m.status = 'member' AND m.leader_user_id IS NULL AND NOT (${NOT_ADMIN_SQL}) AND lower(COALESCE(m.email, '')) != lower(?)
+      ORDER BY m.created_at LIMIT 20`).bind(adminEmail(env)).all<{ id: string; email: string | null; first_name: string; preferred_name: string | null; last_name: string }>();
+  const site = siteUrl(env);
+  let n = 0;
+  for (const m of results) {
+    const leader = await assignLeader(env, m.id).catch((e) => { console.error("backfill leader", e); return null; });
+    if (!leader) continue;
+    n++;
+    if (m.email) await sendMail(env, { to: m.email, toName: `${m.first_name} ${m.last_name}`, template: "member_leader_intro", ...T.memberLeaderIntro({ site }, { name: m.preferred_name || m.first_name, leader: leader.name }) });
+  }
+  return n;
 }
