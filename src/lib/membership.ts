@@ -10,6 +10,7 @@ import { HttpError } from "./http.ts";
 import { randomToken, sha256Hex } from "./crypto.ts";
 import { sendMail } from "./email.ts";
 import * as T from "../emails/templates.ts";
+import { reassignFrom } from "./leaders.ts";
 
 export const CHECKIN_MONTHS = 4;
 const REMIND_AFTER_DAYS = 14;
@@ -90,6 +91,9 @@ export async function revokeMembership(env: Env, m: MemberRow, reason: string | 
   const why = reason ? reason.trim().slice(0, 500) || null : null;
   // Admin access depends on membership: revoking membership removes any admin role too.
   await env.DB.prepare("DELETE FROM admin_roles WHERE user_id IN (SELECT user_id FROM members WHERE id = ? AND user_id IS NOT NULL) OR lower(email) = lower(?)").bind(m.id, m.email || "").run();
+  // If they were a leader, the people in their care are shared out to the other leaders.
+  const uid = (await env.DB.prepare("SELECT user_id FROM members WHERE id = ?").bind(m.id).first<{ user_id: string | null }>())?.user_id;
+  if (uid) await reassignFrom(env, uid, null).catch(() => 0);
   await env.DB.prepare("UPDATE members SET status = 'revoked', revoked_at = ?, revoke_reason = ?, checkin_token_hash = NULL, next_checkin_at = NULL, updated_at = ? WHERE id = ?")
     .bind(now.toISOString(), why, now.toISOString(), m.id).run();
   const note = `[${now.toISOString().slice(0, 10)}] Membership revoked by the member (${via})${why ? `: “${why}”` : ""}.`;

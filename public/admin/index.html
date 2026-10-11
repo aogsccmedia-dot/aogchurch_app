@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css?v=71d32040ea">
-  <link rel="stylesheet" href="/css/pages.css?v=b3de0cf262">
-  <link rel="stylesheet" href="/css/admin.css?v=f265ebcbdf">
+  <link rel="stylesheet" href="/css/pages.css?v=90488741ac">
+  <link rel="stylesheet" href="/css/admin.css?v=6e838e0ac7">
   <script src="/js/switch-boot.js?v=1411ce24b0"></script>
 </head>
 <body class="admin">
@@ -55,6 +55,7 @@
         <button data-tab="overview" class="active">Overview</button>
         <button data-tab="insights">Insights</button>
         <button data-tab="members">Members <span class="badge" data-count="new_members"></span></button>
+        <button data-tab="people">My people</button>
         <button data-tab="events">Events &amp; forms <span class="badge" data-count="pending_payments"></span></button>
         <button data-tab="scan">Door scanner</button>
         <button data-tab="services">Weekly services</button>
@@ -275,6 +276,14 @@
         </div>
       </section>
 
+      <section data-view="people" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Leader care</p><h1>My people</h1><p class="muted">Confirmed members in your care. Reach out, log each catch-up, or hand someone over to another leader.</p></div>
+          <div class="seg" id="pp-scope" hidden><button data-s="mine" class="on">Mine</button><button data-s="all">Everyone</button></div></header>
+        <div class="kpis" id="pp-kpis"></div>
+        <div id="pp-fair" class="card" hidden></div>
+        <div id="pp-list" class="list"></div>
+      </section>
+
       <section data-view="insights" hidden>
         <header class="vh"><div><p class="eyebrow gold">Insights</p><h1>Events at a glance</h1><p class="muted">Tickets sold, who actually came, and money collected. Tap an event for the full picture.</p></div>
           <div class="ins-filters"><select class="input" id="ins-period" aria-label="Period"><option value="year">This year</option><option value="12m">Last 12 months</option><option value="last">Last year</option><option value="all">All time</option></select>
@@ -314,6 +323,7 @@
         <div class="svc-week" id="svc-week"></div>
         <div class="card"><div class="vh" style="align-items:center"><h3>Records</h3><select class="input" id="svc-filter" aria-label="Service" style="max-width:240px"></select></div>
           <div id="svc-sessions" class="list"></div></div>
+        <div class="card" id="wa-card"><div class="vh" style="align-items:center"><h3>WhatsApp</h3><span class="pill" id="wa-state">Checking…</span></div><div id="wa-body"></div></div>
       </section>
 
       <section data-view="report" hidden>
@@ -383,8 +393,10 @@
   </div>
 
   <dialog class="drawer" id="session-drawer"><form class="drawer-body" id="session-form" novalidate></form></dialog>
+  <dialog class="drawer" id="person-drawer"><div class="drawer-body" id="person-body"></div></dialog>
+  <dialog class="drawer" id="rsvp-drawer"><div class="drawer-body" id="rsvp-body"></div></dialog>
   <dialog class="drawer" id="services-drawer"><div class="drawer-body" id="services-body"></div></dialog>
   <dialog class="drawer" id="member-drawer"><div class="drawer-body" id="member-body"></div></dialog>
-  <script type="module" src="/js/admin.js?v=949e49018c"></script>
+  <script type="module" src="/js/admin.js?v=ad8d41b168"></script>
 </body>
 </html>

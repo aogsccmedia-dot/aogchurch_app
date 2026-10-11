@@ -3,7 +3,7 @@
 // - CSS/JS: network first (so a new release is picked up straight away), cached copy when offline.
 // - Photos/logos: cache first.
 // - /api and /admin are never cached.
-const VERSION = "scc-v1";
+const VERSION = "scc-v2";
 const SHELL = ["/", "/offline", "/css/base.css", "/css/pages.css", "/js/site.js", "/js/auth.js", "/js/icons.js", "/js/install.js",
   "/assets/logo-64.png", "/assets/logo-192.png", "/manifest.webmanifest"];
 
@@ -14,6 +14,7 @@ self.addEventListener("activate", (e) => {
   e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
+const timedFetch = (req, ms) => Promise.race([fetch(req), new Promise((_, no) => setTimeout(() => no(new Error("slow")), ms))]);
 const put = async (req, res) => { if (res && res.ok && res.type === "basic") (await caches.open(VERSION)).put(req, res.clone()); return res; };
 
 self.addEventListener("fetch", (e) => {
@@ -23,7 +24,7 @@ self.addEventListener("fetch", (e) => {
   if (url.origin !== location.origin || url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin")) return;
 
   if (req.mode === "navigate") {
-    e.respondWith(fetch(req).then((res) => put(req, res)).catch(async () =>
+    e.respondWith(timedFetch(req, 4000).then((res) => put(req, res)).catch(async () =>
       (await caches.match(req, { ignoreSearch: true })) || (await caches.match("/offline")) || Response.error()));
     return;
   }
@@ -32,6 +33,9 @@ self.addEventListener("fetch", (e) => {
     return;
   }
   if (url.pathname.startsWith("/css/") || url.pathname.startsWith("/js/")) {
-    e.respondWith(fetch(req).then((res) => put(req, res)).catch(async () => (await caches.match(req)) || Response.error()));
+    // Versioned files (?v=<hash>) never change: serve from cache instantly.
+    if (url.searchParams.has("v")) { e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => put(req, res)))); return; }
+    // Everything else: network first, but don't keep people waiting on a slow connection.
+    e.respondWith(timedFetch(req, 2500).then((res) => put(req, res)).catch(async () => (await caches.match(req)) || fetch(req)));
   }
 });

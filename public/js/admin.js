@@ -275,7 +275,7 @@ async function openMember(id) {
       <a class="btn btn-sm" href="mailto:${esc(m.email)}">Email</a><a class="btn btn-sm" href="tel:${esc(m.phone)}">Call</a></div>
     <div class="card form-grid">
       <div class="grid-2"><div class="field"><label>Status</label><select class="input" id="md-status">${["new", "contacted", "welcomed", "member", "inactive", "revoked"].map((s) => `<option ${s === m.status ? "selected" : ""}>${s}</option>`).join("")}</select></div>
-        <div class="field"><label>Assigned leader</label><input class="input" id="md-assigned" value="${esc(m.assigned_to || "")}"></div></div>
+        <div class="field"><label>Leader</label><p class="leader-line">${m.assigned_to ? `${esc(m.assigned_to)}${m.followup_status === "met" ? ` · connected${m.followup_method ? ` by ${esc({ whatsapp: "WhatsApp", call: "phone", email: "email", in_person: "in person" }[m.followup_method] || m.followup_method)}` : ""}` : " · not connected yet"}` : m.status === "member" ? "Assigning…" : "Assigned when they're confirmed as a member"}</p>${m.assigned_to ? `<a class="link-btn" href="#people">Hand over in My people</a>` : ""}<input type="hidden" id="md-assigned" value="${esc(m.assigned_to || "")}"></div></div>
       <div class="field"><label>Leader notes</label><textarea class="input" id="md-notes">${esc(m.admin_notes || "")}</textarea></div>
       <button class="btn btn-gold btn-sm" id="md-save" style="justify-self:start">Save</button></div>
     ${attachments.length ? `<div class="card"><h3>Attachments</h3><div class="files">${attachments.map((a) => `<a href="/api/admin/files/${esc(a.id)}" target="_blank" rel="noopener">${a.content_type.startsWith("image/") && a.content_type !== "image/heic" ? `<img src="/api/admin/files/${esc(a.id)}" alt="">` : `<span class="doc">${esc((a.filename.split(".").pop() || "file").toUpperCase())}</span>`}<span>${esc(a.kind)} · ${(a.size_bytes / 1024).toFixed(0)} KB</span></a>`).join("")}</div></div>` : ""}
@@ -284,7 +284,7 @@ async function openMember(id) {
   const dlg = $("#member-drawer"); dlg.showModal();
   // Save closes straight away and you're back on the list; the row updates instantly, the server catches up.
   $("#md-save").onclick = () => {
-    const body = { status: $("#md-status").value, admin_notes: $("#md-notes").value, assigned_to: $("#md-assigned").value };
+    const body = { status: $("#md-status").value, admin_notes: $("#md-notes").value };
     dlg.close();
     $$(`[data-member="${CSS.escape(id)}"] .c-status`).forEach((td) => { td.innerHTML = `<span class="pill ${esc(body.status)}">${esc(body.status)}</span>`; });
     toast(body.status !== m.status ? `${m.first_name} is now “${body.status}”` : "Saved");

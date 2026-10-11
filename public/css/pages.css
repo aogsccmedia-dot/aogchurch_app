@@ -1088,3 +1088,11 @@ dialog.ob-sheet { width: min(520px, calc(100% - 24px)); max-height: calc(100dvh 
 .gsi-wait { position: absolute; inset: 0; z-index: 2; display: none; align-items: center; justify-content: center; gap: 10px; border-radius: 999px; background: var(--bg-2, #fff); border: 1px solid var(--line-strong); font-size: 14px; color: var(--text); cursor: pointer; }
 .gsi-wait .spinner { width: 16px; height: 16px; border-width: 2px; }
 .gsi-waiting .gsi-wait { display: flex; }
+
+/* RSVP page */
+.rv-reasons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: 100%; }
+.chip-btn { padding: 10px 14px; min-height: 44px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--text); font: inherit; font-size: 14.5px; cursor: pointer; }
+.chip-btn[aria-pressed="true"] { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 14%, var(--bg)); }
+.rv-other { width: 100%; }
+.rv-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; width: 100%; }
+.link-btn { background: none; border: 0; color: var(--text-2); font: inherit; font-size: 14px; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; padding: 8px; }

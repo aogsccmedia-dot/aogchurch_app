@@ -505,3 +505,23 @@ details.card[open] > summary::before { content: "–"; }
 .main > section[data-view]:not([hidden]) { animation: view-in .22s ease both; }
 @keyframes view-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .main > section[data-view] { animation: none !important; } }
+.svc-rsvp { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; width: 100%; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: none; color: var(--text-2); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.svc-rsvp b { color: var(--text); font-weight: 500; }
+.svc-rsvp span { margin-left: auto; color: var(--gold); }
+.rsvp-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.wa-test { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.wa-test .input { flex: 1 1 200px; }
+.wa-steps { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; font-size: 13.5px; color: var(--text-2); }
+.wa-steps code { font-size: 12.5px; color: var(--gold); overflow-wrap: anywhere; }
+/* My people */
+.pp-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 14px; align-items: center; }
+.pp-main { display: grid; gap: 2px; min-width: 0; }
+.pp-main b { font-weight: 450; }
+.pp-main small { color: var(--muted); font-size: 12.5px; }
+.pp-actions { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }
+.leader-line { margin: 6px 0 2px; color: var(--text); }
+.rv-reasons.left { justify-content: flex-start; display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-radio input { position: absolute; opacity: 0; pointer-events: none; }
+.chip-radio span { display: inline-block; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line-strong, var(--line)); cursor: pointer; font-size: 14px; }
+.chip-radio input:checked + span { border-color: var(--gold); color: var(--gold); background: rgba(214, 166, 80, .1); }
+.chip-radio input:focus-visible + span { outline: 2px solid var(--gold); outline-offset: 2px; }

@@ -13,6 +13,8 @@ import { randomToken, sha256Hex } from "./crypto.ts";
 import { sendMail } from "./email.ts";
 import { DAYS, saToday } from "./groups.ts";
 import * as T from "../emails/templates.ts";
+import { rsvpLinks } from "./rsvp.ts";
+import { sendWhatsappReminders } from "./whatsapp.ts";
 
 interface Svc { id: string; day: number; title: string; start_time: string | null; end_time: string | null; frequency: string }
 
@@ -64,7 +66,8 @@ export async function sendServiceReminder(env: Env, s: Svc, date: string, tonigh
   let sent = 0;
   for (const r of await reminderRecipients(env)) {
     const stopUrl = await stopLink(env, r.email);
-    const mail = T.serviceReminder({ site }, {
+    const rsvp = await rsvpLinks(env, s.id, date, r.email, r.name);
+    const mail = T.serviceReminder({ site }, { yesUrl: rsvp.yes, noUrl: rsvp.no,
       name: r.name ? r.name.split(" ")[0] : null, title: s.title, when, time: timeLabel(s), tonight,
       topic: session?.topic ?? null, speaker: session?.speaker ?? null,
       posterUrl: session?.poster_attachment_id ? `${site}/api/media/${session.poster_attachment_id}` : null, stopUrl,
@@ -73,6 +76,7 @@ export async function sendServiceReminder(env: Env, s: Svc, date: string, tonigh
       headers: { "List-Unsubscribe": `<${stopUrl.replace("/reminders?", "/api/reminders/stop?")}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } });
     if (ok) sent++;
   }
+  sent += await sendWhatsappReminders(env, s, date, tonight, session?.topic ?? null).catch(() => 0);
   await env.DB.prepare("UPDATE reminder_runs SET sent = ? WHERE service_id = ? AND date = ?").bind(sent, s.id, date).run();
   return sent;
 }

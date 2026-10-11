@@ -17,6 +17,7 @@ import { insightsRoutes } from "./routes/insights.ts";
 import { processAnnouncements } from "./lib/newsletter.ts";
 import { processCheckins, processWelcomes } from "./lib/membership.ts";
 import { processServiceReminders } from "./lib/reminders.ts";
+import { processFollowups } from "./lib/leaders.ts";
 import { nextSundayAfternoon } from "./lib/time.ts";
 import { sendMail } from "./lib/email.ts";
 import { adminLetterReminder } from "./emails/templates.ts";
@@ -69,6 +70,7 @@ export default {
       await processCheckins(env, now);
       await processWelcomes(env, now);
       await processServiceReminders(env, now).catch((e) => console.error("service reminders failed", e));
+      await processFollowups(env, now).catch((e) => console.error("leader follow-ups failed", e));
 
       const h = now.getUTCHours(), m = now.getUTCMinutes();
       if (now.getUTCDay() === 6 && h === 8 && m < 10) {

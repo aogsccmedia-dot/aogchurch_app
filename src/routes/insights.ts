@@ -8,6 +8,8 @@ import { requireAdmin, type Session } from "../lib/auth.ts";
 import { uuid } from "../lib/crypto.ts";
 import { readUpload, storeFiles, deleteOwnerFiles } from "../lib/uploads.ts";
 import { reminderRecipients, sendServiceReminder } from "../lib/reminders.ts";
+import { rsvpSummary } from "../lib/rsvp.ts";
+import { sendTemplate, sendText, waNumber, whatsappEnabled, whatsappRecipients } from "../lib/whatsapp.ts";
 import { DAYS, GROUP_KEYS, MINISTRY_GROUPS, groupLabel, isServiceDay, nextOccurrence, occurrences, saToday } from "../lib/groups.ts";
 
 type Ctx = { waitUntil(p: Promise<unknown>): void };
@@ -251,6 +253,8 @@ async function ministryReport(env: Env, group: string, year: number) {
 
 // ---------------------------------------------------------------- routes
 
+const siteUrlOf = (env: Env) => env.SITE_URL || "https://aogsccyouth.com";
+
 export function insightsRoutes(router: Router, env: Env): void {
   const guard = (h: H) => async (req: Request, p: Record<string, string>, ctx?: Ctx) => {
     const s = await requireAdmin(env, req);
@@ -310,9 +314,12 @@ export function insightsRoutes(router: Router, env: Env): void {
     const { results: recent } = await env.DB.prepare(
       "SELECT id, service_id, date, topic, attendance, poster_attachment_id FROM service_sessions WHERE date BETWEEN ? AND ? ORDER BY date")
       .bind(occurrences(0, 5, 0, today)[0], occurrences(0, 0, 3, today).at(-1)).all<{ id: string; service_id: string; date: string; topic: string; attendance: number | null; poster_attachment_id: string | null }>();
+    const { results: rs } = await env.DB.prepare("SELECT service_id, date, SUM(response = 'yes') AS yes, SUM(response = 'no') AS no FROM service_rsvps WHERE date BETWEEN ? AND ? GROUP BY service_id, date")
+      .bind(occurrences(0, 2, 0, today)[0], occurrences(0, 0, 2, today).at(-1)).all<{ service_id: string; date: string; yes: number; no: number }>();
     return json({
-      ok: true, today,
+      ok: true, today, whatsapp: whatsappEnabled(env),
       services: results.map((s) => ({
+        rsvps: Object.fromEntries(rs.filter((r) => r.service_id === s.id).map((r) => [r.date, { yes: n(r.yes), no: n(r.no) }])),
         ...s, day_label: DAYS[s.day], time: timeLabel(s), group_label: groupLabel(s.ministry_group),
         next_date: nextOccurrence(s.day, today), dates: occurrences(s.day, 4, 3, today),
         sessions: recent.filter((x) => x.service_id === s.id),
@@ -435,6 +442,36 @@ export function insightsRoutes(router: Router, env: Env): void {
     await env.DB.prepare("DELETE FROM ministry_ledger WHERE id = ?").bind(id).run();
     await audit(s, "delete", "ledger", id);
     return json({ ok: true });
+  }));
+
+  // ---- RSVPs ("Are you coming?") for a service date
+  router.get("/api/admin/rsvps", guard(async (req) => {
+    const q = new URL(req.url).searchParams;
+    const id = q.get("service_id") || "", date = q.get("date") || "";
+    if (!id || !DATE.test(date)) throw new HttpError(400, "Choose the service and date.");
+    return json({ ok: true, ...(await rsvpSummary(env, id, date)) });
+  }));
+
+  // ---- WhatsApp status + test message
+  router.get("/api/admin/whatsapp", guard(async () => {
+    const one = async (sql: string) => n((await env.DB.prepare(sql).first<{ n: number }>())?.n);
+    return json({ ok: true, connected: whatsappEnabled(env), webhook: !!(env.WHATSAPP_APP_SECRET && env.WHATSAPP_VERIFY_TOKEN), ai: !!env.ANTHROPIC_API_KEY,
+      reminder_template: env.WHATSAPP_REMINDER_TEMPLATE || "service_reminder", welcome_template: env.WHATSAPP_WELCOME_TEMPLATE || "member_welcome",
+      reachable: (await whatsappRecipients(env)).length, opted_out: await one("SELECT COUNT(*) AS n FROM whatsapp_contacts WHERE opted_out = 1"),
+      sent_7d: await one(`SELECT COUNT(*) AS n FROM whatsapp_log WHERE direction = 'out' AND status = 'sent' AND created_at > '${new Date(Date.now() - 7 * 86400_000).toISOString()}'`),
+      failed_7d: await one(`SELECT COUNT(*) AS n FROM whatsapp_log WHERE direction = 'out' AND status = 'failed' AND created_at > '${new Date(Date.now() - 7 * 86400_000).toISOString()}'`),
+      webhook_url: `${new URL(siteUrlOf(env)).origin}/api/whatsapp/webhook` });
+  }));
+  router.post("/api/admin/whatsapp/test", guard(async (req) => {
+    if (!whatsappEnabled(env)) throw new HttpError(409, "WhatsApp isn't connected yet. Add the WhatsApp settings first.");
+    const { phone, kind } = await readJson<{ phone?: string; kind?: string }>(req);
+    const to = waNumber(phone);
+    if (!to) throw new HttpError(422, "Enter a mobile number, e.g. 082 123 4567.", { phone: "Enter a valid mobile number." });
+    const ok = kind === "template"
+      ? await sendTemplate(env, to, env.WHATSAPP_REMINDER_TEMPLATE || "service_reminder", ["friend", "Youth service", "tonight at 18:00", "a test message"], ["rsvp|test|none|2000-01-01", "rsvp|test|none|2000-01-01"])
+      : await sendText(env, to, "Hello from AOG Sandton City Church 👋 This is a test message from the website.");
+    if (!ok) throw new HttpError(502, "WhatsApp didn't accept the message. Check the WhatsApp log reason (usually: number not opted in to test, template not approved, or the 24-hour window for plain messages).");
+    return json({ ok: true, to });
   }));
 
   // ---- board report

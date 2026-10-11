@@ -5,6 +5,9 @@ import { Validator, ageOn, formToRaw } from "../lib/validate.ts";
 import { rateLimit, ipHash } from "../lib/ratelimit.ts";
 import { confirmMembership, memberByToken, revokeMembership, revokeReason } from "../lib/membership.ts";
 import { emailForReminderToken, remindersOn, setReminders } from "../lib/reminders.ts";
+import { RSVP_REASONS, recordRsvp, rsvpByToken } from "../lib/rsvp.ts";
+import { CONTACT_METHODS, followupByToken, logContact, snoozeFollowup } from "../lib/leaders.ts";
+import { handleWebhook, sendWhatsappWelcome, validSignature } from "../lib/whatsapp.ts";
 import { refCode, uuid } from "../lib/crypto.ts";
 import { activeDriver, getFile } from "../lib/storage.ts";
 import { readUpload, storeFiles, type PendingFile } from "../lib/uploads.ts";
@@ -152,7 +155,7 @@ export function publicRoutes(router: Router, env: Env): void {
   });
 
   // ---------------- join (membership onboarding)
-  router.post("/api/join", async (req) => {
+  router.post("/api/join", async (req, _p, ctx) => {
     const ip = clientIp(req);
     await rateLimit(env, "join", ip, 6, 3600);
     const ct = req.headers.get("content-type") || "";
@@ -264,6 +267,9 @@ export function publicRoutes(router: Router, env: Env): void {
 
     const b = { site: siteUrl(env) };
     const first = m.preferred_name || m.first_name!;
+    // WhatsApp welcome (only if they agreed to WhatsApp contact and WhatsApp is connected).
+    const wa = sendWhatsappWelcome(env, { whatsapp: m.whatsapp, phone: m.phone, comm_whatsapp: m.comm_whatsapp ? 1 : 0, first_name: m.first_name!, preferred_name: m.preferred_name, ref_code: ref }).catch(() => false);
+    if (ctx?.waitUntil) ctx.waitUntil(wa); else await wa;
     if (await sendMail(env, { to: m.email!, toName: `${m.first_name} ${m.last_name}`, ...T.joinWelcome(b, first, ref), template: "join_welcome" }))
       await env.DB.prepare("UPDATE members SET welcome_sent_at = ? WHERE ref_code = ?").bind(new Date().toISOString(), ref).run();
     await sendMail(env, { to: adminEmail(env), ...T.adminNewMember(b, {
@@ -341,6 +347,57 @@ export function publicRoutes(router: Router, env: Env): void {
       return json({ ok: true, on });
     });
   }
+
+  // "Are you coming?" from the reminder email (POST only, so link scanners can't answer for people).
+  router.post("/api/rsvp/lookup", async (req) => {
+    await rateLimit(env, "rsvp", clientIp(req), 60, 3600);
+    const { t } = await readJson<{ t?: string }>(req);
+    const r = await rsvpByToken(env, t);
+    return json({ ok: true, service: r.title, date: r.date, time: r.start_time ? `${r.start_time}${r.end_time ? ` – ${r.end_time}` : ""}` : null, name: r.name,
+      response: r.current?.response ?? null, reason_code: r.current?.reason_code ?? null, reasons: RSVP_REASONS });
+  });
+  router.post("/api/rsvp", async (req) => {
+    await rateLimit(env, "rsvp", clientIp(req), 60, 3600);
+    const b = await readJson<{ t?: string; response?: string; reason_code?: string; reason?: string }>(req);
+    const r = await rsvpByToken(env, b.t);
+    if (b.response !== "yes" && b.response !== "no") throw new HttpError(400, "Please choose an answer.");
+    await recordRsvp(env, { service_id: r.service_id, date: r.date, contact: r.contact, name: r.name, response: b.response, channel: "email", reason_code: b.reason_code ?? null, reason: b.reason ?? null });
+    return json({ ok: true, response: b.response });
+  });
+
+  // Leader follow-up ("Have you connected?") from the leader's email. POST only.
+  router.post("/api/followup/lookup", async (req) => {
+    await rateLimit(env, "followup", clientIp(req), 60, 3600);
+    const { t } = await readJson<{ t?: string }>(req);
+    const r = await followupByToken(env, t);
+    return json({ ok: true, member: `${r.preferred_name || r.first_name} ${r.last_name}`, first: r.preferred_name || r.first_name, leader: r.leader_name.split(" ")[0],
+      status: r.followup_status, method: r.followup_method, phone: r.phone, whatsapp: r.whatsapp, email: r.email, methods: CONTACT_METHODS });
+  });
+  router.post("/api/followup", async (req) => {
+    await rateLimit(env, "followup", clientIp(req), 60, 3600);
+    const b = await readJson<{ t?: string; met?: boolean; method?: string; note?: string; days?: number }>(req);
+    const r = await followupByToken(env, b.t);
+    if (b.met) { await logContact(env, r.member_id, r.leader_user_id, b.method || "", b.note ?? null); return json({ ok: true, met: true }); }
+    return json({ ok: true, met: false, days: await snoozeFollowup(env, r.member_id, Number(b.days) || 3) });
+  });
+
+  // WhatsApp Business Platform webhook (Meta): verification handshake + signed incoming messages.
+  router.get("/api/whatsapp/webhook", async (req) => {
+    const q = new URL(req.url).searchParams;
+    if (q.get("hub.mode") === "subscribe" && env.WHATSAPP_VERIFY_TOKEN && q.get("hub.verify_token") === env.WHATSAPP_VERIFY_TOKEN)
+      return new Response(q.get("hub.challenge") || "", { headers: { "Content-Type": "text/plain" } });
+    return new Response("Forbidden", { status: 403 });
+  });
+  router.post("/api/whatsapp/webhook", async (req, _p, ctx) => {
+    const raw = await req.text();
+    if (!(await validSignature(env, raw, req.headers.get("x-hub-signature-256")))) return new Response("Invalid signature", { status: 401 });
+    let body: Parameters<typeof handleWebhook>[1];
+    try { body = JSON.parse(raw); } catch { return new Response("Bad request", { status: 400 }); }
+    // Reply to Meta straight away; handle the message in the background.
+    const job = handleWebhook(env, body).catch((e) => console.error("whatsapp webhook", e));
+    if (ctx?.waitUntil) ctx.waitUntil(job); else await job;
+    return new Response("OK");
+  });
 
   // Cookie consent: store the visitor's choice (anonymous id, no IP) so we can show what was agreed.
   router.post("/api/consent", async (req) => {

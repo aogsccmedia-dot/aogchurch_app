@@ -880,4 +880,76 @@ describe("door, insights, weekly services and the board report", () => {
     assert.equal(mails().length, n);
     env.DB._db.prepare("UPDATE weekly_services SET reminders = 0 WHERE id = 'svc-fri-youth'").run();
   });
+
+  test("leader care: confirmed members are shared out fairly; next-day check-in; 'not yet' snoozes; 'yes' logs how; handover; leaving the team reassigns", async () => {
+    const { processFollowups } = await import("../src/lib/leaders.ts");
+    // Two delegated admins (leaders).
+    for (const [id, email, name] of [["u-lead-a", "lead.a@example.com", "Ayanda"], ["u-lead-b", "lead.b@example.com", "Bongi"]]) {
+      env.DB._db.prepare("INSERT OR IGNORE INTO users (id, email, name, given_name) VALUES (?,?,?,?)").run(id, email, name, name);
+      env.DB._db.prepare("INSERT OR IGNORE INTO admin_roles (user_id, email, granted_by) VALUES (?,?,?)").run(id, email, "aogsccmedia@gmail.com");
+    }
+    const joinAndConfirm = async (email: string, first: string) => {
+      const r = await call("/api/join", { method: "POST", body: joinForm({ email, first_name: first, signature_name: `${first} Test` }) });
+      assert.equal(r.status, 201, await r.clone().text());
+      const id = (env.DB._db.prepare("SELECT id FROM members WHERE email = ?").get(email) as { id: string }).id;
+      // Joining alone assigns nobody.
+      assert.equal((env.DB._db.prepare("SELECT leader_user_id FROM members WHERE id = ?").get(id) as { leader_user_id: string | null }).leader_user_id, null);
+      const welcome = mails(email).find((m) => /Welcome to the family/.test(m.subject))!;
+      assert.doesNotMatch(welcome.html!, /reach out to you personally within the week/, "no leader promise before confirmation");
+      assert.equal((await call(`/api/admin/members/${id}`, { method: "PATCH", headers: { ...A(cookie), ...JSONH }, body: JSON.stringify({ status: "member" }) })).status, 200);
+      return id;
+    };
+    const ids = [await joinAndConfirm("care1@example.com", "Care1"), await joinAndConfirm("care2@example.com", "Care2"), await joinAndConfirm("care3@example.com", "Care3"), await joinAndConfirm("care4@example.com", "Care4")];
+    const rows = ids.map((id) => env.DB._db.prepare("SELECT leader_user_id, assigned_to, followup_status, followup_next_ask_at FROM members WHERE id = ?").get(id) as Record<string, string>);
+    const counts = (uid: string) => (env.DB._db.prepare("SELECT COUNT(*) AS n FROM members WHERE status = 'member' AND leader_user_id = ?").get(uid) as { n: number }).n;
+    assert.ok(rows.every((r) => r.leader_user_id && r.followup_status === "pending"));
+    assert.ok(Math.abs(counts("u-lead-a") - counts("u-lead-b")) <= 1, "shared out fairly");
+    // Member hears who their leader is; the leader gets an introduction.
+    const verified = mails("care1@example.com").find((m) => /officially a member/.test(m.subject))!;
+    assert.match(verified.html!, new RegExp(rows[0].assigned_to));
+    const leaderEmail = rows[0].leader_user_id === "u-lead-a" ? "lead.a@example.com" : "lead.b@example.com";
+    assert.ok(mails(leaderEmail).some((m) => /Please welcome Care1/.test(m.subject)));
+
+    // Nothing before a day has passed; then the check-in goes out once.
+    const askAt = new Date(rows[0].followup_next_ask_at);
+    await processFollowups(env, new Date(askAt.getTime() - 60_000));
+    assert.ok(!mails(leaderEmail).some((m) => /connected with Care1/.test(m.subject)));
+    await processFollowups(env, new Date(askAt.getTime() + 60_000));
+    const ask = mails(leaderEmail).filter((m) => /connected with Care1/.test(m.subject));
+    assert.equal(ask.length, 1);
+    await processFollowups(env, new Date(askAt.getTime() + 120_000));
+    assert.equal(mails(leaderEmail).filter((m) => /connected with Care1/.test(m.subject)).length, 1, "not twice in a row");
+    const t = decodeURIComponent(/followup\?t=([^"&<\s]+)/.exec(ask[0].html!)![1]);
+    // "Not yet" → asked again later; "Yes" → how.
+    assert.equal(((await (await post("/api/followup", { t, met: false, days: 7 })).json()) as { days: number }).days, 7);
+    assert.equal((env.DB._db.prepare("SELECT followup_status FROM members WHERE id = ?").get(ids[0]) as { followup_status: string }).followup_status, "not_yet");
+    assert.equal((await post("/api/followup", { t, met: true, method: "whatsapp", note: "Lovely chat" })).status, 200);
+    const done = env.DB._db.prepare("SELECT followup_status, followup_method, last_contact_at FROM members WHERE id = ?").get(ids[0]) as Record<string, string>;
+    assert.equal(done.followup_status, "met"); assert.equal(done.followup_method, "whatsapp"); assert.ok(done.last_contact_at);
+    assert.equal((env.DB._db.prepare("SELECT COUNT(*) AS n FROM member_contacts WHERE member_id = ?").get(ids[0]) as { n: number }).n, 1);
+
+    // Handover to the other leader.
+    const other = rows[1].leader_user_id === "u-lead-a" ? "u-lead-b" : "u-lead-a";
+    assert.equal((await post(`/api/admin/people/${ids[1]}/handover`, { to: other }, A(cookie))).status, 200);
+    assert.equal((env.DB._db.prepare("SELECT leader_user_id FROM members WHERE id = ?").get(ids[1]) as { leader_user_id: string }).leader_user_id, other);
+    // A leader leaves the team → their people move to the remaining leader.
+    assert.equal((await call("/api/admin/team/u-lead-a", { method: "DELETE", headers: A(cookie) })).status, 200);
+    assert.equal(counts("u-lead-a"), 0);
+    assert.ok(ids.every((id) => (env.DB._db.prepare("SELECT leader_user_id FROM members WHERE id = ?").get(id) as { leader_user_id: string }).leader_user_id === "u-lead-b"));
+  });
+
+  test("RSVP from the reminder email: one tap to answer, optional reason, visible to admins", async () => {
+    const { rsvpLinks } = await import("../src/lib/rsvp.ts");
+    const links = await rsvpLinks(env, "svc-fri-youth", "2026-10-16", "guest@example.com", "Guest");
+    const tok = decodeURIComponent(new URL(links.no).searchParams.get("t")!);
+    const look = await (await post("/api/rsvp/lookup", { t: tok })).json() as { service: string; response: string | null };
+    assert.equal(look.service, "Youth service"); assert.equal(look.response, null);
+    assert.equal((await post("/api/rsvp", { t: tok, response: "no", reason_code: "work" })).status, 200);
+    const sum = await (await call("/api/admin/rsvps?service_id=svc-fri-youth&date=2026-10-16", { headers: { cookie } })).json() as { coming: number; not_coming: number; reasons: Record<string, number> };
+    assert.equal(sum.not_coming, 1); assert.equal(sum.reasons["Work or studies"], 1);
+    assert.equal((await post("/api/rsvp", { t: tok, response: "yes" })).status, 200);
+    const sum2 = await (await call("/api/admin/rsvps?service_id=svc-fri-youth&date=2026-10-16", { headers: { cookie } })).json() as { coming: number; not_coming: number };
+    assert.equal(sum2.coming, 1); assert.equal(sum2.not_coming, 0, "changing your mind updates the answer");
+    assert.equal((await call("/api/whatsapp/webhook", { method: "POST", body: "{}" })).status, 401, "WhatsApp webhook rejects unsigned calls");
+  });
 });

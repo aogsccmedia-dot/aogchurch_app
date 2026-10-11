@@ -126,16 +126,16 @@ export function joinWelcome(b: Brand, name: string, ref: string) {
   return {
     subject: `Welcome to the family, ${name} 💛`,
     html: layout(b, {
-      preheader: "We've received your details — a leader will reach out personally this week.",
+      preheader: "We've received your details. Next, our team confirms your membership.",
       eyebrow: "Welcome home",
       heading: `Welcome to the family, ${esc(name)}`,
       welcome: true,
       content: p("Thank you for taking the step to join AOG Sandton City Church. It genuinely made our day.") +
-        p("One of our leaders will reach out to you personally within the week to say hello, answer any questions, and help you find your place. You don't have to have it all figured out — just come as you are.") +
+        p("Our team will look over your details and confirm your membership. Once you're confirmed, we'll introduce you to a leader who will walk with you, answer your questions and help you find your place. You don't have to have it all figured out. Just come as you are.") +
         scripture("So then you are no longer strangers and aliens, but you are fellow citizens with the saints and members of the household of God.", "Ephesians 2:19") +
         p(`Your reference is <strong style="color:${C.ink};letter-spacing:.08em">${esc(ref)}</strong> — keep it handy in case you need it.`) + button(b.site + "/me", "View my profile"),
     }),
-    text: `Welcome to the family, ${name}!\n\nThank you for joining AOG Sandton City Church. A leader will reach out personally within the week.\n\nYour reference: ${ref}\n\n"You are no longer strangers... but members of the household of God." — Ephesians 2:19` + textFooter(b),
+    text: `Welcome to the family, ${name}!\n\nThank you for joining AOG Sandton City Church. Our team will confirm your membership; once you're confirmed, we'll introduce you to a leader who will walk with you.\n\nYour reference: ${ref}\n\n"You are no longer strangers... but members of the household of God." — Ephesians 2:19` + textFooter(b),
   };
 }
 
@@ -447,7 +447,7 @@ export function adminNewComplaint(b: Brand, o: { name: string; ref: string; cate
   };
 }
 
-export function memberVerified(b: Brand, o: { name: string; ref: string }) {
+export function memberVerified(b: Brand, o: { name: string; ref: string; leader?: string | null }) {
   return {
     subject: `${o.name}, you're officially a member 🎉`,
     html: layout(b, {
@@ -456,6 +456,7 @@ export function memberVerified(b: Brand, o: { name: string; ref: string }) {
       heading: `You're officially part of the family, ${esc(o.name)}!`,
       welcome: true,
       content: p("Our leaders have verified your membership. We're so glad you're here, and we can't wait to grow, serve and worship together.") +
+        (o.leader ? p(`<strong>${esc(o.leader)}</strong> from our leadership team will be your leader and will be in touch this week to welcome you personally. They're here to walk with you, pray with you and help you find your place.`) : "") +
         `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 18px">
           <tr><td style="padding:12px 16px;background:#eef5ec;border-radius:12px;font:15px/1.6 ${SANS};color:${C.ink}">✓ &nbsp;Your profile shows your events, tickets and membership</td></tr><tr><td height="8"></td></tr>
           <tr><td style="padding:12px 16px;background:#f1edfb;border-radius:12px;font:15px/1.6 ${SANS};color:${C.ink}">✓ &nbsp;You can raise a concern confidentially if anything isn't right</td></tr><tr><td height="8"></td></tr>
@@ -463,7 +464,7 @@ export function memberVerified(b: Brand, o: { name: string; ref: string }) {
         scripture("So in Christ Jesus you are all children of God through faith.", "Galatians 3:26") +
         p(`Your member reference is <strong style="letter-spacing:.06em">${esc(o.ref)}</strong>.`) + button(b.site + "/me?welcome=1", "Open my profile"),
     }),
-    text: `${o.name}, you're officially a member of AOG Sandton City Church! Your reference: ${o.ref}. ${b.site}/me` + textFooter(b),
+    text: `${o.name}, you're officially a member of AOG Sandton City Church!${o.leader ? ` ${o.leader} will be your leader and will be in touch this week.` : ""} Your reference: ${o.ref}. ${b.site}/me` + textFooter(b),
   };
 }
 
@@ -501,7 +502,7 @@ export function checkedIn(b: Brand, o: { name: string; title: string; seq: numbe
 }
 
 /** Weekly service reminder (sent only for services an admin has switched reminders on for). */
-export function serviceReminder(b: Brand, o: { name: string | null; title: string; when: string; time: string; topic: string | null; speaker: string | null; posterUrl: string | null; stopUrl: string; tonight: boolean }) {
+export function serviceReminder(b: Brand, o: { name: string | null; title: string; when: string; time: string; topic: string | null; speaker: string | null; posterUrl: string | null; stopUrl: string; tonight: boolean; yesUrl?: string; noUrl?: string }) {
   const greet = o.name ? `Hi ${esc(o.name)},` : "Hi there,";
   return {
     subject: `${o.tonight ? "Tonight" : "Tomorrow"}: ${o.title}${o.topic ? ` · ${o.topic}` : ""}`,
@@ -513,10 +514,61 @@ export function serviceReminder(b: Brand, o: { name: string | null; title: strin
       content: p(greet) +
         p(`A friendly reminder: <strong>${esc(o.title)}</strong> is ${o.tonight ? "tonight" : "tomorrow"}, ${esc(o.when)}${o.time ? `, <strong>${esc(o.time)}</strong>` : ""}${o.speaker ? `, with ${esc(o.speaker)}` : ""}. Come as you are, and bring a friend!`) +
         p(`<span style="color:${C.muted}">17 Humber Street, Woodmead, Sandton</span>`) +
-        button(b.site + "/events#our-week", "See this week's services"),
+        (o.yesUrl && o.noUrl ? p("<strong>Will you be joining us?</strong> One tap lets the team know:") + twoButtons({ href: o.yesUrl, label: "I'm coming" }, { href: o.noUrl, label: "Can't make it" })
+          : button(b.site + "/events#our-week", "See this week's services")),
       footerNote: "You're getting this because you're part of the AOG Sandton City Church family.",
       unsubscribeUrl: o.stopUrl,
     }).replace(">Unsubscribe</a>", ">Stop service reminders</a>"),
-    text: `${o.name ? `Hi ${o.name}` : "Hi there"},\n\n${o.title} is ${o.tonight ? "tonight" : "tomorrow"}, ${o.when}${o.time ? `, ${o.time}` : ""}.${o.topic ? `\nTopic: ${o.topic}` : ""}${o.speaker ? `\nWith: ${o.speaker}` : ""}\n17 Humber Street, Woodmead, Sandton.\n\nStop service reminders (the weekly letter is unaffected): ${o.stopUrl}` + textFooter(b),
+    text: `${o.name ? `Hi ${o.name}` : "Hi there"},\n\n${o.title} is ${o.tonight ? "tonight" : "tomorrow"}, ${o.when}${o.time ? `, ${o.time}` : ""}.${o.topic ? `\nTopic: ${o.topic}` : ""}${o.speaker ? `\nWith: ${o.speaker}` : ""}\n17 Humber Street, Woodmead, Sandton.${o.yesUrl ? `\n\nI'm coming: ${o.yesUrl}\nCan't make it: ${o.noUrl}` : ""}\n\nStop service reminders (the weekly letter is unaffected): ${o.stopUrl}` + textFooter(b),
+  };
+}
+
+/** To a leader: a newly confirmed member to welcome personally (or handed over by another leader). */
+export function leaderAssigned(b: Brand, o: { leader: string; member: string; first: string; ref: string; phone: string | null; whatsapp: string | null; email: string | null; age: number | null; interests: string | null; handedBy?: string | null; peopleUrl: string }) {
+  const wa = (o.whatsapp || o.phone || "").replace(/\D/g, "").replace(/^0/, "27");
+  const row = (k: string, v: string) => `<tr><td style="padding:6px 0;font:14px ${SANS};color:${C.muted};width:120px">${k}</td><td style="padding:6px 0;font:15px ${SANS};color:${C.ink}">${v}</td></tr>`;
+  return {
+    subject: o.handedBy ? `${o.member} is now in your care (from ${o.handedBy})` : `Please welcome ${o.member}, our newest member`,
+    html: layout(b, {
+      preheader: `${o.first} has been confirmed as a member and assigned to you. Please reach out this week.`,
+      eyebrow: o.handedBy ? "Handed over to you" : "New member to welcome",
+      heading: `Hi ${esc(o.leader)}, meet ${esc(o.member)}`,
+      content: p(o.handedBy ? `${esc(o.handedBy)} has handed ${esc(o.first)} over to you. Please introduce yourself and keep in touch.` : `${esc(o.first)} has just been confirmed as a member of AOG Sandton City Church, and you're their leader. Please reach out this week to welcome them personally, answer questions and help them find their place.`) +
+        `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 18px">${row("Reference", esc(o.ref))}${o.phone ? row("Phone", esc(o.phone)) : ""}${o.email ? row("Email", esc(o.email)) : ""}${o.age != null ? row("Age", String(o.age)) : ""}${o.interests ? row("Interested in", esc(o.interests)) : ""}</table>` +
+        (wa ? twoButtons({ href: `https://wa.me/${wa}?text=${encodeURIComponent(`Hi ${o.first}! It's ${o.leader} from AOG Sandton City Church. Welcome to the family 💛`)}`, label: "Message on WhatsApp" }, { href: `tel:${o.phone || ""}`, label: "Call" }) : "") +
+        p(`<span style="font-size:13px;color:${C.muted}">Tomorrow we'll check in with you to see if you've connected. You can see everyone in your care under <a href="${esc(o.peopleUrl)}" style="color:${C.gold}">My people</a> in the admin.</span>`),
+    }),
+    text: `Hi ${o.leader},\n\n${o.handedBy ? `${o.handedBy} has handed ${o.member} over to you.` : `${o.member} has been confirmed as a member and assigned to you.`} Please reach out this week.\n\nReference: ${o.ref}\n${o.phone ? `Phone: ${o.phone}\n` : ""}${o.email ? `Email: ${o.email}\n` : ""}\nMy people: ${o.peopleUrl}` + textFooter(b),
+  };
+}
+
+/** To a leader: "have you connected yet?" with one-tap answers. */
+export function leaderFollowup(b: Brand, o: { leader: string; member: string; first: string; yesUrl: string; notYetUrl: string; asks: number }) {
+  return {
+    subject: o.asks > 1 ? `Gentle reminder: have you connected with ${o.member}?` : `Have you connected with ${o.member} yet?`,
+    html: layout(b, {
+      preheader: `One tap to let us know how it went with ${o.first}.`,
+      eyebrow: "Leader follow-up",
+      heading: `Have you connected with ${esc(o.first)}?`,
+      content: p(`Hi ${esc(o.leader)}, ${o.asks > 1 ? "just checking in again" : "a quick check-in"}: have you been able to reach ${esc(o.member)} yet?`) +
+        twoButtons({ href: o.yesUrl, label: "Yes, we've connected" }, { href: o.notYetUrl, label: "Not yet" }) +
+        p(`<span style="font-size:13px;color:${C.muted}">If you tap “Yes”, we'll ask how you connected (WhatsApp, a call, email or in person). “Not yet” gives you a few more days.</span>`),
+    }),
+    text: `Hi ${o.leader}, have you connected with ${o.member} yet?\nYes: ${o.yesUrl}\nNot yet: ${o.notYetUrl}` + textFooter(b),
+  };
+}
+
+/** To the main admin: someone still hasn't been reached after several reminders. */
+export function adminFollowupOverdue(b: Brand, o: { member: string; ref: string; leader: string; days: number }) {
+  return {
+    subject: `${o.member} hasn't been contacted yet`,
+    html: layout(b, {
+      preheader: `${o.leader} hasn't connected with ${o.member} after ${o.days} days.`,
+      eyebrow: "Follow-up needs attention",
+      heading: `${esc(o.member)} is still waiting`,
+      content: p(`${esc(o.member)} (${esc(o.ref)}) was assigned to <strong>${esc(o.leader)}</strong> ${o.days} days ago and hasn't been contacted yet. You may want to check in with ${esc(o.leader)} or hand ${esc(o.member)} to another leader.`) +
+        button(b.site + "/admin/#people", "Open My people"),
+    }),
+    text: `${o.member} (${o.ref}) was assigned to ${o.leader} ${o.days} days ago and hasn't been contacted yet. ${b.site}/admin/#people` + textFooter(b),
   };
 }

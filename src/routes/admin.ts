@@ -10,6 +10,7 @@ import { parseSchema, sanitizeSchema, slugify } from "../lib/forms.ts";
 import { emailHealth, resendFailed, sendMail } from "../lib/email.ts";
 import { SAMPLES } from "../emails/samples.ts";
 import { ensureTickets, voidTickets } from "../lib/tickets.ts";
+import { CONTACT_METHODS, assignLeader, leaders, logContact, reassignFrom } from "../lib/leaders.ts";
 import { GROUP_KEYS } from "../lib/groups.ts";
 import { CHECKIN_MONTHS, addMonths } from "../lib/membership.ts";
 import { buildAnnouncement, processAnnouncements, renderAnnouncement, type AnnouncementRow } from "../lib/newsletter.ts";
@@ -128,8 +129,8 @@ export function adminRoutes(router: Router, env: Env): void {
     const assigned = "assigned_to" in body ? v.text("assigned_to", { max: 120 }) : undefined;
     v.assert();
     const sets: string[] = []; const args: unknown[] = [];
-    const prev = status ? await env.DB.prepare("SELECT status, first_name, preferred_name, last_name, email, ref_code FROM members WHERE id = ?").bind(id)
-      .first<{ status: string; first_name: string; preferred_name: string | null; last_name: string; email: string | null; ref_code: string }>() : null;
+    const prev = status ? await env.DB.prepare("SELECT status, first_name, preferred_name, last_name, email, ref_code, leader_user_id, user_id FROM members WHERE id = ?").bind(id)
+      .first<{ status: string; first_name: string; preferred_name: string | null; last_name: string; email: string | null; ref_code: string; leader_user_id: string | null; user_id: string | null }>() : null;
     if (status) {
       sets.push("status = ?"); args.push(status);
       if (status === "revoked") {
@@ -146,9 +147,15 @@ export function adminRoutes(router: Router, env: Env): void {
     sets.push("updated_at = ?"); args.push(new Date().toISOString());
     const res = await env.DB.prepare(`UPDATE members SET ${sets.join(", ")} WHERE id = ?`).bind(...args, id).run();
     if (!res.meta.changes) throw new HttpError(404, "Member not found.");
-    if (status === "member" && prev && prev.status !== "member" && prev.email) {
-      await later(ctx, sendMail(env, { to: prev.email, toName: `${prev.first_name} ${prev.last_name}`, ...T.memberVerified({ site: siteUrl(env) }, { name: prev.preferred_name || prev.first_name, ref: prev.ref_code }), template: "member_verified" }));
+    if (status === "member" && prev && prev.status !== "member") {
+      // Newly confirmed: a leader from the admin team is assigned (fairly), then the member hears who it is.
+      await later(ctx, (async () => {
+        const leader = prev.leader_user_id ? null : await assignLeader(env, id).catch((e) => { console.error("assign leader", e); return null; });
+        const leaderName = leader?.name ?? (await env.DB.prepare("SELECT assigned_to FROM members WHERE id = ?").bind(id).first<{ assigned_to: string | null }>())?.assigned_to ?? null;
+        if (prev.email) await sendMail(env, { to: prev.email, toName: `${prev.first_name} ${prev.last_name}`, ...T.memberVerified({ site: siteUrl(env) }, { name: prev.preferred_name || prev.first_name, ref: prev.ref_code, leader: leaderName }), template: "member_verified" });
+      })());
     }
+    if (status === "revoked" && prev?.user_id) await later(ctx, reassignFrom(env, prev.user_id, null));
     await audit(env, s, "update", "member", id, { status, assigned });
     return json({ ok: true });
   }));
@@ -595,8 +602,49 @@ export function adminRoutes(router: Router, env: Env): void {
     if (!r.meta.changes) throw new HttpError(404, "Not an admin.");
     await env.DB.prepare("DELETE FROM sessions WHERE user_id = ? AND kind = 'admin'").bind(userId).run();
     await audit(env, s, "revoke_admin", "user", userId);
+    // Their people are shared out fairly among the remaining leaders.
+    const moved = await reassignFrom(env, userId, null);
+    return json({ ok: true, reassigned: moved });
+  }));
+  // ---- Leader care: "My people" (everyone sees their own; the main admin sees all), handovers and contact log
+  router.get("/api/admin/people", guard(async (req, _p, s) => {
+    const all = s.role === "super" && new URL(req.url).searchParams.get("all") === "1";
+    const { results } = await env.DB.prepare(
+      `SELECT m.id, m.ref_code, m.first_name, m.last_name, m.preferred_name, m.phone, m.whatsapp, m.email, m.leader_user_id, m.leader_assigned_at,
+          m.followup_status, m.followup_method, m.followup_at, m.followup_asks, m.last_contact_at, m.assigned_to,
+          (SELECT COUNT(*) FROM member_contacts c WHERE c.member_id = m.id) AS contacts
+       FROM members m WHERE m.status = 'member' AND ${all ? "1 = 1" : "m.leader_user_id = ?"} ORDER BY CASE m.followup_status WHEN 'met' THEN 1 ELSE 0 END, m.leader_assigned_at DESC LIMIT 500`)
+      .bind(...(all ? [] : [s.user.id])).all();
+    return json({ ok: true, people: results, leaders: await leaders(env), me: s.user.id, methods: CONTACT_METHODS,
+      unassigned: (await env.DB.prepare("SELECT COUNT(*) AS n FROM members WHERE status = 'member' AND leader_user_id IS NULL").first<{ n: number }>())?.n ?? 0 });
+  }));
+  router.get("/api/admin/people/:id/contacts", guard(async (_req, { id }) => {
+    const { results } = await env.DB.prepare(
+      `SELECT c.method, c.note, c.created_at, COALESCE(NULLIF(u.given_name, ''), u.name, u.email) AS leader FROM member_contacts c LEFT JOIN users u ON u.id = c.leader_user_id
+        WHERE c.member_id = ? ORDER BY c.created_at DESC LIMIT 50`).bind(id).all();
+    return json({ ok: true, contacts: results });
+  }));
+  router.post("/api/admin/people/:id/contact", guard(async (req, { id }, s) => {
+    const { method, note } = await readJson<{ method?: string; note?: string }>(req);
+    await logContact(env, id, s.user.id, method || "", note ?? null);
+    await audit(env, s, "contact", "member", id, { method });
     return json({ ok: true });
   }));
+  router.post("/api/admin/people/:id/handover", guard(async (req, { id }, s, ctx) => {
+    const { to } = await readJson<{ to?: string }>(req);
+    if (!to) throw new HttpError(422, "Choose who to hand over to.");
+    const job = assignLeader(env, id, { toUserId: to, handedBy: s.user.given_name || s.user.name || "A leader" });
+    const leader = await job;
+    await audit(env, s, "handover", "member", id, { to });
+    return json({ ok: true, leader: leader?.name ?? null });
+  }));
+  router.post("/api/admin/people/assign-unassigned", superOnly(async (_req, _p, s) => {
+    const { results } = await env.DB.prepare("SELECT id FROM members WHERE status = 'member' AND leader_user_id IS NULL ORDER BY created_at LIMIT 200").all<{ id: string }>();
+    let n = 0; for (const r of results) if (await assignLeader(env, r.id)) n++;
+    await audit(env, s, "assign_unassigned", "member", "", { count: n });
+    return json({ ok: true, assigned: n });
+  }));
+
   router.get("/api/admin/whoami", guard(async (_req, _p, s) => json({ ok: true, email: s.user.email, name: s.user.name, role: s.role ?? "super" })));
 
   // ---------- complaints ----------

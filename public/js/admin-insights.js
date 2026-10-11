@@ -139,6 +139,7 @@ export function initInsights(ctx) {
     if (!META.groups.length) await loadMeta();
     const [s, x] = await Promise.all([api("/api/admin/services"), api(`/api/admin/sessions?from=${addDays(META.today, -365)}&to=${addDays(META.today, 60)}`)]);
     SVC = s; SESS = x.sessions;
+    drawWhatsapp();
     const sel = $("#svc-filter"), v = sel.value;
     sel.innerHTML = `<option value="">All services</option>` + SVC.services.map((w) => `<option value="${esc(w.id)}">${esc(w.title)} · ${esc(w.day_label)}</option>`).join("");
     sel.value = v;
@@ -158,6 +159,7 @@ export function initInsights(ctx) {
       const isToday = next === SVC.today;
       return `<article class="svc-card">
         <header><span class="svc-day">${esc(w.day_label.slice(0, 3))}</span><span><b>${esc(w.title)}</b><small>${esc(w.time || "")}${w.time ? " · " : ""}${esc(w.group_label)}</small></span></header>
+        ${(() => { const r = w.rsvps?.[w.next_date]; return r ? `<button class="svc-rsvp" type="button" data-rsvps="${esc(w.id)}" data-date="${esc(w.next_date)}"><b>${num(r.yes)}</b> coming · <b>${num(r.no)}</b> can't make it <span>See who →</span></button>` : ""; })()}
         ${w.reminders ? `<div class="svc-remind"><span>Email reminder ${w.start_time && w.start_time < "12:00" ? "the evening before" : "on the morning"}</span><button class="link-btn" type="button" data-remind="${esc(w.id)}">Send now</button></div>` : ""}
         <div class="svc-slot">${sNext ? `${sNext.poster_url ? `<img src="${esc(sNext.poster_url)}" alt="">` : ""}<span><em>${isToday ? "Today" : esc(day(next))}</em>${esc(sNext.topic)}</span><button class="btn btn-sm" data-edit-session="${esc(sNext.id)}">${isToday ? "Add results" : "Edit"}</button>`
           : `<span><em>${isToday ? "Today" : "Next · " + esc(day(next))}</em><span class="muted">No topic yet</span></span><button class="btn btn-sm btn-gold" data-new-session="${esc(w.id)}" data-date="${esc(next)}">Plan</button>`}</div>
@@ -177,6 +179,8 @@ export function initInsights(ctx) {
   $("#svc-filter").addEventListener("change", drawServices);
   $("#svc-new").addEventListener("click", () => openSession(null, SVC.services.find((w) => w.active)?.id, null));
   $("[data-view=services]").addEventListener("click", (e) => {
+    const rv = e.target.closest("[data-rsvps]");
+    if (rv) { safe(openRsvps)(rv.dataset.rsvps, rv.dataset.date); return; }
     const rm = e.target.closest("[data-remind]");
     if (rm) {
       const w = SVC.services.find((x) => x.id === rm.dataset.remind);
@@ -191,6 +195,30 @@ export function initInsights(ctx) {
     if (n) openSession(null, n.dataset.newSession, n.dataset.date);
     if (ed) openSession(SESS.find((s) => s.id === ed.dataset.editSession));
   });
+
+  async function openRsvps(serviceId, date) {
+    const w = SVC.services.find((x) => x.id === serviceId);
+    const r = await api(`/api/admin/rsvps?service_id=${encodeURIComponent(serviceId)}&date=${date}`);
+    const body = $("#rsvp-body");
+    const reasons = Object.entries(r.reasons);
+    body.innerHTML = `<header class="vh"><div><p class="eyebrow gold">Who's coming</p><h2>${esc(w?.title || "")} · ${esc(day(date))}</h2></div><button class="icon-btn" type="button" data-close aria-label="Close">✕</button></header>
+      <div class="kpis">${kpi(num(r.coming), "Coming")}${kpi(num(r.not_coming), "Can't make it")}</div>
+      ${reasons.length ? `<div class="card"><h3>Reasons shared</h3><div class="hbars">${reasons.map(([k, v]) => `<div class="hb"><span>${esc(k)}</span><span class="track"><i style="width:${(v / Math.max(...reasons.map(([, x]) => x))) * 100}%"></i></span><b>${v}</b></div>`).join("")}</div><p class="muted small">Only what people chose to share. Please treat it with care.</p></div>` : ""}
+      <div class="card"><div class="list">${r.people.length ? r.people.map((p) => `<div class="item rsvp-row"><span class="pill ${p.response === "yes" ? "member" : "pending"}">${p.response === "yes" ? "Coming" : "Can't"}</span><span><b style="font-weight:450">${esc(p.name)}</b>${p.reason ? `<div class="meta">${esc(p.reason)}</div>` : ""}</span><span class="meta">${p.channel === "whatsapp" ? "WhatsApp" : "Email"}</span></div>`).join("") : `<p class="muted">No answers yet. They come in from the reminder${SVC.whatsapp ? " email and WhatsApp" : " email"}.</p>`}</div></div>`;
+    $("#rsvp-drawer").showModal();
+  }
+
+  // WhatsApp is a coming-soon feature: the integration is built but stays off until the church connects a number.
+  async function drawWhatsapp() {
+    const w = await api("/api/admin/whatsapp").catch(() => null);
+    const live = !!w?.connected;
+    $("#wa-state").textContent = live ? "Connected" : "Coming soon"; $("#wa-state").className = `pill ${live ? "member" : "new"}`;
+    $("#wa-body").innerHTML = live
+      ? `<p class="muted small">Reminders go to ${num(w.reachable)} member${w.reachable === 1 ? "" : "s"} who agreed to WhatsApp contact (${num(w.opted_out)} said STOP). Sent in the last 7 days: ${num(w.sent_7d)}${w.failed_7d ? `, failed: ${num(w.failed_7d)}` : ""}.</p>
+         <form class="row wa-test" id="wa-test"><input class="input" name="phone" inputmode="tel" placeholder="Your number, e.g. 082 123 4567" required><button class="btn btn-sm" type="submit">Send test</button></form>`
+      : `<p class="muted small">Soon: Friday reminders on WhatsApp with “I'm coming / Can't make it” buttons, a WhatsApp welcome for new members, and quick answers to questions. For now, reminders go by email with the same buttons.</p>`;
+    $("#wa-test")?.addEventListener("submit", safe(async (e) => { e.preventDefault(); const r = await api("/api/admin/whatsapp/test", { method: "POST", body: { phone: e.target.phone.value } }); toast(`Test sent to +${r.to}`); }));
+  }
 
   // The record form: service → date list fills in automatically from the service's weekday.
   function openSession(sess, serviceId, date) {
@@ -461,6 +489,66 @@ export function initInsights(ctx) {
         ${table(["Measure", "Number"], [["New members joined", r.membership.joined], ["Verified members (today)", r.membership.verified_total], ["Active member records (today)", r.membership.active_total], ["Memberships revoked", r.membership.revoked], ["Weekly letter subscribers (today)", r.membership.subscribers], ["Prayer requests received", r.care.prayer_requests], ["Complaints raised", r.care.complaints], ["Complaints resolved", r.care.complaints_resolved]].map(([k, v]) => `<tr><td>${k}</td><td class="n">${num(v)}</td></tr>`))}
       </section>
       <footer class="rep-foot">Prepared ${esc(fmtDate(r.generated_at))} from the church's records (event bookings, door scans and weekly service records). Figures for income include approved online payments and amounts recorded by leaders.</footer>`;
+  }
+
+
+  // ------------------------------------------------------------ My people (leader care)
+  let PP = null, ppScope = "mine";
+  const FU = { pending: ["Not contacted yet", "pending"], not_yet: ["Not yet", "pending"], met: ["Connected", "member"] };
+  const methodLabel = (k) => ({ whatsapp: "WhatsApp", call: "phone call", email: "email", in_person: "in person" }[k] || k);
+  const ago = (iso) => { if (!iso) return "never"; const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000); return d <= 0 ? "today" : d === 1 ? "yesterday" : `${d} days ago`; };
+  loaders.people = async () => {
+    PP = await api(`/api/admin/people${ppScope === "all" ? "?all=1" : ""}`);
+    const sup = document.body.dataset.role === "super";
+    $("#pp-scope").hidden = !sup;
+    $$("#pp-scope button").forEach((b) => b.classList.toggle("on", b.dataset.s === ppScope));
+    const list = PP.people, waiting = list.filter((p) => p.followup_status !== "met").length;
+    $("#pp-kpis").innerHTML = kpi(num(list.length), ppScope === "all" ? "Members with a leader" : "In your care") + kpi(num(waiting), "Waiting for a first contact") + kpi(num(list.filter((p) => p.followup_status === "met").length), "Connected");
+    $("#pp-fair").hidden = !(sup && ppScope === "all");
+    if (sup && ppScope === "all") $("#pp-fair").innerHTML = `<h3>Shared out fairly</h3><div class="hbars">${PP.leaders.map((l) => `<div class="hb"><span>${esc(l.name)}</span><span class="track"><i style="width:${(l.caring / Math.max(1, ...PP.leaders.map((x) => x.caring))) * 100}%"></i></span><b>${num(l.caring)}</b></div>`).join("")}</div>
+      ${PP.unassigned ? `<p class="muted small">${num(PP.unassigned)} confirmed member${PP.unassigned === 1 ? " has" : "s have"} no leader yet. <button class="link-btn" type="button" id="pp-assign">Assign them now</button></p>` : ""}`;
+    $("#pp-assign")?.addEventListener("click", safe(async () => { const r = await api("/api/admin/people/assign-unassigned", { method: "POST", body: {} }); toast(`${r.assigned} assigned`); loaders.people(); }));
+    $("#pp-list").innerHTML = list.length ? list.map((p) => {
+      const [label, cls] = FU[p.followup_status] || FU.pending;
+      const wa = (p.whatsapp || p.phone || "").replace(/\D/g, "").replace(/^0/, "27");
+      return `<article class="item pp-row" data-person="${esc(p.id)}">
+        <div class="pp-main"><b>${esc(p.preferred_name || p.first_name)} ${esc(p.last_name)}</b><small>${esc(p.ref_code)}${ppScope === "all" ? ` · ${esc(p.assigned_to || "")}` : ""} · last contact ${esc(ago(p.last_contact_at))}</small></div>
+        <span class="pill ${cls}">${label}</span>
+        <div class="pp-actions">${wa ? `<a class="btn btn-sm" href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ""}${p.phone ? `<a class="btn btn-sm" href="tel:${esc(p.phone)}">Call</a>` : ""}<button class="btn btn-sm btn-gold" type="button" data-log>Log contact</button><button class="btn btn-sm btn-ghost" type="button" data-more>More</button></div>
+      </article>`; }).join("") : `<div class="empty">${ppScope === "all" ? "No confirmed members have a leader yet." : "Nobody is in your care yet. When a member is confirmed, they're shared out fairly among the admin team."}</div>`;
+  };
+  $("#pp-scope").addEventListener("click", (e) => { const b = e.target.closest("[data-s]"); if (!b) return; ppScope = b.dataset.s; safe(loaders.people)(); });
+  $("#pp-list").addEventListener("click", safe(async (e) => {
+    const row = e.target.closest("[data-person]"); if (!row) return;
+    const p = PP.people.find((x) => x.id === row.dataset.person);
+    if (e.target.closest("[data-log]") || e.target.closest("[data-more]")) await openPerson(p, !!e.target.closest("[data-log]"));
+  }));
+  async function openPerson(p, focusLog) {
+    const { contacts } = await api(`/api/admin/people/${p.id}/contacts`);
+    const others = PP.leaders.filter((l) => l.id !== p.leader_user_id);
+    $("#person-body").innerHTML = `<header class="vh"><div><p class="eyebrow gold">${esc(p.ref_code)}</p><h2>${esc(p.preferred_name || p.first_name)} ${esc(p.last_name)}</h2><p class="muted small">Leader: ${esc(p.assigned_to || "—")}${p.followup_at ? ` · first connected ${esc(fmtDate(p.followup_at))}` : ""}</p></div><button class="icon-btn" type="button" data-close aria-label="Close">✕</button></header>
+      <form class="card form-grid" id="pp-log"><h3>Log a contact</h3>
+        <div class="rv-reasons left">${PP.methods.map(([k, l]) => `<label class="chip-radio"><input type="radio" name="method" value="${esc(k)}" required><span>${esc(l)}</span></label>`).join("")}</div>
+        <textarea class="input" name="note" rows="2" maxlength="1000" placeholder="How are they doing? Anything to follow up? (optional)"></textarea>
+        <button class="btn btn-gold btn-sm" type="submit" style="justify-self:start">Save</button></form>
+      <div class="card"><h3>Keeping in touch</h3>${contacts.length ? `<div class="list">${contacts.map((c) => `<div class="item"><b style="font-weight:450">${esc(methodLabel(c.method))}</b> <span class="meta">· ${esc(fmtDate(c.created_at))} · ${esc(c.leader || "")}</span>${c.note ? `<p style="margin:4px 0 0">${esc(c.note)}</p>` : ""}</div>`).join("")}</div>` : `<p class="muted small">No contacts logged yet.</p>`}</div>
+      ${others.length ? `<form class="card" id="pp-hand"><h3>Hand over</h3><p class="muted small">Pass ${esc(p.preferred_name || p.first_name)} to another leader. They'll get an introduction email.</p>
+        <div class="row" style="display:flex;gap:8px;flex-wrap:wrap"><select class="input" name="to" required style="flex:1 1 200px">${others.map((l) => `<option value="${esc(l.id)}">${esc(l.name)} (${num(l.caring)} in care)</option>`).join("")}</select><button class="btn btn-sm" type="submit">Hand over</button></div></form>` : ""}`;
+    const dlg = $("#person-drawer"); dlg.showModal();
+    if (focusLog) $("#pp-log input[name=method]").focus();
+    $("#pp-log").onsubmit = (e) => {
+      e.preventDefault(); const f = e.target;
+      const body = { method: f.method.value, note: f.note.value };
+      dlg.close(); toast("Saved");
+      Object.assign(p, { followup_status: "met", last_contact_at: new Date().toISOString() }); safe(loaders.people)();
+      api(`/api/admin/people/${p.id}/contact`, { method: "POST", body }).then(() => safe(loaders.people)()).catch((err) => toast(err.message));
+    };
+    $("#pp-hand")?.addEventListener("submit", (e) => {
+      e.preventDefault(); const to = e.target.to.value, name = others.find((l) => l.id === to)?.name;
+      if (!confirm(`Hand ${p.preferred_name || p.first_name} over to ${name}?`)) return;
+      dlg.close(); toast(`Handed over to ${name}`);
+      api(`/api/admin/people/${p.id}/handover`, { method: "POST", body: { to } }).then(() => safe(loaders.people)()).catch((err) => { toast(err.message); safe(loaders.people)(); });
+    });
   }
 
   return { loadMeta };

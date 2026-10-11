@@ -40,6 +40,17 @@ export interface Env {
   /** Sender address on our domain, e.g. noreply@aogsccyouth.com */
   MAIL_FROM?: string;
   MAIL_FROM_NAME?: string;
+
+  /** WhatsApp Business Platform (Meta Cloud API). All optional: WhatsApp features switch on once these are set. */
+  WHATSAPP_TOKEN?: string;            // secret: permanent access token (System User)
+  WHATSAPP_PHONE_ID?: string;         // the WhatsApp phone number ID
+  WHATSAPP_APP_SECRET?: string;       // secret: Meta app secret, to verify webhook calls
+  WHATSAPP_VERIFY_TOKEN?: string;     // secret: any phrase, also entered in Meta's webhook settings
+  WHATSAPP_REMINDER_TEMPLATE?: string; // approved template name for service reminders (default "service_reminder")
+  WHATSAPP_WELCOME_TEMPLATE?: string;  // approved template name for the welcome (default "member_welcome")
+  WHATSAPP_TEMPLATE_LANG?: string;     // default "en"
+  /** Optional: lets the WhatsApp helper answer free-form questions with Claude (otherwise built-in answers). */
+  ANTHROPIC_API_KEY?: string;
   /** Google Identity Services web client ID (public). Empty = Google sign-in hidden. */
   GOOGLE_CLIENT_ID?: string;
 }
