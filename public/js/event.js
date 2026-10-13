@@ -22,8 +22,8 @@ function done(status, ref, message, already) {
   const pendingApproval = status === "pending";
   $("reg-done").hidden = false;
   $("reg-done").innerHTML = `<img class="seal" src="/assets/seal.png" alt="">
-    <h3>${already ? (pendingApproval ? "Your payment is being reviewed" : "You're already registered") : wait ? "You're on the waitlist" : pendingApproval ? "Payment received — thank you!" : "You're in! 🎉"}</h3>
-    <p class="muted-text">${wait ? "This event is full right now — we'll email you the moment a spot opens." : pendingApproval ? "Our team will check your proof of payment and email your ticket with a calendar invite as soon as it's approved." : "We've emailed your ticket. We can't wait to see you!"}</p>
+    <h3>${already ? (pendingApproval ? "Checking your payment" : "You've got your ticket") : wait ? "You're on the waitlist" : pendingApproval ? "Payment received 🙌" : "You're in! 🎉"}</h3>
+    <p class="muted-text">${wait ? "It's full right now. We'll email you if a spot opens." : pendingApproval ? "We'll email your ticket as soon as it's approved." : "Your ticket is in your email. See you there!"}</p>
     ${message ? `<p class="statement">${esc(message)}</p>` : ""}
     <span class="tag">Ref ${esc(ref)}${event.price_label ? " · " + esc(event.price_label) : ""}</span>
     ${wait || pendingApproval ? "" : `<p class="eyebrow" style="margin-top:6px">Add it to your calendar</p>
@@ -36,7 +36,7 @@ function prefill(me) {
   form.elements.name.value ||= me.user.name || "";
   $("r-email-field").hidden = true;
   form.email.required = false;
-  $("reg-heading").textContent = `Hi ${me.user.given_name || "there"} — save your seat`;
+  $("reg-heading").textContent = `Hi ${me.user.given_name || "there"}, get your ticket`;
   $("reg-google").hidden = true;
   form.dispatchEvent(new Event("input"));   // refresh the payment reference + Register lock
 }
@@ -72,7 +72,7 @@ async function load() {
 
   if (r.mine) { done(r.mine.status, r.mine.ref_code, null, true); return; }
   if (!event.registration_open) {
-    $("reg-card").innerHTML = `<p class="eyebrow gold">Registration</p><h3>Registration is closed</h3><p class="muted-text">But you're still very welcome to join us!</p>`;
+    $("reg-card").innerHTML = `<p class="eyebrow gold">Tickets</p><h3>Tickets are closed</h3><p class="muted-text">You're still very welcome to join us!</p>`;
     return;
   }
   form.hidden = false;
@@ -120,8 +120,7 @@ function setupPayment() {
   const price = event.ticket_price;
   const guests = form.guests;
   if (price) {
-    $("r-guests-label").textContent = "How many tickets?";
-    [...guests.options].forEach((o) => { const n = 1 + Number(o.value); o.textContent = `${n} ${n === 1 ? "ticket (just me)" : "tickets"} · ${rand(price * n)}`; });
+    [...guests.options].forEach((o) => { const n = 1 + Number(o.value); o.textContent = `${n} ${n === 1 ? "ticket" : "tickets"} · ${rand(price * n)}`; });
   }
   if (!event.requires_pop) return;
   $("pay-block").hidden = false;
@@ -152,7 +151,7 @@ function setupPayment() {
   $("pop").required = true;
   $("pop").addEventListener("change", () => { const f = $("pop").files[0]; $("pop-name").textContent = f ? `✓ ${f.name}` : "Tap to upload a PDF, photo or screenshot"; $("pop").closest(".pop-drop, .field").querySelector(".pop-drop").classList.toggle("has-file", !!f); $("pop").closest(".field").classList.remove("invalid"); });
   lockUntilComplete();
-  $("approval-note").textContent = event.auto_approve ? "Your ticket is emailed straight away." : "You'll get an email straight away saying we've received your details. Once our team has verified your payment, a second email confirms your seat with your ticket and a calendar invite.";
+  $("approval-note").textContent = event.auto_approve ? "Straight away." : "As soon as we've checked your payment, usually the same day.";
 }
 
 load();
@@ -176,7 +175,7 @@ function addEventSchema(e) {
   } catch { /* never block the page */ }
 }
 
-// Paid events: keep "Register" locked until every required field (and the proof of payment) is in.
+// Paid events: keep "Get Ticket" locked until every required field (and the proof of payment) is in.
 function lockUntilComplete() {
   const btn = form.querySelector('[type="submit"]');
   let hint = document.getElementById("reg-left");
@@ -197,7 +196,7 @@ function lockUntilComplete() {
     const left = missing();
     btn.disabled = left.length > 0;
     btn.classList.toggle("locked", left.length > 0);
-    hint.innerHTML = left.length ? `${icon("hourglass")} Still needed: ${left.map(esc).join(", ")}` : `${icon("check")} All set. You can register now.`;
+    hint.innerHTML = left.length ? `${icon("hourglass")} Still needed: ${left.map(esc).join(", ")}` : `${icon("check")} All set.`;
     hint.classList.toggle("ready", !left.length);
   };
   form.addEventListener("input", update);

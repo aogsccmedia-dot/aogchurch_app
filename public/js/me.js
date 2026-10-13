@@ -48,6 +48,7 @@ async function render() {
   switchReady();
   loadComplaints(d.member);
   maybeWelcome(d.member, u);
+  if (d.member?.status === "member") voteBanner();
   $("me-letter").checked = !!d.subscribed;
   $("me-reminders").checked = d.service_reminders !== false;
   $("me-events").innerHTML = d.registrations.length ? d.registrations.map((r) => `
@@ -163,3 +164,16 @@ $("cmp-form").addEventListener("submit", async (e) => {
 $("me-signout").addEventListener("click", signOut);
 whenSignedIn(render);
 render();
+
+
+// Open votes for members: a friendly nudge at the top of the profile.
+async function voteBanner() {
+  const r = await api("/api/votes").catch(() => null);
+  const open = (r?.polls || []).filter((p) => p.state === "open");
+  if (!open.length || document.getElementById("vote-banner")) return;
+  const p = open[0], todo = open.filter((x) => !x.voted).length;
+  const el = document.createElement("a");
+  el.id = "vote-banner"; el.className = "vote-banner"; el.href = `/vote?p=${encodeURIComponent(p.id)}`;
+  el.innerHTML = `<span class="vb-ico">${icon("vote")}</span><span><b>${todo ? "Your vote is waiting" : "Watch the live results"}</b><small>${esc(p.title)}${p.event_name ? ` · ${esc(p.event_name)}` : ""}</small></span><span class="btn btn-sm btn-gold${todo ? " btn-glow" : ""}">${todo ? "Vote now" : "See results"}</span>`;
+  $("me-view").prepend(el);
+}

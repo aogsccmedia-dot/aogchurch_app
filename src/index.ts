@@ -16,6 +16,8 @@ import { programmeRoutes } from "./routes/programme.ts";
 import { insightsRoutes } from "./routes/insights.ts";
 import { presenterRoutes } from "./routes/presenter.ts";
 import { codeRoutes } from "./routes/code.ts";
+import { fridayRoutes, processFridayReminder } from "./routes/fridays.ts";
+import { voteRoutes } from "./routes/votes.ts";
 import { processAnnouncements } from "./lib/newsletter.ts";
 import { processCheckins, processWelcomes } from "./lib/membership.ts";
 import { processServiceReminders } from "./lib/reminders.ts";
@@ -54,6 +56,8 @@ export default {
       insightsRoutes(router, env);
       presenterRoutes(router, env);
       codeRoutes(router, env);
+      fridayRoutes(router, env);
+      voteRoutes(router, env);
       const res = await router.handle(req, ctx);
       return res ?? json({ ok: false, error: "Not found." }, 404);
     } catch (err) {
@@ -76,6 +80,7 @@ export default {
       await processServiceReminders(env, now).catch((e) => console.error("service reminders failed", e));
       await backfillLeaders(env).catch((e) => console.error("leader catch-up failed", e));
       await processFollowups(env, now).catch((e) => console.error("leader follow-ups failed", e));
+      await processFridayReminder(env, now).catch((e) => console.error("friday reminder failed", e));
 
       const h = now.getUTCHours(), m = now.getUTCMinutes();
       if (now.getUTCDay() === 6 && h === 8 && m < 10) {

@@ -65,7 +65,7 @@ def head(title, desc, canonical=None, noindex=False, extra=""):
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{title}</title>
   <meta name="description" content="{desc}">
-  <meta name="theme-color" content="#f6f1e8">{robots}{canon}
+  <meta name="theme-color" content="#fdfdff">{robots}{canon}
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="AOG SCC">
@@ -99,7 +99,7 @@ def head(title, desc, canonical=None, noindex=False, extra=""):
 MENU_GROUPS = [
     ("Explore", [("/", "Home"), ("/about", "About us"), ("/our-story", "Our story"), ("/beliefs", "What we believe")]),
     ("Church life", [("/events", "Services &amp; events"), ("/get-involved", "Get involved"), ("/prayer", "Prayer"), ("/visit", "Visit &amp; contact")]),
-    ("For you", [("/me", "My profile"), ("/me#complaints", "Raise a concern"), ("/#letter", "Weekly letter"), ("/app", "Get the app")]),
+    ("For you", [("/me", "My profile"), ("/vote", "Vote"), ("/me#complaints", "Raise a concern"), ("/#letter", "Weekly letter"), ("/app", "Get the app")]),
     ("Tools", [("/tools", "All tools"), ("/presenter", "SCC Presenter · Beta")]),
 ]
 
@@ -113,6 +113,7 @@ def header():
     socials = "".join(f'<a href="{u}" target="_blank" rel="noopener" aria-label="{n}">{{{{i:{ic}}}}}</a>' for n, ic, u in SOCIALS)
     return f'''
   <a class="sr-only" href="#main">Skip to content</a>
+  <div class="ticker" id="ticker" hidden></div>
   <header class="site-header">
     <div class="wrap bar">
       <div class="header-left">
@@ -251,6 +252,7 @@ PAGES = {
     "complaints": dict(title="Complaints policy" + T, crumb="Complaints policy", desc="How to raise a complaint at Sandton City Church and what to expect: acknowledgement, a response within 7 working days, confidentiality.", canonical="/complaints", scripts=["site.js", "auth.js"]),
     "data-protection": dict(title="Data protection, POPIA & PAIA" + T, crumb="Data protection", desc="Sandton City Church's data protection standards: Information Officer, security, retention, breach notification and your POPIA/PAIA rights.", canonical="/data-protection", scripts=["site.js", "auth.js"]),
     "presenter": dict(title="SCC Presenter (Beta) · Free church presentation software" + T, crumb="SCC Presenter", desc="SCC Presenter: free, open-source presentation software for churches. Songs, scripture, video, stage screen, phone remote and OBS output for Windows and Mac. Beta open to the first 20 testers.", canonical="/presenter", scripts=["site.js", "auth.js", "presenter.js"]),
+    "vote": dict(title="Vote" + T, body="portal", desc="Members' voting at AOG Sandton City Church.", noindex=True, scripts=["site.js", "auth.js", "vote.js"]),
     "tools": dict(title="Tools" + T, crumb="Tools", desc="Free tools from AOG Sandton City Church: SCC Presenter for Windows and Mac, and the church app.", canonical="/tools", scripts=["site.js", "auth.js"]),
     "app": dict(title="Get the app" + T, crumb="Get the app", desc="Add Sandton City Church to your phone's home screen — iPhone, Android or computer.", canonical="/app", scripts=["site.js", "auth.js"]),
     "ticket": dict(title="Your ticket" + T, desc="Your digital ticket for an event at Sandton City Church.", noindex=True, scripts=["site.js", "auth.js", "ticket.js"]),
@@ -285,6 +287,9 @@ def main():
     for name, o in PAGES.items():
         body = legal_page((HERE / "pages" / f"{name}.html").read_text())
         scripts = "\n".join(f'  <script type="module" src="/js/{s}?v={ver("js/" + s)}"></script>' for s in o["scripts"])
+        # Fetch auth.js's own imports in parallel instead of one after the other.
+        if "auth.js" in o["scripts"]:
+            scripts = '  <link rel="modulepreload" href="/js/switcher.js">\n  <link rel="modulepreload" href="/js/otp.js">\n' + scripts
         extra = o.get("extra", "") + crumbs_ld(o.get("canonical"), o.get("crumb", ""))
         html = (head(o["title"].replace("&", "&amp;"), o["desc"], o.get("canonical"), o.get("noindex", False), extra) + (f'\n<body class="{o["body"]}">' if o.get("body") else "\n<body>") + header()
                 + body.replace("  </main>\n", "  </main>\n" + pager(o.get("canonical")), 1) + footer() + TABBAR + scripts + "\n</body>\n</html>\n")

@@ -31,7 +31,7 @@ export function authRoutes(router: Router, env: Env): void {
     const member = await env.DB.prepare("SELECT ref_code, status, first_name, preferred_name, created_at FROM members WHERE (user_id = ? OR email = ?) AND status != 'revoked' ORDER BY created_at DESC LIMIT 1")
       .bind(s.user.id, s.user.email).first();
     const sub = await env.DB.prepare("SELECT status FROM subscribers WHERE email = ?").bind(s.user.email).first<{ status: string }>();
-    return json({ ok: true, user: s.user, is_admin: s.kind === "admin", admin_role: s.role ?? null, can_admin: await canAdmin(env, s.user), admin_account: isAdminEmail(env, s.user.email),
+    return json({ ok: true, user: s.user, is_admin: s.kind === "admin", admin_role: s.role ?? null, admin_perms: s.role === "youth" ? s.perms : null, can_admin: await canAdmin(env, s.user), admin_account: isAdminEmail(env, s.user.email),
       member, subscribed: sub?.status === "active", google_client_id: env.GOOGLE_CLIENT_ID || null });
   });
 

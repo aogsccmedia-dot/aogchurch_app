@@ -29,35 +29,23 @@
       </div>
     </section>
 
-    <!-- SCC PODCAST (coming soon) -->
-    <section class="block slim">
-      <div class="wrap">
-        <div class="podcast reveal">
-          <div class="podcast-art" aria-hidden="true"><span class="podcast-icon">{{i:podcast}}</span><span class="eq"><i></i><i></i><i></i><i></i><i></i></span></div>
-          <div class="podcast-copy">
-            <p class="eyebrow">Coming soon</p>
-            <h2>The SCC Podcast</h2>
-            <p>Sermons, honest conversations and stories from our church family, for your commute, your gym session or your quiet time.</p>
-            <div class="podcast-actions"><span class="spotify-chip">{{i:headphones}} Coming soon on <b>Spotify</b></span><a class="btn btn-sm" href="/#letter">Get notified in the weekly letter</a></div>
-          </div>
-        </div>
-        <a class="presenter-teaser reveal" href="/presenter">
-          <picture><source type="image/webp" srcset="/assets/presenter/main-800.webp 800w, /assets/presenter/main-1600.webp 1600w" sizes="(max-width: 900px) 100vw, 50vw"><img src="/assets/presenter/main-1200.jpg" alt="SCC Presenter showing song slides and the live screen" loading="lazy" width="1600" height="1000"></picture>
-          <div class="presenter-copy">
-            <p class="eyebrow">Coming soon · <span class="beta-pill">Beta open</span></p>
-            <h2>SCC Presenter</h2>
-            <p>Free presentation software for churches: songs, scripture and video on your projector. The beta is open to the first 20 testers; the full release is on 31 January 2027.</p>
-            <span class="btn btn-sm">See SCC Presenter {{arrow}}</span>
-          </div>
-        </a>
-      </div>
-    </section>
-
-
     <!-- FEATURED EVENT (filled from the next upcoming event) -->
     <section class="block featured" id="featured" hidden aria-labelledby="featured-title">
       <div class="wrap">
         <article class="feature-card" id="feature-card"></article>
+      </div>
+    </section>
+
+    <!-- SERVICES & EVENTS -->
+    <section class="block" id="services">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <p class="eyebrow gold">Services &amp; events</p>
+          <h2>What's coming up</h2>
+          <p class="lede" data-setting="service_summary">Join us every Sunday — see upcoming services for times.</p>
+        </div>
+        <div class="event-grid" id="events" data-limit="3" aria-live="polite"><div class="events-empty">Loading…</div></div>
+        <p class="more-link reveal"><a class="btn" href="/events">All services &amp; events {{arrow}}</a></p>
       </div>
     </section>
 
@@ -84,16 +72,17 @@
       </div>
     </section>
 
-    <!-- SERVICES & EVENTS -->
-    <section class="block" id="services">
-      <div class="wrap">
-        <div class="section-head reveal">
-          <p class="eyebrow gold">Services &amp; events</p>
-          <h2>What's coming up</h2>
-          <p class="lede" data-setting="service_summary">Join us every Sunday — see upcoming services for times.</p>
-        </div>
-        <div class="event-grid" id="events" data-limit="3" aria-live="polite"><div class="events-empty">Loading…</div></div>
-        <p class="more-link reveal"><a class="btn" href="/events">All services &amp; events {{arrow}}</a></p>
+    <!-- COMING SOON: podcast + SCC Presenter -->
+    <section class="block slim">
+      <div class="wrap soon-grid">
+        <a class="soon-card podcast-soon reveal" href="/#letter">
+          <span class="soon-art" aria-hidden="true">{{i:podcast}}<span class="eq"><i></i><i></i><i></i><i></i><i></i></span></span>
+          <span class="soon-copy"><span class="eyebrow">Coming soon · Spotify</span><b>The SCC Podcast</b><span>Sermons and honest conversations for your commute and quiet time.</span></span>
+        </a>
+        <a class="soon-card presenter-soon reveal" href="/presenter">
+          <picture><source type="image/webp" srcset="/assets/presenter/main-800.webp"><img src="/assets/presenter/main-1200.jpg" alt="SCC Presenter showing song slides and the live screen" loading="lazy" width="1600" height="1000"></picture>
+          <span class="soon-copy"><span class="eyebrow">Coming soon · <span class="beta-pill">Beta open</span></span><b>SCC Presenter</b><span>Free presentation software for churches. Full release 31 January 2027.</span></span>
+        </a>
       </div>
     </section>
 
@@ -130,7 +119,7 @@
             <p class="lede">aogsccyouth.com is the official website and members' app of AOG Sandton City Church, 17 Humber Street, Woodmead, Sandton. Everything below is free to browse, with no account needed.</p></div>
           <ul class="purpose-list">
             <li><b>Church information</b>: who we are, what we believe, service times and how to visit.</li>
-            <li><b>Events &amp; tickets</b>: register for services and events, pay by EFT and receive digital tickets.</li>
+            <li><b>Events &amp; tickets</b>: get tickets for services and events, pay by EFT and receive digital tickets.</li>
             <li><b>Joining &amp; membership</b>: join the church family and manage your membership and profile.</li>
             <li><b>Prayer &amp; the Daily Word</b>: share prayer requests and read a daily Bible verse together.</li>
             <li><b>The weekly letter</b>: an encouraging Sunday email with the week's services.</li>

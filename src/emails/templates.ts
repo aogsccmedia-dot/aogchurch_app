@@ -301,6 +301,23 @@ export function announcement(b: Brand, a: AnnouncementData, firstName: string | 
   };
 }
 
+export function adminNewRegistration(b: Brand, o: { name: string; title: string; ref: string; amount: string; guests: number; status: string; regId: string; eventId: string }) {
+  const pending = o.status === "pending";
+  const people = o.guests ? `${o.guests + 1} tickets` : "1 ticket";
+  return {
+    subject: pending ? `Approve: ${o.name} · ${o.title}` : `New ticket: ${o.name} · ${o.title}`,
+    html: layout(b, {
+      preheader: pending ? `${o.name} paid${o.amount ? ` ${o.amount}` : ""} and is waiting for approval.` : `${o.name} got ${people} for ${o.title}.`,
+      eyebrow: pending ? "Ready to approve" : o.status === "waitlist" ? "Waitlist" : "New ticket",
+      heading: pending ? `${esc(o.name)} is waiting for you` : `${esc(o.name)} is coming`,
+      content: p(`<strong>${esc(o.title)}</strong> · ${esc(people)}${o.amount ? ` · ${esc(o.amount)}` : ""} · Ref ${esc(o.ref)}`) +
+        (pending ? p("Check the proof of payment and approve. Any admin can do it — the first one wins, and the ticket goes out by itself.") + button(`${b.site}/admin/#approvals:${o.regId}`, "Open and approve")
+          : button(`${b.site}/admin/#event:${o.eventId}`, "See the guest list")),
+    }),
+    text: `${pending ? "Approve" : "New ticket"}: ${o.name} · ${o.title} · ${people}${o.amount ? ` · ${o.amount}` : ""} · Ref ${o.ref}\n${pending ? `${b.site}/admin/#approvals:${o.regId}` : `${b.site}/admin/#event:${o.eventId}`}`,
+  };
+}
+
 export function adminPaymentToReview(b: Brand, o: { name: string; title: string; ref: string; amount: string; eventId: string }) {
   return {
     subject: `Payment to approve: ${o.name} · ${o.title}`,
@@ -465,6 +482,22 @@ export function memberVerified(b: Brand, o: { name: string; ref: string; leader?
         p(`Your member reference is <strong style="letter-spacing:.06em">${esc(o.ref)}</strong>.`) + button(b.site + "/me?welcome=1", "Open my profile"),
     }),
     text: `${o.name}, you're officially a member of AOG Sandton City Church!${o.leader ? ` ${o.leader} will be your leader and will be in touch this week.` : ""} Your reference: ${o.ref}. ${b.site}/me` + textFooter(b),
+  };
+}
+
+export function youthLeaderGranted(b: Brand, o: { name: string; can: string[] }) {
+  return {
+    subject: "You're now a youth leader on the church website ✨",
+    html: layout(b, {
+      preheader: "You can now help on Fridays: scanning tickets, capturing the night's numbers and reports.",
+      eyebrow: "Youth leader",
+      heading: `Welcome to the team, ${esc(o.name)}`,
+      content: p(`You've been made a <strong>youth leader</strong> on the AOG Sandton City Church website. You can now help with: <strong>${esc(o.can.join(", "))}</strong>.`) +
+        `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 18px"><tr><td style="padding:16px 18px;border-radius:14px;background:#f3ead9;font:15px/1.7 ${SANS};color:${C.ink}">
+          <strong>How to sign in</strong><br>1. Go to aogsccyouth.com/admin<br>2. Continue with Google using <strong>this email address</strong><br>3. Enter the 6-digit code we email you.</td></tr></table>` +
+        button(b.site + "/admin/", "Open the leaders' portal"),
+    }),
+    text: `Welcome to the team, ${o.name}! You're now a youth leader and can help with: ${o.can.join(", ")}. Sign in at ${b.site}/admin/ with Google and the code we email you.` + textFooter(b),
   };
 }
 

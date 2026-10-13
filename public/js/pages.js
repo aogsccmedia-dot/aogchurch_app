@@ -42,7 +42,7 @@ async function renderFeatured(ev) {
         ${ev.price_label ? `<li>${icon("ticket")}<span>${esc(ev.price_label)}</span></li>` : ""}
       </ul>
       <div class="feature-actions">
-        ${ev.registration_open ? `<a class="btn btn-gold" href="/event?e=${encodeURIComponent(ev.slug)}">${ev.price_label ? "Get your ticket" : "Register"} ${icon("arrowRight", "arr")}</a>` : ""}
+        ${ev.registration_open ? `<a class="btn btn-gold btn-glow" href="/event?e=${encodeURIComponent(ev.slug)}">${icon("ticket")} Get Ticket ${icon("arrowRight", "arr")}</a>` : ""}
         <details class="cal-menu"><summary class="btn">${icon("calendarPlus")} Add to calendar</summary>
           <div class="cal-pop"><a href="${esc(detail.calendar_url || "#")}" target="_blank" rel="noopener">Google Calendar</a><a href="/api/events/${encodeURIComponent(ev.slug)}/calendar.ics">Apple / iPhone (.ics)</a><a href="${esc(detail.outlook_url || "#")}" target="_blank" rel="noopener">Outlook</a></div></details>
       </div>
@@ -67,7 +67,7 @@ async function loadEvents() {
         <figure class="photo cover-square">${coverImg(ev, i)}</figure>
         <div class="body"><span class="eyebrow gold">${esc(whenShort(ev.starts_at))}</span><h3>${esc(ev.title)}</h3>
           <p class="meta">${esc(ev.location || "17 Humber Street, Woodmead")}</p>
-          <div class="foot"><span class="price">${esc(ev.price_label || "Free")}</span>${spots(ev)}<span class="btn btn-sm">${ev.registration_open ? "Register" : "Details"} ${icon("arrowRight", "arr")}</span></div></div></a>`).join("");
+          <div class="foot"><span class="price">${esc(ev.price_label || "Free")}</span>${spots(ev)}<span class="btn btn-sm${ev.registration_open ? " btn-gold btn-glow" : ""}">${ev.registration_open ? "Get Ticket" : "Details"} ${icon("arrowRight", "arr")}</span></div></div></a>`).join("");
     initPhotos(eventsEl);
   } catch {
     eventsEl.innerHTML = `<div class="events-empty" style="grid-column:1/-1">We couldn't load events right now. Please try again shortly.</div>`;

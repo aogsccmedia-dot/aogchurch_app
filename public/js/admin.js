@@ -3,6 +3,7 @@ import { AVAILABILITY, LABELS, MINISTRIES } from "./options.js";
 import { FIELD_TYPES, renderField } from "./forms.js";
 import { icon } from "./icons.js";
 import { initInsights } from "./admin-insights.js";
+import { initMore } from "./admin-more.js";
 import { arrivedBySwitch, switchReady } from "./switcher.js";
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -16,7 +17,8 @@ const parseList = (s) => { try { return JSON.parse(s || "[]"); } catch { return 
 const toLocal = (iso) => { if (!iso) return ""; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
 const fromLocal = (v) => (v ? new Date(v).toISOString() : "");
 
-let me = null;
+let me = null, perms = null;   // perms: youth leaders only (null = full admin)
+const allowed = (tab) => { const b = document.querySelector(`#nav [data-tab="${tab}"]`); if (!perms) return true; if (!b) return false; return !!b.dataset.perm && b.dataset.perm.split("|").some((p) => perms.includes(p)); };
 
 
 // ---- Instant feedback: the button you pressed shows a spinner the moment a save starts,
@@ -143,14 +145,23 @@ async function boot() {
   $("#who").textContent = me.email;
   const role = r.admin_role || "super";
   document.body.dataset.role = role;
-  $("#role-chip").textContent = role === "super" ? "Main admin" : "Admin";
+  perms = role === "youth" ? (r.admin_perms || []) : null;
+  $("#role-chip").textContent = role === "super" ? "Main admin" : role === "youth" ? "Youth leader" : "Admin";
+  // Youth leaders only see what the main admin has switched on for them.
+  $$("#nav [data-tab]").forEach((b) => { b.hidden = !allowed(b.dataset.tab); });
+  $$("#nav .nav-group").forEach((g) => { let n = g.nextElementSibling, any = false; while (n && !n.classList.contains("nav-group")) { if (!n.hidden) any = true; n = n.nextElementSibling; } g.hidden = !any; });
+  if (perms) {
+    const quick = [["fridays", "calendar", "Fridays"], ["scan", "scan", "Scan"], ["report", "layoutDashboard", "Reports"], ["events", "ticket", "Events"], ["members", "users", "Members"]].filter(([t]) => allowed(t)).slice(0, 3);
+    $(".m-bar").innerHTML = quick.map(([t, ico, l]) => `<button data-go-tab="${t}" class="${t === "scan" ? "m-scan" : ""}">${icon(ico)}<span>${l}</span></button>`).join("");
+    $$(".m-bar [data-go-tab]").forEach((b) => b.addEventListener("click", () => { location.hash = b.dataset.goTab; }));
+  }
   $("#to-profile").hidden = role === "super";
   $("#m-switch").hidden = role === "super";
   if (new URLSearchParams(location.search).has("switch")) history.replaceState(null, "", location.pathname + location.hash);
   const hour = Number(new Intl.DateTimeFormat("en-ZA", { hour: "numeric", hour12: false, timeZone: TZ }).format(new Date()));
   $("#greeting").textContent = `${hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"}${me.given_name ? ", " + me.given_name : ""}`;
   insights.loadMeta().catch(() => {});   // ministry groups for the event editor
-  openTab(location.hash.slice(1) || "overview");
+  openTab(location.hash.slice(1) || (perms ? firstAllowed() : "overview"));
   switchReady();
 }
 
@@ -164,8 +175,10 @@ async function refreshBadges() {
 // ================================================================ tabs
 const loaders = {};
 const detailRoutes = {};   // "#insight:<id>" style deep links
+const firstAllowed = () => $$("#nav [data-tab]").find((b) => !b.hidden)?.dataset.tab || "fridays";
 function openTab(tab) {
-  const [base, arg] = tab.split(":");
+  let [base, arg] = tab.split(":");
+  if (perms && !allowed(base === "event" || base === "events-new" ? "events" : base)) { base = firstAllowed(); arg = undefined; tab = base; }
   if (arg && detailRoutes[base]) return detailRoutes[base](arg);
   if (base === "events-new") return editEvent(null);
   if (base === "letters-new") return editLetter(null);
@@ -825,34 +838,54 @@ $("#prog-list").addEventListener("click", safe(async (e) => {
 }));
 
 // ================================================================ team & roles (main admin)
+let teamPerms = [];
 async function loadTeam() {
-  const { admins, people } = await api(`/api/admin/team?q=${encodeURIComponent($("#team-q").value)}`);
-  $("#team-admins").innerHTML = admins.length ? admins.map((a) => `<div class="item team-row">
+  const { admins, people, perms: all, youth_default } = await api(`/api/admin/team?q=${encodeURIComponent($("#team-q").value)}`);
+  teamPerms = all; loadTeam.def = youth_default;
+  $("#team-admins").innerHTML = admins.length ? admins.map((a) => `<div class="item team-row" data-user="${esc(a.user_id)}">
       <span class="avatar sm">${a.picture ? `<img src="${esc(a.picture)}" alt="" referrerpolicy="no-referrer">` : esc((a.name || a.email)[0].toUpperCase())}</span>
-      <div><b>${esc(a.name || a.email)}</b><div class="meta">${esc(a.email)}${a.ref_code ? ` · ${esc(a.ref_code)}` : ""} · since ${fmtDate(a.created_at)}</div></div>
-      <button class="btn btn-sm" data-revoke="${esc(a.user_id)}">Remove admin</button></div>`).join("") : `<div class="empty">Only you for now.</div>`;
+      <div><b>${esc(a.name || a.email)}</b><div class="meta">${esc(a.email)}${a.ref_code ? ` · ${esc(a.ref_code)}` : ""} · since ${fmtDate(a.created_at)}</div>
+        ${a.role === "youth_leader" ? `<div class="perm-row" aria-label="What they can open">${all.map(([k, l]) => `<label class="perm"><input type="checkbox" data-perm="${k}" ${a.perms.includes(k) ? "checked" : ""}>${esc(l)}</label>`).join("")}</div>` : ""}</div>
+      <div class="team-actions"><select class="input" data-role aria-label="Role"><option value="admin" ${a.role !== "youth_leader" ? "selected" : ""}>Admin</option><option value="youth_leader" ${a.role === "youth_leader" ? "selected" : ""}>Youth leader</option></select>
+        <button class="btn btn-sm" data-revoke="${esc(a.user_id)}">Remove</button></div></div>`).join("") : `<div class="empty">Only you for now.</div>`;
   $("#team-people").innerHTML = people.length ? people.map((p) => `<div class="item team-row">
       <span class="avatar sm">${p.picture ? `<img src="${esc(p.picture)}" alt="" referrerpolicy="no-referrer">` : esc((p.name || p.email)[0].toUpperCase())}</span>
       <div><b>${esc(p.first_name ? `${p.first_name} ${p.last_name}` : p.name || p.email)}</b><div class="meta">${esc(p.email)} · ${p.ref_code ? `Member ${esc(p.ref_code)} (${esc(p.status)})` : "Not a registered member yet"}</div></div>
-      ${p.is_admin ? `<span class="pill member">Admin</span>` : p.ref_code ? `<button class="btn btn-sm btn-gold" data-grant="${esc(p.user_id)}">Make admin</button>` : `<span class="pill">Needs to join</span>`}</div>`).join("") : `<div class="empty">No one found.</div>`;
+      ${p.is_admin ? `<span class="pill member">On the team</span>` : p.ref_code ? `<div class="team-actions"><button class="btn btn-sm btn-gold" data-grant="${esc(p.user_id)}" data-role="admin">Make admin</button><button class="btn btn-sm" data-grant="${esc(p.user_id)}" data-role="youth_leader">Make youth leader</button></div>` : `<span class="pill">Needs to join</span>`}</div>`).join("") : `<div class="empty">No one found.</div>`;
 }
 loaders.team = loadTeam;
 let teamT;
 $("#team-q").addEventListener("input", () => { clearTimeout(teamT); teamT = setTimeout(() => safe(loadTeam)(), 250); });
+$("[data-view=team]").addEventListener("change", safe(async (e) => {
+  const row = e.target.closest("[data-user]"); if (!row) return;
+  const user = row.dataset.user;
+  if (e.target.matches("[data-role]")) {
+    const role = e.target.value;
+    await api(`/api/admin/team/${user}`, { method: "PATCH", body: { role, perms: role === "youth_leader" ? loadTeam.def : undefined } });
+    toast(role === "youth_leader" ? "Now a youth leader (Fridays, scanner and reports to start)" : "Now a full admin"); loadTeam();
+  }
+  if (e.target.matches("[data-perm]")) {
+    const list = $$("[data-perm]", row).filter((x) => x.checked).map((x) => x.dataset.perm);
+    await api(`/api/admin/team/${user}`, { method: "PATCH", body: { perms: list } });
+    toast("Saved. It applies straight away.");
+  }
+}));
 $("[data-view=team]").addEventListener("click", safe(async (e) => {
   const g = e.target.closest("[data-grant]"), r = e.target.closest("[data-revoke]");
   if (g) {
-    const who = g.closest(".team-row").querySelector("b").textContent;
-    if (!confirm(`Give ${who} admin access?\n\nThey'll be able to approve registrations, verify members, send and scan tickets, and handle prayer requests and complaints. They can't delete people or change roles.\n\nWe'll email them a welcome with sign-in steps.`)) return;
-    // Instant: the row shows the new role straight away; the server and welcome email follow.
-    g.outerHTML = `<span class="pill member">Admin</span>`;
-    toast(`${who} is now an admin. Welcome email on its way.`);
-    api("/api/admin/team", { method: "POST", body: { user_id: g.dataset.grant } })
-      .then((r) => { if (r.already) toast("They're already an admin"); safe(loadTeam)(); })
+    const who = g.closest(".team-row").querySelector("b").textContent, role = g.dataset.role;
+    const msg = role === "youth_leader"
+      ? `Make ${who} a youth leader?\n\nTo start they can capture Fridays, use the door scanner and see reports. You can change what they can open at any time.\n\nWe'll email them a welcome with sign-in steps.`
+      : `Give ${who} admin access?\n\nThey'll be able to approve registrations, verify members, send and scan tickets, and handle prayer requests and complaints. They can't delete people or change roles.\n\nWe'll email them a welcome with sign-in steps.`;
+    if (!confirm(msg)) return;
+    g.closest(".team-actions").outerHTML = `<span class="pill member">${role === "youth_leader" ? "Youth leader" : "Admin"}</span>`;
+    toast(`${who} is now ${role === "youth_leader" ? "a youth leader" : "an admin"}. Welcome email on its way.`);
+    api("/api/admin/team", { method: "POST", body: { user_id: g.dataset.grant, role } })
+      .then((x) => { if (x.already) toast("They're already on the team"); safe(loadTeam)(); })
       .catch((err) => { toast(`Couldn't add ${who}: ${err.message}`); safe(loadTeam)(); });
   }
-  if (r && confirm("Remove this person's admin access? They'll keep their normal member profile.")) {
-    r.closest(".team-row")?.remove(); toast("Admin access removed");
+  if (r && confirm("Remove this person from the team? They'll keep their normal member profile.")) {
+    r.closest(".team-row")?.remove(); toast("Removed from the team");
     api(`/api/admin/team/${r.dataset.revoke}`, { method: "DELETE" }).then(() => safe(loadTeam)()).catch((err) => { toast(err.message); safe(loadTeam)(); });
   }
 }));
@@ -932,7 +965,7 @@ $("#tpl-test").addEventListener("click", safe(async (e) => {
   toast(`Test sent to ${r.sent_to}`);
 }));
 
-addEventListener("hashchange", () => { if (me) openTab(location.hash.slice(1) || "overview"); });
+addEventListener("hashchange", () => { if (me) openTab(location.hash.slice(1) || (perms ? firstAllowed() : "overview")); });
 // Phone/tablet: menu drawer + quick bar
 // ---- Menus: one tap anywhere outside closes them and stays on the current screen ----
 const setSide = (open) => { document.body.classList.toggle("side-open", open); $("#m-menu").setAttribute("aria-expanded", String(open)); };
@@ -958,4 +991,5 @@ $$("[data-ico]:not([data-go-tab])").forEach((b) => { b.innerHTML = icon(b.datase
 $$("[data-go-tab]").forEach((b) => { if (b.dataset.ico) b.insertAdjacentHTML("afterbegin", icon(b.dataset.ico)); b.addEventListener("click", () => { location.hash = b.dataset.goTab; }); });
 // Insights, weekly services and the board report live in their own module.
 const insights = initInsights({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate });
+initMore({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate, icon });
 boot();

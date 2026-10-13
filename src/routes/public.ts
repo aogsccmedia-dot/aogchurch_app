@@ -14,6 +14,7 @@ import { readUpload, storeFiles, type PendingFile } from "../lib/uploads.ts";
 import { getSession, isAdminEmail } from "../lib/auth.ts";
 import { parseSchema, validateAnswers } from "../lib/forms.ts";
 import { sendMail } from "../lib/email.ts";
+import { teamRecipients } from "../lib/admins.ts";
 import { confirmSubscription, subscribe, unsubscribe } from "../lib/newsletter.ts";
 import { calendarUrl, icsFile, outlookUrl } from "../lib/time.ts";
 import * as T from "../emails/templates.ts";
@@ -94,7 +95,7 @@ export function publicRoutes(router: Router, env: Env): void {
       "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": `attachment; filename="${e.slug}.ics"`, "Cache-Control": "public, max-age=300" } });
   });
 
-  router.post("/api/events/:slug/register", async (req, { slug }) => {
+  router.post("/api/events/:slug/register", async (req, { slug }, ctx) => {
     const ip = clientIp(req);
     await rateLimit(env, "register", ip, 12, 3600);
     const e = await env.DB.prepare("SELECT * FROM events WHERE (slug = ? OR id = ?) AND is_published = 1").bind(slug, slug).first<EventRow>();
@@ -148,9 +149,12 @@ export function publicRoutes(router: Router, env: Env): void {
     } catch (err) { await stored.rollback(); throw err; }
 
     await notifyRegistration(env, e, { id, event_id: e.id, ref_code: ref, name: name!, email: email!, guests, status, amount_due: amountDue });
-    if (status === "pending") {
-      await sendMail(env, { to: adminEmail(env), ...T.adminPaymentToReview({ site: siteUrl(env) }, { name: name!, title: e.title, ref, amount: amountDue ? `R${amountDue}` : "", eventId: e.id }), template: "admin_payment_review" });
-    }
+    // Every admin hears about every new ticket (in the background, so the person isn't kept waiting).
+    const teamMail = (async () => {
+      const mail = T.adminNewRegistration({ site: siteUrl(env) }, { name: name!, title: e.title, ref, amount: amountDue ? `R${amountDue}` : "", guests, status, regId: id, eventId: e.id });
+      for (const t of await teamRecipients(env, "events")) await sendMail(env, { to: t.email, ...mail, template: status === "pending" ? "admin_payment_review" : "admin_new_ticket" });
+    })().catch((err) => console.error("team registration email failed", err));
+    if (ctx?.waitUntil) ctx.waitUntil(teamMail); else await teamMail;
     return json({ ok: true, status, ref, message: e.confirmation_message, amount_due: amountDue }, 201);
   });
 

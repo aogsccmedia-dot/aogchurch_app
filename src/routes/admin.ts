@@ -4,7 +4,7 @@ import { HttpError, Router, json, readJson } from "../lib/http.ts";
 import { randomToken, uuid } from "../lib/crypto.ts";
 import { Validator } from "../lib/validate.ts";
 import { getFile } from "../lib/storage.ts";
-import { isAdminEmail, requireAdmin, type Session } from "../lib/auth.ts";
+import { isAdminEmail, parsePerms, requireAdmin, YOUTH_DEFAULT, YOUTH_PERMS, type Session } from "../lib/auth.ts";
 import { deleteOwnerFiles, readUpload, storeFiles } from "../lib/uploads.ts";
 import { parseSchema, sanitizeSchema, slugify } from "../lib/forms.ts";
 import { emailHealth, resendFailed, sendMail } from "../lib/email.ts";
@@ -397,6 +397,16 @@ export function adminRoutes(router: Router, env: Env): void {
     return json({ ok: true });
   }));
 
+  // Everything waiting for approval, across all events, in one list (newest first).
+  router.get("/api/admin/approvals", guard(async () => {
+    const { results } = await env.DB.prepare(
+      `SELECT r.id, r.name, r.email, r.phone, r.guests, r.amount_due, r.ref_code, r.created_at, r.pop_attachment_id, r.event_id,
+              e.title AS event_title, e.starts_at, a.content_type AS pop_type
+         FROM event_registrations r JOIN events e ON e.id = r.event_id LEFT JOIN attachments a ON a.id = r.pop_attachment_id
+        WHERE r.status = 'pending' ORDER BY r.created_at DESC LIMIT 200`).all();
+    return json({ ok: true, approvals: results });
+  }));
+
   // Approve every registration still awaiting approval for an event, in sign-up order.
   router.post("/api/admin/events/:id/approve-all", guard(async (_req, { id }, s, ctx) => {
     const e = await env.DB.prepare("SELECT * FROM events WHERE id = ?").bind(id).first<EventRow>();
@@ -573,7 +583,7 @@ export function adminRoutes(router: Router, env: Env): void {
   router.get("/api/admin/team", superOnly(async (req) => {
     const q = (new URL(req.url).searchParams.get("q") || "").trim().toLowerCase();
     const { results: admins } = await env.DB.prepare(
-      `SELECT a.user_id, a.email, a.created_at, u.name, u.picture, m.ref_code, m.status FROM admin_roles a JOIN users u ON u.id = a.user_id
+      `SELECT a.user_id, a.email, a.created_at, a.role, a.perms, u.name, u.picture, m.ref_code, m.status FROM admin_roles a JOIN users u ON u.id = a.user_id
          LEFT JOIN members m ON m.user_id = a.user_id OR m.email = a.email GROUP BY a.user_id ORDER BY a.created_at`).all();
     const like = `%${q}%`;
     const { results: people } = await env.DB.prepare(
@@ -582,19 +592,37 @@ export function adminRoutes(router: Router, env: Env): void {
          FROM users u LEFT JOIN members m ON (m.user_id = u.id OR m.email = u.email) AND m.status != 'revoked'
         WHERE lower(u.email) != ? AND (? = '' OR lower(u.email) LIKE ? OR lower(COALESCE(u.name, '')) LIKE ? OR lower(COALESCE(m.first_name || ' ' || m.last_name, '')) LIKE ?)
         GROUP BY u.id ORDER BY (m.ref_code IS NULL), u.name LIMIT 50`).bind(adminEmail(env), q, like, like, like).all();
-    return json({ ok: true, admins, people });
+    return json({ ok: true, admins: admins.map((a) => ({ ...a, perms: a.role === "youth_leader" ? parsePerms(a.perms as string | null) : null })), people, perms: YOUTH_PERMS, youth_default: YOUTH_DEFAULT });
+  }));
+  // Change someone's role (Admin ⇄ Youth leader) or a youth leader's permissions. Main admin only.
+  router.patch("/api/admin/team/:userId", superOnly(async (req, { userId }, s) => {
+    const b = await readJson<{ role?: string; perms?: string[] }>(req);
+    const row = await env.DB.prepare("SELECT role FROM admin_roles WHERE user_id = ?").bind(userId).first<{ role: string }>();
+    if (!row) throw new HttpError(404, "Not on the team.");
+    const role = b.role === "youth_leader" || b.role === "admin" ? b.role : row.role;
+    const perms = role === "youth_leader" ? JSON.stringify(parsePerms(JSON.stringify(Array.isArray(b.perms) ? b.perms : parsePerms(null)))) : null;
+    await env.DB.prepare("UPDATE admin_roles SET role = ?, perms = ? WHERE user_id = ?").bind(role, perms, userId).run();
+    await audit(env, s, "change_role", "user", userId, { role, perms });
+    if (row.role === "admin" && role === "youth_leader") await reassignFrom(env, userId, null);   // youth leaders don't look after members
+    return json({ ok: true, role, perms: perms ? JSON.parse(perms) : null });
   }));
   router.post("/api/admin/team", superOnly(async (req, _p, s, ctx) => {
-    const { user_id } = await readJson<{ user_id?: string }>(req);
+    const { user_id, role: wantRole, perms: wantPerms } = await readJson<{ user_id?: string; role?: string; perms?: string[] }>(req);
+    const role = wantRole === "youth_leader" ? "youth_leader" : "admin";
+    const perms = role === "youth_leader" ? parsePerms(JSON.stringify(Array.isArray(wantPerms) ? wantPerms : YOUTH_DEFAULT)) : null;
     const u = await env.DB.prepare("SELECT id, email, name, given_name FROM users WHERE id = ?").bind(user_id || "").first<{ id: string; email: string; name: string | null; given_name: string | null }>();
     if (!u) throw new HttpError(404, "That person needs to sign in with Google on the website once before they can be made an admin.");
     const member = await env.DB.prepare("SELECT status FROM members WHERE (user_id = ? OR email = ?) AND status != 'revoked' LIMIT 1").bind(u.id, u.email).first<{ status: string }>();
     if (!member) throw new HttpError(422, "Only registered members can be given admin access. Ask them to join the church first.");
     if (isAdminEmail(env, u.email)) throw new HttpError(422, "That's the main admin account already.");
     if (await env.DB.prepare("SELECT 1 FROM admin_roles WHERE user_id = ?").bind(u.id).first()) return json({ ok: true, already: true });
-    await env.DB.prepare("INSERT OR IGNORE INTO admin_roles (user_id, email, granted_by) VALUES (?, ?, ?)").bind(u.id, u.email.toLowerCase(), s.user.email).run();
-    await audit(env, s, "grant_admin", "user", u.id, { email: u.email });
-    await later(ctx, sendMail(env, { to: u.email, toName: u.name || undefined, ...T.adminGranted({ site: siteUrl(env) }, { name: u.given_name || (u.name || "").split(" ")[0] || "friend" }), template: "admin_granted" }));
+    await env.DB.prepare("INSERT OR IGNORE INTO admin_roles (user_id, email, granted_by, role, perms) VALUES (?, ?, ?, ?, ?)").bind(u.id, u.email.toLowerCase(), s.user.email, role, perms ? JSON.stringify(perms) : null).run();
+    await audit(env, s, role === "youth_leader" ? "grant_youth_leader" : "grant_admin", "user", u.id, { email: u.email });
+    const first = u.given_name || (u.name || "").split(" ")[0] || "friend";
+    const mail = role === "youth_leader"
+      ? T.youthLeaderGranted({ site: siteUrl(env) }, { name: first, can: perms!.map((k) => YOUTH_PERMS.find(([x]) => x === k)?.[1] || k) })
+      : T.adminGranted({ site: siteUrl(env) }, { name: first });
+    await later(ctx, sendMail(env, { to: u.email, toName: u.name || undefined, ...mail, template: role === "youth_leader" ? "youth_leader_granted" : "admin_granted" }));
     return json({ ok: true });
   }));
   router.delete("/api/admin/team/:userId", superOnly(async (_req, { userId }, s) => {
@@ -645,7 +673,7 @@ export function adminRoutes(router: Router, env: Env): void {
     return json({ ok: true, assigned: n });
   }));
 
-  router.get("/api/admin/whoami", guard(async (_req, _p, s) => json({ ok: true, email: s.user.email, name: s.user.name, role: s.role ?? "super" })));
+  router.get("/api/admin/whoami", guard(async (_req, _p, s) => json({ ok: true, email: s.user.email, name: s.user.name, role: s.role ?? "super", perms: s.role === "youth" ? s.perms : null, all_perms: YOUTH_PERMS })));
 
   // ---------- complaints ----------
   router.get("/api/admin/complaints", guard(async (req) => {

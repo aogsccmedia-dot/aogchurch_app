@@ -5,15 +5,15 @@
    ========================================================================== */
 
 :root {
-  --bg: #f6f1e8;
-  --bg-2: #fffdf9;
-  --surface: #efe8dc;
-  --surface-2: #e7dfd1;
-  --line: rgba(43, 32, 16, 0.10);
-  --line-strong: rgba(43, 32, 16, 0.20);
-  --text: #1c1712;
-  --text-2: #4c4339;
-  --muted: #7d7265;
+  --bg: #fcfcfe;
+  --bg-2: #ffffff;
+  --surface: #f4f3f9;
+  --surface-2: #ecebf3;
+  --line: rgba(32, 28, 54, 0.09);
+  --line-strong: rgba(32, 28, 54, 0.18);
+  --text: #1c1a22;
+  --text-2: #4a4656;
+  --muted: #777386;
   --gold: #9a6a1f;          /* accent text & icons */
   --gold-2: #8a5c14;        /* emphasis text (serif italics, prices) */
   --gold-deep: #c8963e;
@@ -21,16 +21,16 @@
   --gold-btn-2: #e3b866;
   --danger: #b4321f;
   --ok: #2f7a47;
-  --hover: rgba(43, 32, 16, 0.06);
-  --btn: #ebe3d5;
-  --btn-2: #e1d7c6;
-  --input: #fffdf9;
+  --hover: rgba(32, 28, 54, 0.05);
+  --btn: #f0eff6;
+  --btn-2: #e6e5ef;
+  --input: #ffffff;
   --input-focus: #ffffff;
-  --placeholder: #a2988a;
-  --dim: #d8cfbf;           /* unselected dots, switches */
-  --header-bg: rgba(246, 241, 232, 0.9);
-  --menu-bg: rgba(246, 241, 232, 0.98);
-  --backdrop: rgba(28, 23, 18, 0.45);
+  --placeholder: #9e9aab;
+  --dim: #dcdbe6;           /* unselected dots, switches */
+  --header-bg: rgba(255, 255, 255, 0.78);
+  --menu-bg: rgba(253, 253, 255, 0.98);
+  --backdrop: rgba(28, 26, 38, 0.38);
   --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%234c4339' stroke-width='1.5'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
 
   --tone-warm: #d6a650;
@@ -39,7 +39,7 @@
 
   --radius: 14px;
   --radius-sm: 9px;
-  --shadow: 0 24px 60px -28px rgba(60, 40, 10, 0.35);
+  --shadow: 0 24px 60px -30px rgba(60, 50, 120, 0.28);
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 
   --font-sans: "Jost", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -99,6 +99,22 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+}
+
+/* Website background: clean white with a faint wash of baby blue, soft lilac and baby pink, and a fine film grain.
+   Both layers are fixed, drawn once and composited by the GPU, so scrolling stays smooth. */
+body:not(.admin):not(.portal) { background: #fdfdff; }
+body:not(.admin):not(.portal)::before, body:not(.admin):not(.portal)::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+body:not(.admin):not(.portal)::before {
+  background:
+    radial-gradient(46% 42% at 8% 6%, rgba(178, 212, 246, .50), transparent 70%),
+    radial-gradient(40% 40% at 94% 14%, rgba(206, 190, 246, .42), transparent 70%),
+    radial-gradient(52% 44% at 76% 96%, rgba(250, 198, 222, .40), transparent 70%),
+    radial-gradient(38% 34% at 4% 92%, rgba(216, 204, 250, .30), transparent 70%);
+}
+body:not(.admin):not(.portal)::after {
+  opacity: .055; mix-blend-mode: multiply; background-size: 200px 200px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 img, svg { max-width: 100%; display: block; }
@@ -293,3 +309,28 @@ a, button, .btn, summary, label, input[type="checkbox"], input[type="radio"], se
 @keyframes sv-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes sv-out { to { opacity: 0; visibility: hidden; } }
 @media (prefers-reduced-motion: reduce) { .sv-mark i { animation: none; } }
+
+/* Get Ticket: a soft, glowing call to action (the glow is a cheap opacity animation on its own layer). */
+.btn-glow { position: relative; isolation: isolate; overflow: visible; font-weight: 500; letter-spacing: .01em; }
+.btn-glow::before { content: ""; position: absolute; inset: -3px; z-index: -1; border-radius: inherit; background: linear-gradient(110deg, #f3c76e, #f7a6c8, #b9a7f5, #9fd3f5, #f3c76e); background-size: 300% 100%; filter: blur(10px); opacity: .55; animation: glow-pulse 2.8s ease-in-out infinite, glow-slide 6s linear infinite; pointer-events: none; }
+.btn-glow:hover::before { opacity: .85; }
+.btn-glow .i { width: 18px; height: 18px; }
+@keyframes glow-pulse { 50% { opacity: .9; } }
+@keyframes glow-slide { to { background-position: 300% 0; } }
+@media (prefers-reduced-motion: reduce) { .btn-glow::before { animation: none; } }
+
+/* Event ticker (top of the site) */
+.ticker { position: relative; height: 38px; display: flex; align-items: center; overflow: hidden; background: linear-gradient(90deg, #f3eefe, #fdeef4 50%, #eaf3fd); border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.ticker[hidden] { display: none; }
+.has-ticker .ticker[hidden] { display: block; }
+.tk-track { display: flex; width: max-content; animation: tk-scroll calc(var(--n) * 12s + 12s) linear infinite; }
+.ticker:hover .tk-track, .ticker:focus-within .tk-track { animation-play-state: paused; }
+.tk-run { display: flex; gap: 42px; padding-right: 42px; }
+.tk-item { display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; color: var(--text); }
+.tk-item span { color: var(--text-2); }
+.tk-item .tk-cta { color: var(--gold-2); font-weight: 500; }
+.tk-item:hover b { text-decoration: underline; text-underline-offset: 3px; }
+.tk-dot { width: 7px; height: 7px; border-radius: 50%; background: #e38bb0; box-shadow: 0 0 0 4px rgba(227, 139, 176, .18); }
+.tk-x { position: absolute; right: 0; top: 0; bottom: 0; width: 38px; border: 0; background: linear-gradient(90deg, transparent, #eaf3fd 40%); font-size: 18px; color: var(--muted); cursor: pointer; }
+@keyframes tk-scroll { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .tk-track { animation: none; } }

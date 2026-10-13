@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Event · Sandton City Church</title>
   <meta name="description" content="Register for an upcoming service or event at Sandton City Church.">
-  <meta name="theme-color" content="#f6f1e8">
+  <meta name="theme-color" content="#fdfdff">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,13 +30,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/base.css?v=71d32040ea">
-  <link rel="stylesheet" href="/css/pages.css?v=516631dbb6">
-  <script src="/js/switch-boot.js?v=1411ce24b0"></script>
+  <link rel="stylesheet" href="/css/base.css?v=e648a046c0">
+  <link rel="stylesheet" href="/css/pages.css?v=49fb5a36c9">
+  <script src="/js/switch-boot.js?v=6aa2d537d6"></script>
   <script type="speculationrules">{"prerender": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/admin/*"}}, {"not": {"href_matches": "/api/*"}}]}, "eagerness": "moderate"}]}</script>
 </head>
 <body>
   <a class="sr-only" href="#main">Skip to content</a>
+  <div class="ticker" id="ticker" hidden></div>
   <header class="site-header">
     <div class="wrap bar">
       <div class="header-left">
@@ -55,7 +56,7 @@
         <a class="brand" href="/"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
         <button class="icon-btn" data-menu-close aria-label="Close menu"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
-      <nav class="menu-groups" aria-label="Main"><div class="menu-group" style="--g:0"><p class="menu-label">Explore</p><a href="/" style="--i:0">Home</a><a href="/about" style="--i:1">About us</a><a href="/our-story" style="--i:2">Our story</a><a href="/beliefs" style="--i:3">What we believe</a></div><div class="menu-group" style="--g:1"><p class="menu-label">Church life</p><a href="/events" style="--i:0">Services &amp; events</a><a href="/get-involved" style="--i:1">Get involved</a><a href="/prayer" style="--i:2">Prayer</a><a href="/visit" style="--i:3">Visit &amp; contact</a></div><div class="menu-group" style="--g:2"><p class="menu-label">For you</p><a href="/me" style="--i:0">My profile</a><a href="/me#complaints" style="--i:1">Raise a concern</a><a href="/#letter" style="--i:2">Weekly letter</a><a href="/app" style="--i:3">Get the app</a></div><div class="menu-group" style="--g:3"><p class="menu-label">Tools</p><a href="/tools" style="--i:0">All tools</a><a href="/presenter" style="--i:1">SCC Presenter · Beta</a></div></nav>
+      <nav class="menu-groups" aria-label="Main"><div class="menu-group" style="--g:0"><p class="menu-label">Explore</p><a href="/" style="--i:0">Home</a><a href="/about" style="--i:1">About us</a><a href="/our-story" style="--i:2">Our story</a><a href="/beliefs" style="--i:3">What we believe</a></div><div class="menu-group" style="--g:1"><p class="menu-label">Church life</p><a href="/events" style="--i:0">Services &amp; events</a><a href="/get-involved" style="--i:1">Get involved</a><a href="/prayer" style="--i:2">Prayer</a><a href="/visit" style="--i:3">Visit &amp; contact</a></div><div class="menu-group" style="--g:2"><p class="menu-label">For you</p><a href="/me" style="--i:0">My profile</a><a href="/vote" style="--i:1">Vote</a><a href="/me#complaints" style="--i:2">Raise a concern</a><a href="/#letter" style="--i:3">Weekly letter</a><a href="/app" style="--i:4">Get the app</a></div><div class="menu-group" style="--g:3"><p class="menu-label">Tools</p><a href="/tools" style="--i:0">All tools</a><a href="/presenter" style="--i:1">SCC Presenter · Beta</a></div></nav>
       <div class="menu-foot">
         <a class="btn btn-gold" href="/join" data-join-cta>Join the church <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
         <div class="social-row"><a href="https://www.youtube.com/@aogsandtoncitychurchtv9989" target="_blank" rel="noopener" aria-label="YouTube"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg></a><a href="https://www.instagram.com/aogsandtoncitychurch" target="_blank" rel="noopener" aria-label="Instagram"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/></svg></a><a href="https://www.facebook.com/AOGSandtonCity/" target="_blank" rel="noopener" aria-label="Facebook"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a><a href="https://www.tiktok.com/@aog.sandton.city" target="_blank" rel="noopener" aria-label="TikTok"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12a4 4 0 1 0 4 4V2a5 5 0 0 0 5 5"/></svg></a></div>
@@ -86,7 +87,7 @@
         </div>
       </div>
       <aside class="reg-card" id="reg-card">
-        <div><p class="eyebrow gold">Register</p><h3 id="reg-heading">Save your seat</h3></div>
+        <div><p class="eyebrow gold">Tickets</p><h3 id="reg-heading">Get your ticket</h3></div>
         <div id="reg-google" class="google-slot" hidden></div>
         <form id="reg-form" novalidate hidden>
           <div class="honeypot" aria-hidden="true"><input name="website" tabindex="-1" autocomplete="off"></div>
@@ -94,30 +95,29 @@
           <div class="field" id="r-email-field"><label class="req" for="r-email">Email</label><input class="input" id="r-email" name="email" type="email" required autocomplete="email" maxlength="254"><span class="error"></span></div>
           <div class="field" id="r-phone-field"><label class="req" for="r-phone">Phone</label><input class="input" id="r-phone" name="phone" type="tel" autocomplete="tel" maxlength="30"><span class="error"></span></div>
           <div id="custom-fields" style="display:grid;gap:16px"></div>
-          <div class="field"><label for="r-guests" id="r-guests-label">Bringing anyone?</label><select class="input" id="r-guests" name="guests"><option value="0">Just me</option><option value="1">+1 guest</option><option value="2">+2 guests</option><option value="3">+3 guests</option><option value="4">+4 guests</option><option value="5">+5 guests</option></select></div>
+          <div class="field"><label for="r-guests" id="r-guests-label">Tickets</label><select class="input" id="r-guests" name="guests"><option value="0">1 ticket (just me)</option><option value="1">2 tickets</option><option value="2">3 tickets</option><option value="3">4 tickets</option><option value="4">5 tickets</option><option value="5">6 tickets</option></select></div>
           <div id="pay-block" class="pay-block" hidden>
-            <div class="pay-head"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 18v-7"/><path d="M11.12 2.198a2 2 0 0 1 1.76.006l7.866 3.847c.476.233.31.949-.22.949H3.474c-.53 0-.695-.716-.22-.949z"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M3 22h18"/><path d="M6 18v-7"/></svg><div><b>Secure EFT payment</b><span>Three quick steps. Your seat is held while we verify.</span></div><div class="amount-due"><span>Amount due</span><b id="amount-due"></b></div></div>
+            <div class="pay-head"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 18v-7"/><path d="M11.12 2.198a2 2 0 0 1 1.76.006l7.866 3.847c.476.233.31.949-.22.949H3.474c-.53 0-.695-.716-.22-.949z"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M3 22h18"/><path d="M6 18v-7"/></svg><div><b>Pay by EFT</b><span>Pay, upload proof, done.</span></div><div class="amount-due"><span>Amount due</span><b id="amount-due"></b></div></div>
             <div class="pay-step" id="bank-wrap">
-              <p class="step-label"><span class="n">1</span>Pay by EFT to this account</p>
-              <p class="hint" style="margin:-4px 0 0">Tap any line to copy it.</p>
+              <p class="step-label"><span class="n">1</span>Pay this account <small class="hint">(tap to copy)</small></p>
               <dl class="bank-rows" id="bank-rows"></dl>
-              <div class="ref-row"><div><span class="k">Payment reference <em>Mandatory</em></span><b id="pay-ref">Type your full name above</b><small>Use your full names exactly as above so we can match your payment.</small></div><button type="button" class="icon-btn copy" id="copy-ref" aria-label="Copy reference"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button></div>
+              <div class="ref-row"><div><span class="k">Reference <em>Required</em></span><b id="pay-ref">Type your full name above</b></div><button type="button" class="icon-btn copy" id="copy-ref" aria-label="Copy reference"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button></div>
             </div>
             <div class="pay-step">
-              <p class="step-label"><span class="n">2</span>Upload your proof of payment</p>
+              <p class="step-label"><span class="n">2</span>Upload proof of payment</p>
               <div class="field" data-field="pop">
                 <label class="sr-only" for="pop">Proof of payment</label>
-                <label class="drop pop-drop" for="pop"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg><span id="pop-name">Tap to upload a PDF, photo or screenshot</span><span class="hint">Required · max 10 MB</span></label>
+                <label class="drop pop-drop" for="pop"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg><span id="pop-name">Tap to upload a photo, screenshot or PDF</span></label>
                 <input class="sr-only" type="file" id="pop" name="pop" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic">
                 <span class="error"></span>
               </div>
             </div>
             <div class="pay-step last">
-              <p class="step-label"><span class="n">3</span>We verify and email you</p>
+              <p class="step-label"><span class="n">3</span>We email your ticket</p>
               <p class="hint" id="approval-note"></p>
             </div>
           </div>
-          <button class="btn btn-gold" type="submit">Register <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+          <button class="btn btn-gold btn-glow" type="submit"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg> Get Ticket</button>
           <div class="notice err" data-status hidden></div>
         </form>
         <div class="reg-done" id="reg-done" hidden></div>
@@ -156,8 +156,10 @@
     <a href="/prayer"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16"/><path d="m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 15 6 6"/><path d="M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z"/></svg><span>Prayer</span></a>
     <button type="button" data-menu-open-tab aria-controls="menu"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg><span>More</span></button>
   </nav>
-  <script type="module" src="/js/site.js?v=3271908e34"></script>
+  <link rel="modulepreload" href="/js/switcher.js">
+  <link rel="modulepreload" href="/js/otp.js">
+  <script type="module" src="/js/site.js?v=5b8e893bc9"></script>
   <script type="module" src="/js/auth.js?v=4b07d17e9d"></script>
-  <script type="module" src="/js/event.js?v=4933da2d73"></script>
+  <script type="module" src="/js/event.js?v=1284848789"></script>
 </body>
 </html>

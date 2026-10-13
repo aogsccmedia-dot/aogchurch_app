@@ -8,7 +8,47 @@ const USER_DAYS = 30;
 const ADMIN_HOURS = 12;
 
 export interface User { id: string; email: string; name: string | null; given_name: string | null; family_name: string | null; picture: string | null }
-export interface Session { user: User; kind: "user" | "admin"; role?: "super" | "staff" }
+export interface Session { user: User; kind: "user" | "admin"; role?: "super" | "staff" | "youth"; perms?: string[] }
+
+// ---------------------------------------------------------------- youth leaders: a limited admin role
+/** What a youth leader can be allowed to open. The main admin ticks these per person. */
+export const YOUTH_PERMS = [
+  ["fridays", "Friday services (attendance & money)"],
+  ["scan", "Door scanner"],
+  ["reports", "Reports"],
+  ["services", "Weekly services"],
+  ["events", "Events & forms"],
+  ["members", "Members & my people"],
+  ["votes", "Voting"],
+  ["prayer", "Prayer requests"],
+] as const;
+export const YOUTH_DEFAULT = ["fridays", "scan", "reports"];
+
+/** Which permission an admin API call needs (null = full admins only). */
+export function permFor(method: string, path: string): string | null {
+  const p = path.replace(/\/+$/, "");
+  if (p === "/api/admin/whoami" || p === "/api/admin/meta") return "*";
+  if (/^\/api\/admin\/files\//.test(p) && method === "GET") return "events|services|reports";
+  if (/^\/api\/admin\/fridays(\/|$)/.test(p)) return "fridays";
+  if (/^\/api\/admin\/tickets\/(check-in|[^/]+)$/.test(p) && p !== "/api/admin/tickets/undo") return "scan";
+  if (method === "GET" && (p === "/api/admin/events" || /^\/api\/admin\/events\/[^/]+\/tickets$/.test(p))) return "scan|events";
+  if (/^\/api\/admin\/(reports|report|report\.csv|ledger)(\/|$)/.test(p)) return "reports";
+  if (/^\/api\/admin\/(services|sessions|rsvps)(\/|$)/.test(p)) return "services";
+  if (/^\/api\/admin\/(events|registrations|insights|approvals)(\/|$)/.test(p)) return "events";
+  if (/^\/api\/admin\/(members|people)(\/|$)/.test(p)) return "members";
+  if (/^\/api\/admin\/votes(\/|$)/.test(p)) return "votes";
+  if (/^\/api\/admin\/(prayers|wall)(\/|$)/.test(p)) return "prayer";
+  return null;
+}
+export function youthMay(perms: string[] | undefined, need: string | null): boolean {
+  if (!need) return false;
+  if (need === "*") return true;
+  return need.split("|").some((n) => (perms || []).includes(n));
+}
+export function parsePerms(raw: string | null | undefined): string[] {
+  try { const v = JSON.parse(raw || "null"); if (Array.isArray(v)) return v.filter((x) => YOUTH_PERMS.some(([k]) => k === x)); } catch { /* fall through */ }
+  return [...YOUTH_DEFAULT];
+}
 
 // ---------------------------------------------------------------- Google ID tokens
 
@@ -120,7 +160,9 @@ export async function getSession(env: Env, req: Request): Promise<Session | null
   // Admin sessions: the super admin (ADMIN_EMAIL), or someone the super admin has given a role.
   // If a role is removed, the session quietly drops back to a normal member session.
   if (isAdminEmail(env, user.email)) return { user, kind, role: "super" };
-  if (await hasStaffRole(env, user.id)) return { user, kind, role: "staff" };
+  const r = await env.DB.prepare("SELECT role, perms FROM admin_roles WHERE user_id = ?").bind(user.id).first<{ role: string; perms: string | null }>();
+  if (r?.role === "youth_leader") return { user, kind, role: "youth", perms: parsePerms(r.perms) };
+  if (r) return { user, kind, role: "staff" };
   return { user, kind: "user" };
 }
 
@@ -147,6 +189,10 @@ export async function requireSuper(env: Env, req: Request): Promise<Session> {
 export async function requireAdmin(env: Env, req: Request): Promise<Session> {
   const s = await getSession(env, req);
   if (!s || s.kind !== "admin") throw new HttpError(401, "Please sign in as the church admin.");
+  // Youth leaders only reach the parts the main admin has switched on for them.
+  if (s.role === "youth" && !youthMay(s.perms, permFor(req.method, new URL(req.url).pathname))) {
+    throw new HttpError(403, "Youth leaders don't have access to this. Ask the main admin if you need it.");
+  }
   return s;
 }
 

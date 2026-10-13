@@ -33,7 +33,7 @@ async function leadersRaw(env: Env): Promise<Leader[]> {
   const { results } = await env.DB.prepare(
     `SELECT u.id, u.email, COALESCE(NULLIF(u.given_name, ''), NULLIF(u.name, ''), u.email) AS name,
        (SELECT COUNT(*) FROM members m WHERE m.leader_user_id = u.id AND m.status = 'member') AS caring
-     FROM admin_roles r JOIN users u ON u.id = r.user_id WHERE lower(u.email) != lower(?) ORDER BY name`).bind(adminEmail(env)).all<Leader>();
+     FROM admin_roles r JOIN users u ON u.id = r.user_id WHERE COALESCE(r.role, 'admin') = 'admin' AND lower(u.email) != lower(?) ORDER BY name`).bind(adminEmail(env)).all<Leader>();
   return results;
 }
 

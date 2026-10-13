@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Admin · AOG Sandton City Church</title>
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#0b0a09">
+  <meta name="theme-color" content="#f7f7fb">
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/base.css?v=71d32040ea">
-  <link rel="stylesheet" href="/css/pages.css?v=516631dbb6">
-  <link rel="stylesheet" href="/css/admin.css?v=6e59381ca8">
-  <script src="/js/switch-boot.js?v=1411ce24b0"></script>
+  <link rel="stylesheet" href="/css/base.css?v=e648a046c0">
+  <link rel="stylesheet" href="/css/pages.css?v=49fb5a36c9">
+  <link rel="stylesheet" href="/css/admin.css?v=5e89fad5ae">
+  <script src="/js/switch-boot.js?v=6aa2d537d6"></script>
 </head>
 <body class="admin">
   <!-- Sign in -->
@@ -51,26 +51,35 @@
     </nav>
     <aside class="side" id="side">
       <a class="brand" href="/" target="_blank"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>SCC Admin</span></a>
-      <nav id="nav">
-        <button data-tab="overview" class="active">Overview</button>
-        <button data-tab="insights">Insights</button>
-        <button data-tab="members">Members <span class="badge" data-count="new_members"></span></button>
-        <button data-tab="people">My people</button>
-        <button data-tab="events">Events &amp; forms <span class="badge" data-count="pending_payments"></span></button>
-        <button data-tab="scan">Door scanner</button>
-        <button data-tab="services">Weekly services</button>
-        <button data-tab="programme">Church programme</button>
-        <button data-tab="report">Reports <span class="admin-only-dot" title="Admins only"></span></button>
-        <button data-tab="letters">Weekly letter</button>
-        <button data-tab="subscribers">Subscribers</button>
-        <button data-tab="prayers">Prayer <span class="badge" data-count="prayer_total"></span></button>
-        <button data-tab="messages">Messages <span class="badge" data-count="new_messages"></span></button>
-        <button data-tab="complaints">Complaints <span class="badge" data-count="open_complaints"></span></button>
-        <button data-tab="settings">Site settings</button>
-        <button data-tab="templates">Email templates</button>
-        <button data-tab="emails">Email log</button>
-        <button data-tab="team" data-super>Team &amp; roles</button>
-        <button data-tab="code" data-super>Code changes <span class="badge" id="code-badge"></span></button>
+      <nav id="nav" aria-label="Admin">
+        <p class="nav-group">Today</p>
+        <button data-tab="overview" data-tone="lilac" class="active">Overview</button>
+        <button data-tab="approvals" data-tone="peach" data-perm="events">Approvals <span class="badge" data-count="pending_payments"></span></button>
+        <button data-tab="fridays" data-tone="butter" data-perm="fridays">Fridays</button>
+        <button data-tab="scan" data-tone="blush" data-perm="scan">Door scanner</button>
+        <p class="nav-group">Events &amp; services</p>
+        <button data-tab="events" data-tone="blush" data-perm="events">Events &amp; forms</button>
+        <button data-tab="services" data-tone="butter" data-perm="services">Weekly services</button>
+        <button data-tab="programme" data-tone="butter">Church programme</button>
+        <button data-tab="votes" data-tone="coral" data-perm="votes">Voting</button>
+        <p class="nav-group">People</p>
+        <button data-tab="members" data-tone="mint" data-perm="members">Members <span class="badge" data-count="new_members"></span></button>
+        <button data-tab="people" data-tone="mint" data-perm="members">My people</button>
+        <button data-tab="prayers" data-tone="rose" data-perm="prayer">Prayer <span class="badge" data-count="prayer_total"></span></button>
+        <button data-tab="messages" data-tone="rose">Messages <span class="badge" data-count="new_messages"></span></button>
+        <button data-tab="complaints" data-tone="rose">Complaints <span class="badge" data-count="open_complaints"></span></button>
+        <p class="nav-group">Insights</p>
+        <button data-tab="insights" data-tone="sky" data-perm="events">Insights</button>
+        <button data-tab="report" data-tone="sage" data-perm="reports">Reports <span class="admin-only-dot" title="Admins only"></span></button>
+        <p class="nav-group">Letters &amp; email</p>
+        <button data-tab="letters" data-tone="peri">Weekly letter</button>
+        <button data-tab="subscribers" data-tone="peri">Subscribers</button>
+        <button data-tab="templates" data-tone="peri">Email templates</button>
+        <button data-tab="emails" data-tone="peri">Email log</button>
+        <p class="nav-group">Settings</p>
+        <button data-tab="settings" data-tone="slate">Site settings</button>
+        <button data-tab="team" data-tone="slate" data-super>Team &amp; roles</button>
+        <button data-tab="code" data-tone="slate" data-super>Code changes <span class="badge" id="code-badge"></span></button>
       </nav>
       <div class="side-foot"><span id="who"></span><span class="role-chip" id="role-chip"></span><button class="btn btn-sm btn-ghost" type="button" data-switch="member" id="to-profile" hidden>Switch to member view</button><button class="btn btn-sm" id="logout">Sign out</button></div>
     </aside>
@@ -368,10 +377,40 @@
         <div id="code-body"><p class="muted">Loading…</p></div>
       </section>
 
+      <section data-view="approvals" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Payments</p><h1>Approvals</h1><p class="muted">Everyone waiting for their ticket, across all events. Check the proof, then approve. Their ticket is emailed straight away.</p></div>
+          <button class="btn" type="button" id="ap-refresh">Refresh</button></header>
+        <div id="ap-list" class="ap-list"><p class="muted">Loading…</p></div>
+      </section>
+
+      <section data-view="fridays" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Youth</p><h1>Friday services</h1><p class="muted">Capture each Friday: how many came and the final amount. It takes a minute, on the night.</p></div></header>
+        <div class="kpis" id="fr-kpis"></div>
+        <div id="fr-chart" class="card fr-chart" hidden></div>
+        <div id="fr-list" class="fr-list"><p class="muted">Loading…</p></div>
+      </section>
+
+      <section data-view="votes" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Members</p><h1>Voting</h1><p class="muted">Set up a vote for an event. Only confirmed members can vote, once each, for another member. Ballots are secret: you see totals, never who voted for whom.</p></div>
+          <button class="btn btn-gold" type="button" id="vt-new">New vote</button></header>
+        <form id="vt-form" class="card form-grid" hidden novalidate>
+          <div class="grid-2"><div class="field"><label class="req">What are people voting for?</label><input class="input" name="title" maxlength="120" placeholder="Youth member of the year" required></div>
+            <div class="field"><label>Event</label><input class="input" name="event_name" maxlength="120" placeholder="Youth Awards Night"></div></div>
+          <div class="grid-2"><div class="field"><label class="req">First voting day</label><input class="input" type="date" name="opens" required></div><div class="field"><label class="req">Last voting day</label><input class="input" type="date" name="closes" required></div></div>
+          <div class="field"><label>Note for voters (optional)</label><input class="input" name="description" maxlength="600" placeholder="Vote for the person who served with the biggest heart this year."></div>
+          <div class="field"><label>Who can be voted for?</label>
+            <div class="seg" id="vt-mode"><button type="button" data-m="list" class="on">Members I choose</button><button type="button" data-m="all">Any member</button></div></div>
+          <div class="field" id="vt-pick"><input class="input" id="vt-q" placeholder="Search members to add…"><div id="vt-results" class="vt-results"></div><div id="vt-chosen" class="vt-chosen"></div></div>
+          <label class="check"><input type="checkbox" name="show_live" checked> Members can watch the results live</label>
+          <div class="row"><button class="btn btn-gold" type="submit">Start the vote</button><button class="btn" type="button" id="vt-cancel">Cancel</button></div>
+        </form>
+        <div id="vt-list" class="list"><p class="muted">Loading…</p></div>
+      </section>
+
       <section data-view="team" hidden>
-        <header class="vh"><div><p class="eyebrow gold">Main admin only</p><h1>Team &amp; roles</h1><p class="muted">Give registered members admin access to help approve registrations, verify members and send tickets. Admins can't delete people or change roles. They sign in with Google plus a code emailed to them.</p></div></header>
-        <div class="card"><h3>Current admins</h3><div id="team-admins" class="list"></div></div>
-        <div class="card" style="margin-top:16px"><h3>Add an admin</h3><p class="muted">People appear here after they've signed in with Google on the website. They must be registered members.</p>
+        <header class="vh"><div><p class="eyebrow gold">Main admin only</p><h1>Team &amp; roles</h1><p class="muted"><b>Admins</b> help with everything except deleting people and changing roles. <b>Youth leaders</b> only open what you tick for them. Everyone signs in with Google plus a code emailed to them.</p></div></header>
+        <div class="card"><h3>The team</h3><div id="team-admins" class="list"></div></div>
+        <div class="card" style="margin-top:16px"><h3>Add someone</h3><p class="muted">People appear here after they've signed in with Google on the website. They must be registered members.</p>
           <input class="input" id="team-q" placeholder="Search by name or email…" style="margin:10px 0"><div id="team-people" class="list"></div></div>
       </section>
 
@@ -405,6 +444,6 @@
   <dialog class="drawer" id="rsvp-drawer"><div class="drawer-body" id="rsvp-body"></div></dialog>
   <dialog class="drawer" id="services-drawer"><div class="drawer-body" id="services-body"></div></dialog>
   <dialog class="drawer" id="member-drawer"><div class="drawer-body" id="member-body"></div></dialog>
-  <script type="module" src="/js/admin.js?v=ad8d41b168"></script>
+  <script type="module" src="/js/admin.js?v=bcb225e8a9"></script>
 </body>
 </html>
