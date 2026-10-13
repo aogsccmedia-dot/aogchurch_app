@@ -121,62 +121,74 @@ export function initMore(ctx) {
   }));
   loaders.fridays = loadFridays;
 
-  // ------------------------------------------------------------ Voting
-  let chosen = [], mode = "list", vtTimer = null;
+  // ------------------------------------------------------------ Voting (elections: roles, rounds, appointments)
+  let vtTimer = null;
   const face = (p, size = 34) => p.picture ? `<img class="face" src="${esc(p.picture)}" alt="" width="${size}" height="${size}" referrerpolicy="no-referrer" loading="lazy">`
     : `<span class="face" style="--h:${[...(p.name || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % 360}">${esc((p.name || "?").split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase())}</span>`;
-  const STATE = { open: ["Voting now", "member"], upcoming: ["Not open yet", "pending"], closed: ["Closed", ""], draft: ["Draft", ""] };
+  const STATE = { open: ["Voting now", "member"], upcoming: ["Starts soon", "pending"], between: ["Between rounds", "pending"], complete: ["Finished", ""], cancelled: ["Cancelled", ""], draft: ["Draft", ""] };
+  const sad = (iso) => dayLabel(new Date(Date.parse(iso) + 2 * 3600_000).toISOString().slice(0, 10));
   async function loadVotes() {
     const { polls } = await api("/api/admin/votes");
     $("#vt-list").innerHTML = polls.length ? polls.map((p) => {
-      const max = Math.max(1, ...p.results.map((r) => r.votes));
-      const [label, cls] = STATE[p.state];
+      const [label, cls] = STATE[p.state] || [p.state, ""];
       return `<article class="card vote-card" data-id="${esc(p.id)}">
-        <div class="vh"><div><b class="vote-title">${esc(p.title)}</b><div class="muted">${p.event_name ? `${esc(p.event_name)} · ` : ""}${dayLabel(p.opens_at.slice(0, 10))} – ${dayLabel(new Date(Date.parse(p.closes_at) + 2 * 3600_000).toISOString().slice(0, 10))} · ${p.candidates === "all" ? "any member" : `${p.candidate_count} people`}</div></div>
-          <span class="pill ${cls}">${label}</span></div>
-        <div class="statline"><b>${p.total}</b> vote${p.total === 1 ? "" : "s"} of ${p.eligible} members (${p.eligible ? Math.round((p.total / p.eligible) * 100) : 0}%)</div>
-        <div class="race">${p.results.slice(0, 8).map((r, i) => `<div class="race-row" style="--w:${(r.votes / max) * 100}%;--i:${i}">${face(r)}<span class="race-name">${esc(r.name)}</span><span class="race-bar"><i></i></span><b>${r.votes}</b></div>`).join("") || `<p class="muted">No votes yet.</p>`}</div>
+        <div class="vh"><div><b class="vote-title">${esc(p.title)}</b><div class="muted">${p.event_name ? `${esc(p.event_name)} · ` : ""}${p.rounds} round${p.rounds > 1 ? "s" : ""}: ${p.schedule.map((r) => `${sad(r.opens_at)}–${sad(r.closes_at)}`).join(", ")}</div></div>
+          <span class="pill ${cls}">${label}${p.state === "open" || p.state === "between" ? ` · round ${p.round}` : ""}</span></div>
+        ${p.state === "open" ? `<div class="statline"><b>${p.voters}</b> of ${p.eligible_voters} members have voted in this round (${p.eligible_voters ? Math.round((p.voters / p.eligible_voters) * 100) : 0}%)</div>` : ""}
+        ${p.roles.map((role) => {
+          const max = Math.max(1, ...role.results.map((r) => r.votes));
+          return `<div class="vt-role-res"><b>${esc(role.name)}</b>${role.seats > 1 ? ` <span class="muted">(${role.seats} places)</span>` : ""}<div class="muted">${esc(role.description || "")}</div>
+            ${role.appointed.length ? `<div class="vt-appointed">${icon("check")} Appointed: ${role.appointed.map((a) => `${face(a, 24)} ${esc(a.name)}`).join(", ")}</div>` : ""}
+            <div class="race">${role.results.slice(0, 6).map((r, i) => `<div class="race-row" style="--w:${(r.votes / max) * 100}%;--i:${i}">${face(r)}<span class="race-name">${esc(r.name)}</span><span class="race-bar"><i></i></span><b>${r.votes}</b></div>`).join("") || `<p class="muted">${p.state === "upcoming" ? "Voting hasn't started." : "No votes yet."}</p>`}</div></div>`;
+        }).join("")}
         <div class="row">
-          ${p.state === "closed" ? `<button class="btn btn-sm" data-act="open">Reopen</button>` : `<button class="btn btn-sm" data-act="close">Close voting now</button>`}
-          <button class="btn btn-sm" data-act="live">${p.show_live ? "Hide live results from members" : "Show live results to members"}</button>
+          ${p.state === "cancelled" ? `<button class="btn btn-sm" data-act="open">Restore</button>` : p.state !== "complete" ? `<button class="btn btn-sm" data-act="close">Cancel this vote</button>` : ""}
           <a class="btn btn-sm btn-ghost" href="/vote?p=${esc(p.id)}" target="_blank" rel="noopener">Members' view</a>
           <button class="btn btn-sm btn-ghost" data-act="delete">Delete</button></div>
       </article>`;
-    }).join("") : `<div class="empty">No votes yet. Tap “New vote” to set one up for an event.</div>`;
+    }).join("") : `<div class="empty">No votes set up yet. Tap “Set up a vote” to fill roles for an event.</div>`;
     clearTimeout(vtTimer);
-    if (polls.some((p) => p.state === "open") && document.body.dataset.view === "votes") vtTimer = setTimeout(() => safe(loadVotes)(), 6000);
+    if (polls.some((p) => p.state === "open") && document.body.dataset.view === "votes") vtTimer = setTimeout(() => safe(loadVotes)(), 8000);
   }
   loaders.votes = loadVotes;
   const VF = () => $("#vt-form");
-  $("#vt-new").addEventListener("click", () => {
-    const f = VF(); f.hidden = !f.hidden; chosen = []; drawChosen();
-    const today = new Date(Date.now() + 2 * 3600_000).toISOString().slice(0, 10);
-    f.opens.value ||= today; f.closes.value ||= today; f.title.focus();
-  });
+  const roleRow = (r = {}) => `<div class="vt-role"><input class="input" data-r="name" maxlength="80" placeholder="Role, e.g. Youth chairperson" value="${esc(r.name || "")}">
+    <input class="input" data-r="description" maxlength="300" placeholder="What it means, e.g. Leads the youth committee and Friday services" value="${esc(r.description || "")}">
+    <select class="input" data-r="seats" aria-label="How many people">${[1, 2, 3, 4, 5].map((n) => `<option value="${n}">${n} ${n === 1 ? "person" : "people"}</option>`).join("")}</select>
+    <button type="button" class="btn btn-sm btn-ghost" data-rm-role aria-label="Remove">×</button></div>`;
+  function drawPlan() {
+    const f = VF(); if (!f.first_day.value) { $("#vt-plan").textContent = ""; return; }
+    const add = (d, n) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+    const out = []; let d = f.first_day.value; const days = Number(f.round_days.value), gap = Number(f.gap_days.value);
+    for (let r = 1; r <= Number(f.rounds.value); r++) { const end = add(d, days - 1); out.push(`Round ${r}: ${dayLabel(d)} – ${dayLabel(end)}`); d = add(end, gap + 1); }
+    $("#vt-plan").innerHTML = `<b>Plan</b><br>${out.join("<br>")}<br><span class="muted">Members get a reminder to pray every two weeks until voting starts, and an email when each round opens.</span>`;
+  }
+  $("#vt-new").addEventListener("click", safe(async () => {
+    const f = VF(); f.hidden = !f.hidden; if (f.hidden) return;
+    $("#vt-roles").innerHTML = roleRow();
+    const t = new Date(Date.now() + 2 * 3600_000 + 14 * 86400_000).toISOString().slice(0, 10);
+    f.first_day.value ||= t; drawPlan(); f.title.focus();
+    const el = await api("/api/admin/votes/eligible?years=5");
+    $("#vt-eligible").innerHTML = `<b>${el.count}</b> of ${el.members} confirmed members can be chosen (saved for at least ${el.years} years, from their join form).${el.count ? `<div class="vt-elig">${el.eligible.slice(0, 24).map((m) => `<span class="chip-person">${face(m, 22)}${esc(m.name)}</span>`).join("")}${el.count > 24 ? ` <span class="muted">+${el.count - 24} more</span>` : ""}</div>` : ""}`;
+  }));
+  $("#vt-add-role").addEventListener("click", () => $("#vt-roles").insertAdjacentHTML("beforeend", roleRow()));
+  $("#vt-roles").addEventListener("click", (e) => { const b = e.target.closest("[data-rm-role]"); if (b && $$(".vt-role").length > 1) b.closest(".vt-role").remove(); });
+  ["first_day", "rounds", "round_days", "gap_days"].forEach((n) => VF()[n].addEventListener("change", drawPlan));
   $("#vt-cancel").addEventListener("click", () => { VF().hidden = true; });
-  $("#vt-mode").addEventListener("click", (e) => { const b = e.target.closest("[data-m]"); if (!b) return; mode = b.dataset.m; $$("#vt-mode button").forEach((x) => x.classList.toggle("on", x === b)); $("#vt-pick").hidden = mode === "all"; });
-  let qT;
-  $("#vt-q").addEventListener("input", (e) => { clearTimeout(qT); qT = setTimeout(safe(async () => {
-    const q = e.target.value.trim(); if (!q) { $("#vt-results").innerHTML = ""; return; }
-    const { members } = await api(`/api/admin/votes/members?q=${encodeURIComponent(q)}`);
-    $("#vt-results").innerHTML = members.map((m) => `<button type="button" class="vt-person" data-id="${esc(m.id)}" data-name="${esc(m.name)}" data-pic="${esc(m.picture || "")}" ${chosen.some((c) => c.id === m.id) ? "disabled" : ""}>${face(m, 28)}<span>${esc(m.name)}</span>${icon("plus")}</button>`).join("") || `<p class="muted">No members found.</p>`;
-  }), 220); });
-  $("#vt-results").addEventListener("click", (e) => { const b = e.target.closest(".vt-person"); if (!b) return; chosen.push({ id: b.dataset.id, name: b.dataset.name, picture: b.dataset.pic || null }); b.disabled = true; drawChosen(); });
-  $("#vt-chosen").addEventListener("click", (e) => { const b = e.target.closest("[data-rm]"); if (!b) return; chosen = chosen.filter((c) => c.id !== b.dataset.rm); drawChosen(); });
-  function drawChosen() { $("#vt-chosen").innerHTML = chosen.map((c) => `<span class="chip-person">${face(c, 24)}${esc(c.name)}<button type="button" data-rm="${esc(c.id)}" aria-label="Remove">×</button></span>`).join(""); }
   VF().addEventListener("submit", safe(async (e) => {
     e.preventDefault();
     const f = e.target;
-    await api("/api/admin/votes", { method: "POST", body: { title: f.title.value, event_name: f.event_name.value, description: f.description.value, opens: f.opens.value, closes: f.closes.value, candidates: mode, member_ids: chosen.map((c) => c.id), show_live: f.show_live.checked } });
-    toast("Voting is set up. Members will see it on their profile."); f.reset(); f.hidden = true; chosen = []; loadVotes();
+    const roles = $$(".vt-role").map((row) => ({ name: row.querySelector('[data-r="name"]').value, description: row.querySelector('[data-r="description"]').value, seats: Number(row.querySelector('[data-r="seats"]').value) })).filter((r) => r.name.trim());
+    await api("/api/admin/votes", { method: "POST", body: { title: f.title.value, event_name: f.event_name.value, description: f.description.value, first_day: f.first_day.value,
+      rounds: Number(f.rounds.value), round_days: Number(f.round_days.value), gap_days: Number(f.gap_days.value), runoff: Number(f.runoff.value), roles } });
+    toast("Vote set up. Members will be reminded to pray every two weeks until it starts."); f.reset(); f.hidden = true; loadVotes();
   }));
   $("#vt-list").addEventListener("click", safe(async (e) => {
     const b = e.target.closest("[data-act]"); if (!b) return;
-    const card = b.closest("[data-id]"), id = card.dataset.id, act = b.dataset.act;
-    if (act === "delete") { if (!confirm("Delete this vote and all its votes?")) return; await api(`/api/admin/votes/${id}`, { method: "DELETE" }); toast("Deleted"); }
-    else if (act === "close") await api(`/api/admin/votes/${id}`, { method: "PATCH", body: { status: "closed" } });
-    else if (act === "open") await api(`/api/admin/votes/${id}`, { method: "PATCH", body: { status: "open", closes: new Date(Date.now() + 2 * 3600_000 + 86400_000).toISOString().slice(0, 10) } });
-    else if (act === "live") await api(`/api/admin/votes/${id}`, { method: "PATCH", body: { show_live: b.textContent.startsWith("Show") } });
+    const id = b.closest("[data-id]").dataset.id, act = b.dataset.act;
+    if (act === "delete") { if (!confirm("Delete this vote and all its ballots?")) return; await api(`/api/admin/votes/${id}`, { method: "DELETE" }); toast("Deleted"); }
+    else if (act === "close") { if (!confirm("Cancel this vote? Members won't be able to vote.")) return; await api(`/api/admin/votes/${id}`, { method: "PATCH", body: { status: "closed" } }); }
+    else if (act === "open") await api(`/api/admin/votes/${id}`, { method: "PATCH", body: { status: "open" } });
     loadVotes();
   }));
 

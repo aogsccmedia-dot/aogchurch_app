@@ -14,15 +14,24 @@
         <div><p class="eyebrow gold" id="me-greet">Welcome home</p><h1 id="me-name"></h1><p class="muted-text" id="me-status"></p></div>
       </header>
       <div id="me-member"></div>
-      <nav class="me-quick" aria-label="Quick links">
-        <a href="/events"><span>{{i:ticket}}</span><b>Get Ticket</b><small>What's coming up</small></a>
-        <a href="/devotions"><span>{{i:bookOpen}}</span><b>Devotions</b><small>Today's verse</small></a>
-        <a href="/assistant"><span>{{i:sparkles}}</span><b>Ask SCC</b><small>Times, events, calendar</small></a>
-        <a href="/prayer#wall"><span>{{i:handHeart}}</span><b>Prayer wall</b><small>Pray with the family</small></a>
-      </nav>
       <section class="me-section">
-        <div class="section-head" style="margin:0"><p class="eyebrow gold">My tickets</p><h2>Where I'll be</h2></div>
-        <div id="me-events" class="event-grid"></div>
+        <div class="me-head"><h2>My tickets</h2><a href="/events" class="me-more">Get a ticket {{arrow}}</a></div>
+        <div id="me-events" class="slider" aria-label="My tickets"></div>
+      </section>
+      <section class="me-section">
+        <div class="me-head"><h2>Coming up at church</h2><a href="/events" class="me-more">All events {{arrow}}</a></div>
+        <div id="me-upcoming" class="slider" aria-label="Upcoming events"></div>
+      </section>
+      <section class="me-section">
+        <div class="me-head"><h2>What to know</h2></div>
+        <div class="know-grid">
+          <a class="know" id="know-pack" href="/assets/welcome-pack.pdf" target="_blank" rel="noopener"><span>{{i:bookOpen}}</span><b>Welcome pack</b><small>Who we are: from Azusa Street to Nicholas Bhengu and the birth of our church (PDF)</small></a>
+          <div class="know" id="know-services"><span>{{i:clock}}</span><b>Service times</b><small>Loading…</small></div>
+          <a class="know" href="/vote" id="know-vote"><span>{{i:vote}}</span><b>Voting</b><small>Checking…</small></a>
+          <a class="know" href="https://maps.google.com/?q=17+Humber+Street+Woodmead+Sandton" target="_blank" rel="noopener"><span>{{i:mapPin}}</span><b>Find us</b><small>17 Humber Street, Woodmead, Sandton</small></a>
+          <a class="know" href="/devotions"><span>{{i:flame}}</span><b>Today's verse</b><small>Read, pray and keep your streak</small></a>
+          <a class="know" href="/store"><span>{{i:landmark}}</span><b>Church store</b><small>Books by our brethren · coming soon</small></a>
+        </div>
       </section>
       <section class="me-section" id="members-calendar" hidden>
         <div class="section-head" style="margin:0"><p class="eyebrow gold">Members only</p><h2>Germiston Sub-Region calendar</h2>

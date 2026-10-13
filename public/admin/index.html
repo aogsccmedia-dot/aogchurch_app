@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css?v=19f64f84fa">
-  <link rel="stylesheet" href="/css/pages.css?v=6be3339680">
-  <link rel="stylesheet" href="/css/admin.css?v=d64a33e848">
+  <link rel="stylesheet" href="/css/pages.css?v=8ecd853ec0">
+  <link rel="stylesheet" href="/css/admin.css?v=8bf4982a9d">
   <script src="/js/switch-boot.js?v=6aa2d537d6"></script>
 </head>
 <body class="admin">
@@ -393,18 +393,22 @@
       </section>
 
       <section data-view="votes" hidden>
-        <header class="vh"><div><p class="eyebrow gold">Members</p><h1>Voting</h1><p class="muted">Set up a vote for an event. Only confirmed members can vote, once each, for another member. Ballots are secret: you see totals, never who voted for whom.</p></div>
-          <button class="btn btn-gold" type="button" id="vt-new">New vote</button></header>
+        <header class="vh"><div><p class="eyebrow gold">Members</p><h1>Voting</h1><p class="muted">Fill church roles by vote. Only confirmed members vote, once per role per round. Only members who have been saved for at least five years (from their join form) can be chosen. Results are live; ballots are secret. When the last round closes, the winners are appointed and emailed. Members get a reminder to pray every two weeks before voting starts.</p></div>
+          <button class="btn btn-gold" type="button" id="vt-new">Set up a vote</button></header>
         <form id="vt-form" class="card form-grid" hidden novalidate>
-          <div class="grid-2"><div class="field"><label class="req">What are people voting for?</label><input class="input" name="title" maxlength="120" placeholder="Youth member of the year" required></div>
-            <div class="field"><label>Event</label><input class="input" name="event_name" maxlength="120" placeholder="Youth Awards Night"></div></div>
-          <div class="grid-2"><div class="field"><label class="req">First voting day</label><input class="input" type="date" name="opens" required></div><div class="field"><label class="req">Last voting day</label><input class="input" type="date" name="closes" required></div></div>
-          <div class="field"><label>Note for voters (optional)</label><input class="input" name="description" maxlength="600" placeholder="Vote for the person who served with the biggest heart this year."></div>
-          <div class="field"><label>Who can be voted for?</label>
-            <div class="seg" id="vt-mode"><button type="button" data-m="list" class="on">Members I choose</button><button type="button" data-m="all">Any member</button></div></div>
-          <div class="field" id="vt-pick"><input class="input" id="vt-q" placeholder="Search members to add…"><div id="vt-results" class="vt-results"></div><div id="vt-chosen" class="vt-chosen"></div></div>
-          <label class="check"><input type="checkbox" name="show_live" checked> Members can watch the results live</label>
-          <div class="row"><button class="btn btn-gold" type="submit">Start the vote</button><button class="btn" type="button" id="vt-cancel">Cancel</button></div>
+          <div class="grid-2"><div class="field"><label class="req">Name of the vote</label><input class="input" name="title" maxlength="120" placeholder="Youth committee 2027" required></div>
+            <div class="field"><label>Event</label><input class="input" name="event_name" maxlength="120" placeholder="Youth AGM"></div></div>
+          <div class="field"><label>Note for members (optional)</label><input class="input" name="description" maxlength="600" placeholder="Pray, then choose the people you believe God is calling."></div>
+          <div class="field"><label class="req">Roles to fill</label><p class="muted" style="margin:0 0 8px">Say briefly what each role means, so members know what they're voting for.</p>
+            <div id="vt-roles" class="vt-roles"></div><button class="btn btn-sm" type="button" id="vt-add-role">+ Add a role</button></div>
+          <div class="grid-2"><div class="field"><label class="req">First voting day</label><input class="input" type="date" name="first_day" required></div>
+            <div class="field"><label>Rounds</label><select class="input" name="rounds"><option value="1">1 round</option><option value="2" selected>2 rounds (top few go through)</option><option value="3">3 rounds</option></select></div></div>
+          <div class="grid-2"><div class="field"><label>Days each round is open</label><select class="input" name="round_days"><option>3</option><option>5</option><option selected>7</option><option>10</option><option>14</option></select></div>
+            <div class="field"><label>Break between rounds (days)</label><select class="input" name="gap_days"><option>3</option><option selected>7</option><option>14</option></select></div></div>
+          <div class="field"><label>How many go through to the next round, per role</label><select class="input" name="runoff"><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+          <div class="callout" id="vt-plan"></div>
+          <div class="callout" id="vt-eligible">Checking who can be chosen…</div>
+          <div class="row"><button class="btn btn-gold" type="submit">Set up the vote</button><button class="btn" type="button" id="vt-cancel">Cancel</button></div>
         </form>
         <div id="vt-list" class="list"><p class="muted">Loading…</p></div>
       </section>

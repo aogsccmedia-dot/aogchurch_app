@@ -39,10 +39,10 @@ async function handleCredential(resp) {
     const me = await getMe(true);
     renderHeaderUser(me);
     if (!onMe && !midTask) {
-      // Members (and the team) land on Ask SCC, the church helper; new people go to the join form, filled in from Google.
+      // Members (and the team) land on their Home: tickets, what's coming up and what to know. New people go to the join form.
       const label = me.member || me.is_admin ? "Getting things ready…" : "Setting up your sign-up…";
       veilShow(label); veilCarry(label);
-      location.href = me.member || me.is_admin ? "/assistant" : "/join";
+      location.href = me.member || me.is_admin ? "/me" : "/join";
       return;   // the next page fades the veil out once it has loaded
     }
     if (!onMe) veilShow("Filling in your details…");
@@ -138,9 +138,10 @@ export function renderHeaderUser(me) {
   const avatar = u.picture ? `<img src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : `<span>${esc(initials)}</span>`;
   slot.innerHTML = `<details class="user-menu"><summary aria-label="Account menu" class="avatar">${avatar}</summary>
     <div class="user-pop"><b>${esc(u.name || u.email)}</b><small>${esc(u.email)}</small>
-      <a href="/assistant">Ask SCC</a>
-      ${me.admin_account ? "" : `<a href="/me">My church</a>`}
+      ${me.admin_account ? "" : `<a href="/me">Home</a>`}
       <a href="/devotions">Devotions</a>
+      <a href="/assistant">Ask SCC</a>
+      <a href="/vote">Vote</a>
       ${me.admin_account || me.is_admin ? `<a href="/admin/">${me.admin_role === "youth" ? "Youth leader portal" : "Admin"}</a>` : ""}
       <a href="/settings">Settings</a>
       ${!me.member && !me.admin_account ? `<a href="/join">Complete joining</a>` : ""}
@@ -148,9 +149,9 @@ export function renderHeaderUser(me) {
   slot.querySelector("[data-signout]").addEventListener("click", signOut);
   // Hide "Join" buttons for people who've already joined (and the admin, who never needs to).
   if (me.member || me.admin_account) document.querySelectorAll("[data-join-cta]").forEach((a) => {
-    a.href = me.admin_account ? "/admin/" : "/assistant";
+    a.href = me.admin_account ? "/admin/" : "/me";
     // Bottom bar: keep the person icon on every device, only the short label changes.
-    if (a.hasAttribute("data-tab-me")) { const s = a.querySelector("span"); if (s) s.textContent = me.admin_account ? "Admin" : "My SCC"; a.setAttribute("aria-label", me.admin_account ? "Admin dashboard" : "Ask SCC and my church"); }
+    if (a.hasAttribute("data-tab-me")) { const s = a.querySelector("span"); if (s) s.textContent = me.admin_account ? "Admin" : "My SCC"; a.setAttribute("aria-label", me.admin_account ? "Admin dashboard" : "My church home"); }
     else a.textContent = me.admin_account ? "Dashboard" : "My profile";
   });
 }

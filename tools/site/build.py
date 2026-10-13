@@ -99,7 +99,7 @@ def head(title, desc, canonical=None, noindex=False, extra=""):
 MENU_GROUPS = [
     ("Explore", [("/", "Home"), ("/about", "About us"), ("/our-story", "Our story"), ("/beliefs", "What we believe")]),
     ("Church life", [("/events", "Services &amp; events"), ("/get-involved", "Get involved"), ("/prayer", "Prayer"), ("/visit", "Visit &amp; contact")]),
-    ("For you", [("/me", "My profile"), ("/devotions", "Devotions"), ("/assistant", "Ask SCC"), ("/settings", "Settings"), ("/vote", "Vote"), ("/settings#complaints", "Raise a concern"), ("/#letter", "Weekly letter"), ("/app", "Get the app")]),
+    ("For you", [("/me", "Home"), ("/devotions", "Devotions"), ("/assistant", "Ask SCC"), ("/vote", "Vote"), ("/store", "Store"), ("/settings", "Settings"), ("/settings#complaints", "Raise a concern"), ("/#letter", "Weekly letter"), ("/app", "Get the app")]),
     ("Tools", [("/tools", "All tools"), ("/presenter", "SCC Presenter · Coming soon")]),
 ]
 
@@ -255,6 +255,7 @@ PAGES = {
     "data-protection": dict(title="Data protection, POPIA & PAIA" + T, crumb="Data protection", desc="Sandton City Church's data protection standards: Information Officer, security, retention, breach notification and your POPIA/PAIA rights.", canonical="/data-protection", scripts=["site.js", "auth.js"]),
     "presenter": dict(title="SCC Presenter (Beta) · Free church presentation software" + T, crumb="SCC Presenter", desc="SCC Presenter: free, open-source presentation software for churches. Songs, scripture, video, stage screen, phone remote and OBS output for Windows and Mac. Beta open to the first 20 testers.", canonical="/presenter", scripts=["site.js", "auth.js", "presenter.js"]),
     "assistant": dict(title="Ask SCC" + T, body="portal ask", desc="Ask SCC: the members' chat for AOG Sandton City Church. Events, service times, your tickets and the church calendar.", noindex=True, scripts=["site.js", "auth.js", "assistant.js"]),
+    "store": dict(title="Store" + T, crumb="Store", desc="AOG Store: books written by members of AOG Sandton City Church. Coming soon.", canonical="/store", scripts=["site.js", "auth.js", "store.js"]),
     "vote": dict(title="Vote" + T, body="portal", desc="Members' voting at AOG Sandton City Church.", noindex=True, scripts=["site.js", "auth.js", "vote.js"]),
     "tools": dict(title="Tools" + T, crumb="Tools", desc="Free tools from AOG Sandton City Church: SCC Presenter for Windows and Mac, and the church app.", canonical="/tools", scripts=["site.js", "auth.js"]),
     "app": dict(title="Get the app" + T, crumb="Get the app", desc="Add Sandton City Church to your phone's home screen — iPhone, Android or computer.", canonical="/app", scripts=["site.js", "auth.js"]),

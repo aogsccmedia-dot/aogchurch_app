@@ -44,15 +44,18 @@ async function render() {
   switchReady();
   if (!maybeWelcome(d.member, u)) helloOnce(me);
   if (d.member?.status === "member") voteBanner();
-  $("me-events").innerHTML = d.registrations.length ? d.registrations.map((r) => `
-    <article class="event-card"><div class="body">
-      <span class="eyebrow">${{ waitlist: "Waitlist", pending: "Awaiting payment approval", confirmed: "Confirmed", rejected: "Payment not approved" }[r.status] || r.status} · ${esc(r.ref_code)}</span>
+  const upcoming = d.registrations.filter((r) => new Date(r.ends_at || r.starts_at) > new Date(Date.now() - 6 * 3600_000) && r.status !== "rejected");
+  $("me-events").innerHTML = upcoming.length ? upcoming.map((r) => `
+    <article class="slide tix">
+      <span class="tix-status ${esc(r.status)}">${{ waitlist: "Waitlist", pending: "Awaiting approval", confirmed: "Confirmed" }[r.status] || esc(r.status)}</span>
       <h3><a href="/event?e=${encodeURIComponent(r.slug)}">${esc(r.title)}</a></h3>
-      <p class="meta">${esc(fmt(r.starts_at))}${r.location ? " · " + esc(r.location) : ""}</p>
-      <div class="foot">${r.ticket_code ? `<a class="btn btn-sm btn-green" href="/ticket?c=${esc(r.ticket_code)}">${icon("ticket")} ${r.guests ? `My ${1 + Number(r.guests)} tickets` : "My ticket"}</a>` : "<span></span>"}
+      <p class="meta">${esc(fmt(r.starts_at))}${r.location ? "<br>" + esc(r.location) : ""}</p>
+      <p class="tix-ref">Ref ${esc(r.ref_code)}${r.guests ? ` · ${1 + Number(r.guests)} people` : ""}</p>
+      <div class="foot">${r.ticket_code ? `<a class="btn btn-sm btn-gold" href="/ticket?c=${esc(r.ticket_code)}">${icon("ticket")} Show ticket</a>` : ""}
         ${new Date(r.starts_at) > new Date() ? `<button class="btn btn-sm btn-ghost" data-cancel="${esc(r.ref_code)}">Can't make it</button>` : ""}</div>
-    </div></article>`).join("")
-    : `<div class="events-empty" style="grid-column:1/-1">No events yet. <a class="btn btn-sm" href="/events">Browse what's coming up ${icon("arrowRight", "arr")}</a></div>`;
+    </article>`).join("")
+    : `<div class="slide empty-slide"><b>No tickets yet</b><p class="muted-text">When you get a ticket, it shows here with its QR code.</p><a class="btn btn-sm btn-gold btn-glow" href="/events">${icon("ticket")} Get Ticket</a></div>`;
+  loadUpcoming(); loadKnow();
 }
 
 $("me-events").addEventListener("click", async (e) => {
@@ -97,4 +100,27 @@ async function voteBanner() {
   el.id = "vote-banner"; el.className = "vote-banner"; el.href = `/vote?p=${encodeURIComponent(p.id)}`;
   el.innerHTML = `<span class="vb-ico">${icon("vote")}</span><span><b>${todo ? "Your vote is waiting" : "Watch the live results"}</b><small>${esc(p.title)}${p.event_name ? ` · ${esc(p.event_name)}` : ""}</small></span><span class="btn btn-sm btn-gold${todo ? " btn-glow" : ""}">${todo ? "Vote now" : "See results"}</span>`;
   $("me-view").insertBefore(el, $("me-member"));
+}
+
+
+// Coming up at church: the next events, swipe through.
+async function loadUpcoming() {
+  const r = await api("/api/events").catch(() => ({ events: [] }));
+  const list = (r.events || []).slice(0, 8);
+  $("me-upcoming").innerHTML = list.length ? list.map((e) => `<a class="slide ev-slide" href="/event?e=${encodeURIComponent(e.slug)}">
+      ${e.cover_url ? `<img src="${esc(e.cover_url)}" alt="" loading="lazy">` : `<span class="ev-ph">${icon("calendar")}</span>`}
+      <span class="ev-body"><b>${esc(e.title)}</b><small>${esc(fmt(e.starts_at))}${e.price_label ? ` · ${esc(e.price_label)}` : ""}</small>
+      ${e.registration_open ? `<span class="btn btn-sm btn-gold btn-glow">${icon("ticket")} Get Ticket</span>` : ""}</span></a>`).join("")
+    : `<div class="slide empty-slide"><b>Nothing new just yet</b><p class="muted-text">New events appear here first.</p></div>`;
+}
+
+// What to know: service times and the next vote.
+async function loadKnow() {
+  const p = await api("/api/programme?limit=1").catch(() => null);
+  const w = p?.weekly || [];
+  $("know-services").querySelector("small").innerHTML = w.length ? w.map((x) => `${esc(x.day.slice(0, 3))} · ${esc(x.title)} ${esc(x.time || "")}`).join("<br>") : "Sundays 08:45–11:00";
+  const v = await api("/api/votes").catch(() => null);
+  const s = $("know-vote").querySelector("small");
+  const open = (v?.polls || []).find((x) => x.state === "open"), next = (v?.polls || []).find((x) => x.state === "upcoming");
+  s.textContent = open ? `Voting is open: ${open.title}` : next ? `Next: ${next.title}, ${new Date(next.opens_at).toLocaleDateString("en-ZA", { day: "numeric", month: "long" })}` : v ? `No votes planned yet in ${new Date().getFullYear()}` : "For confirmed members";
 }

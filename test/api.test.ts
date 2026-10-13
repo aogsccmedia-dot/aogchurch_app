@@ -1054,30 +1054,75 @@ describe("youth leaders, Fridays and voting", () => {
     assert.equal((await yl("/api/admin/fridays/2026-10-17", { method: "PUT", body: JSON.stringify({ attendance: 3 }) })).status, 400, "not a Friday");
   });
 
-  test("voting: members only, one vote each, never for yourself, secret ballot", async () => {
-    const { dayStart, dayEnd, pollState } = await import("../src/routes/votes.ts");
-    assert.equal(pollState({ status: "open", opens_at: dayStart("2026-01-01"), closes_at: dayEnd("2026-01-02") }, "2026-01-02T21:00:00.000Z"), "open");
-    assert.equal(pollState({ status: "open", opens_at: dayStart("2026-01-01"), closes_at: dayEnd("2026-01-02") }, "2026-01-03T00:00:00.000Z"), "closed");
+  test("elections: roles and rounds; only members vote; only members saved 5+ years can be chosen; finalists; appointments; reminders", async () => {
+    const { schedule, pollState, topWithTies, processElections } = await import("../src/routes/votes.ts");
+    const plan = schedule("2027-02-01", 2, 7, 7);
+    assert.deepEqual(plan.map((r) => [r.opens, r.closes]), [["2027-02-01", "2027-02-07"], ["2027-02-15", "2027-02-21"]]);
+    assert.equal(topWithTies([{ member_id: "a", votes: 5 }, { member_id: "b", votes: 3 }, { member_id: "c", votes: 3 }, { member_id: "d", votes: 1 }], 2).length, 3, "ties go through");
     const db = env.DB._db;
-    const addMember = (id: string, uid: string, email: string, first: string) => {
+    const addMember = (id: string, uid: string, email: string, first: string, saved: string | null, year: string | null) => {
       db.prepare("INSERT OR IGNORE INTO users (id, email, name, given_name) VALUES (?,?,?,?)").run(uid, email, first, first);
-      db.prepare("INSERT INTO members (id, ref_code, status, membership_type, first_name, last_name, date_of_birth, phone, email, signature_name, user_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
-        .run(id, `SCCY-V-${id}`, "member", "new_member", first, "Voter", "1999-01-01", "0820000000", email, first, uid);
+      db.prepare("INSERT INTO members (id, ref_code, status, membership_type, first_name, last_name, date_of_birth, phone, email, signature_name, user_id, salvation_status, salvation_year) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)")
+        .run(id, `SCCY-V-${id}`, "member", "new_member", first, "Voter", "1990-01-01", "0820000000", email, first, uid, saved, year);
     };
-    addMember("vm-1", "vu-1", "v1@example.com", "Ayanda"); addMember("vm-2", "vu-2", "v2@example.com", "Bongi"); addMember("vm-3", "vu-3", "v3@example.com", "Chris");
-    const pid = "poll-1";
-    db.prepare("INSERT INTO polls (id, title, event_name, opens_at, closes_at, candidates, show_live, status) VALUES (?,?,?,?,?,?,?,?)").run(pid, "Youth of the year", "Youth Awards", "2020-01-01T00:00:00Z", "2099-01-01T00:00:00Z", "all", 1, "open");
+    addMember("vm-1", "vu-1", "v1@example.com", "Ayanda", "saved", "2010");
+    addMember("vm-2", "vu-2", "v2@example.com", "Bongi", "saved", "2015");
+    addMember("vm-3", "vu-3", "v3@example.com", "Chris", "saved", String(new Date().getUTCFullYear() - 1));   // saved last year: can vote, can't be chosen
+    addMember("vm-4", "vu-4", "v4@example.com", "Dineo", "exploring", null);
     const { createHash } = await import("node:crypto");
     const sess = (uid: string) => { const t = `vote-${uid}-xxxxxxxxxxxxxxxxxxxxxxxx`; db.prepare("INSERT OR REPLACE INTO sessions (token_hash, user_id, kind, expires_at) VALUES (?,?,?,?)").run(createHash("sha256").update(t).digest("hex"), uid, "user", "2099-01-01T00:00:00Z"); return `scc_session=${t}`; };
-    const c1 = sess("vu-1"), c2 = sess("vu-2");
-    assert.equal((await post(`/api/votes/${pid}`, { member_id: "vm-1" }, { cookie: c1 })).status, 422, "not for yourself");
-    assert.equal((await post(`/api/votes/${pid}`, { member_id: "vm-3" }, { cookie: c1 })).status, 200);
-    assert.equal((await post(`/api/votes/${pid}`, { member_id: "vm-2" }, { cookie: c1 })).status, 409, "only once");
-    assert.equal((await post(`/api/votes/${pid}`, { member_id: "vm-3" }, { cookie: c2 })).status, 200);
-    const view = await (await call(`/api/votes/${pid}`, { headers: { cookie: c2 } })).json() as { results: { id: string; votes: number }[]; my_vote: string };
-    assert.equal(view.results[0].id, "vm-3"); assert.equal(view.results[0].votes, 2); assert.equal(view.my_vote, "vm-3");
+    const c1 = sess("vu-1"), c3 = sess("vu-3"), c4 = sess("vu-4");
+    const sup = await adminCookie();
+    // Setting up asks for the roles and what they mean.
+    const today = new Date(Date.now() + 2 * 3600_000).toISOString().slice(0, 10);
+    const bad = await call("/api/admin/votes", { method: "POST", headers: { ...A(sup), ...JSONH }, body: JSON.stringify({ title: "Youth committee", first_day: today, roles: [{ name: "Chair" }] }) });
+    assert.equal(bad.status, 422, "each role needs a short description");
+    const el = await (await call("/api/admin/votes/eligible?years=5", { headers: A(sup) })).json() as { eligible: { id: string }[] };
+    assert.deepEqual(el.eligible.map((x) => x.id).filter((x) => x.startsWith("vm-")).sort(), ["vm-1", "vm-2"]);
+    const made = await call("/api/admin/votes", { method: "POST", headers: { ...A(sup), ...JSONH }, body: JSON.stringify({ title: "Youth committee", event_name: "Youth AGM", first_day: today, rounds: 2, round_days: 2, gap_days: 1, runoff: 2,
+      roles: [{ name: "Chairperson", description: "Leads the youth committee." }, { name: "Secretary", description: "Keeps minutes and records." }] }) });
+    assert.equal(made.status, 200);
+    const { id: pid } = await made.json() as { id: string };
+    const view = await (await call(`/api/votes/${pid}`, { headers: { cookie: c3 } })).json() as { poll: { state: string; round: number }; roles: { id: string; name: string; candidates: { id: string }[] }[] };
+    assert.equal(view.poll.state, "open"); assert.equal(view.poll.round, 1);
+    const chair = view.roles[0].id, sec = view.roles[1].id;
+    assert.deepEqual(view.roles[0].candidates.map((c) => c.id).filter((x) => x.startsWith("vm-")).sort(), ["vm-1", "vm-2"], "only members saved 5+ years");
+    assert.equal((await post(`/api/votes/${pid}`, { role_id: chair, member_id: "vm-3" }, { cookie: c1 })).status, 422, "saved under 5 years can't be chosen");
+    assert.equal((await post(`/api/votes/${pid}`, { role_id: chair, member_id: "vm-1" }, { cookie: c1 })).status, 422, "not for yourself");
+    assert.equal((await post(`/api/votes/${pid}`, { role_id: chair, member_id: "vm-2" }, { cookie: c1 })).status, 200);
+    assert.equal((await post(`/api/votes/${pid}`, { role_id: chair, member_id: "vm-2" }, { cookie: c1 })).status, 409, "once per role per round");
+    assert.equal((await post(`/api/votes/${pid}`, { role_id: sec, member_id: "vm-1" }, { cookie: c3 })).status, 200, "new believers can still vote");
+    assert.equal((await post(`/api/votes/${pid}`, { role_id: chair, member_id: "vm-1" }, { cookie: c4 })).status, 200);
     assert.equal((await call(`/api/votes/${pid}`)).status, 401, "sign-in needed");
-    assert.ok(!JSON.stringify(view).includes("vm-1\",\"votes\""), "no voter identities");
+    // Move time: round 1 closes → finalists; round 2 closes → appointed.
+    db.prepare("UPDATE poll_rounds SET opens_at = '2020-01-01T00:00:00Z', closes_at = '2020-01-02T00:00:00Z' WHERE poll_id = ? AND round = 1").run(pid);
+    db.prepare("UPDATE poll_rounds SET opens_at = '2020-01-03T00:00:00Z', closes_at = '2099-01-01T00:00:00Z' WHERE poll_id = ? AND round = 2").run(pid);
+    const r2 = await (await call(`/api/votes/${pid}`, { headers: { cookie: c3 } })).json() as { poll: { round: number }; roles: { candidates: { id: string }[] }[] };
+    assert.equal(r2.poll.round, 2);
+    assert.deepEqual(r2.roles[0].candidates.map((c) => c.id).sort(), ["vm-1", "vm-2"], "round 2: the top from round 1");
+    assert.equal((await post(`/api/votes/${pid}`, { role_id: chair, member_id: "vm-2" }, { cookie: c3 })).status, 200);
+    db.prepare("UPDATE poll_rounds SET closes_at = '2020-01-04T00:00:00Z' WHERE poll_id = ? AND round = 2").run(pid);
+    const before = env.EMAIL.outbox.length;
+    await processElections(env);
+    const done = await (await call(`/api/votes/${pid}`, { headers: { cookie: c3 } })).json() as { poll: { state: string }; roles: { appointed: { id: string }[] }[] };
+    assert.equal(done.poll.state, "complete");
+    assert.deepEqual(done.roles[0].appointed.map((x) => x.id), ["vm-2"]);
+    assert.ok(env.EMAIL.outbox.slice(before).some((m) => /You've been chosen: Chairperson/.test(m.subject)));
+    assert.equal(pollState({ status: "open" }, [{ round: 1, opens_at: "2099-01-01T00:00:00Z", closes_at: "2099-01-05T00:00:00Z" }]).state, "upcoming");
+  });
+
+  test("elections: a prayer reminder every two weeks before voting, and an email when a round opens", async () => {
+    const { processElections } = await import("../src/routes/votes.ts");
+    const db = env.DB._db;
+    db.prepare("INSERT INTO polls (id, title, opens_at, closes_at, status, rounds, round_days, gap_days, runoff) VALUES ('pr-1','Elders 2027','2099-02-01T00:00:00Z','2099-02-07T00:00:00Z','open',1,7,7,3)").run();
+    db.prepare("INSERT INTO poll_roles (id, poll_id, name, description, seats, sort) VALUES ('pr-r1','pr-1','Elder','Serves the church in prayer and care.',2,0)").run();
+    db.prepare("INSERT INTO poll_rounds (poll_id, round, opens_at, closes_at) VALUES ('pr-1',1,'2099-02-01T00:00:00Z','2099-02-07T00:00:00Z')").run();
+    const noon = new Date("2026-11-02T10:00:00Z");   // 12:00 SAST
+    const n1 = await processElections(env, noon);
+    assert.ok(n1 > 0, "first reminder goes out");
+    assert.equal(await processElections(env, new Date("2026-11-09T10:00:00Z")), 0, "not again after one week");
+    assert.ok(await processElections(env, new Date("2026-11-16T10:00:00Z")) > 0, "again after two weeks");
+    assert.ok(env.EMAIL.outbox.some((m) => /Please pray: Elders 2027/.test(m.subject)));
   });
 });
 

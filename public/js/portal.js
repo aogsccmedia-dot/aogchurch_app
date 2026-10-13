@@ -1,4 +1,4 @@
-// One portal for everyone who signs in. Ask SCC (the church helper) comes first, then My church, Devotions and Settings; people the main admin has
+// One portal for everyone who signs in: Home (tickets, what's coming up, what to know), Devotions, Ask SCC, Vote, Store, Settings; people the main admin has
 // given a role also see their Admin (or Youth leader) tab, on the same sign-in, with no switching and no codes.
 // After signing in, a short black welcome greets them by name and role.
 import { icon } from "./icons.js";
@@ -9,10 +9,12 @@ export const roleName = (me) => me?.admin_role === "super" ? "Main admin" : me?.
 export function tabsFor(me) {
   const role = roleName(me);
   return [
-    ["/assistant", "sparkles", "Ask SCC"],
-    !me.admin_account && ["/me", "home", "My church"],
+    !me.admin_account && ["/me", "home", "Home"],
     ["/devotions", "bookOpen", "Devotions"],
-    role && ["/admin/", "layoutDashboard", me.admin_role === "youth" ? "Youth leader" : "Admin"],
+    ["/assistant", "sparkles", "Ask SCC"],
+    ["/vote", "vote", "Vote"],
+    ["/store", "landmark", "Store"],
+    role && ["/admin/", "layoutDashboard", me.admin_role === "youth" ? "Leader" : "Admin"],
     ["/settings", "settings", "Settings"],
   ].filter(Boolean);
 }

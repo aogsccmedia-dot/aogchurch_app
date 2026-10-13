@@ -711,3 +711,9 @@ dialog.drawer { background: #fff; }
 .as-steps { margin-top: 8px; }
 .as-steps button.on { background: #111016; color: #fff; }
 #team-requests .team-row { background: #fff8ec; border-radius: 12px; }
+.vt-roles { display: grid; gap: 8px; margin-bottom: 8px; }
+.vt-role { display: grid; grid-template-columns: 1fr 1.6fr 130px auto; gap: 8px; align-items: center; }
+@media (max-width: 760px) { .vt-role { grid-template-columns: 1fr; } }
+.vt-elig { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.vt-role-res { padding: 12px 0; border-top: 1px solid var(--line, #eee); }
+.vt-appointed { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 6px 0; color: #1f6b3d; font-weight: 500; }

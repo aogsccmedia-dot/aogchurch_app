@@ -137,7 +137,8 @@ export function joinWelcome(b: Brand, name: string, ref: string) {
       content: p("Thank you for taking the step to join AOG Sandton City Church. It genuinely made our day.") +
         p("Our team will look over your details and confirm your membership. Once you're confirmed, we'll introduce you to a leader who will walk with you, answer your questions and help you find your place. You don't have to have it all figured out. Just come as you are.") +
         scripture("So then you are no longer strangers and aliens, but you are fellow citizens with the saints and members of the household of God.", "Ephesians 2:19") +
-        p(`Your reference is <strong style="color:${C.ink};letter-spacing:.08em">${esc(ref)}</strong> — keep it handy in case you need it.`) + button(b.site + "/me", "View my profile"),
+        p(`Your reference is <strong style="color:${C.ink};letter-spacing:.08em">${esc(ref)}</strong> — keep it handy in case you need it.`) +
+        p(`New to the Assemblies of God? Our <a href="${esc(b.site)}/assets/welcome-pack.pdf" style="color:${C.goldText};font-weight:600">welcome pack</a> tells the story from Azusa Street to Nicholas Bhengu and the birth of our church.`) + button(b.site + "/me", "Open my church home"),
     }),
     text: `Welcome to the family, ${name}!\n\nThank you for joining AOG Sandton City Church. Our team will confirm your membership; once you're confirmed, we'll introduce you to a leader who will walk with you.\n\nYour reference: ${ref}\n\n"You are no longer strangers... but members of the household of God." — Ephesians 2:19` + textFooter(b),
   };
@@ -611,6 +612,57 @@ export function prayerWeekly(b: Brand, o: { name: string; items: { who: string; 
       unsubscribeUrl: o.unsub,
     }),
     text: `This week on the prayer wall:\n\n${o.items.map((x) => `• ${x.who}: ${x.request}`).join("\n")}\n\nPray and tap "I prayed": ${b.site}/prayer#wall` + textFooter(b, o.unsub),
+  };
+}
+
+const saDate = (iso: string) => new Intl.DateTimeFormat("en-ZA", { weekday: "long", day: "numeric", month: "long", timeZone: "Africa/Johannesburg" }).format(new Date(iso));
+
+export function electionReminder(b: Brand, o: { title: string; event: string | null; opens: string; closes?: string; round?: number; rounds?: number; roles: { name: string; description: string }[]; kind: "pray" | "open"; url: string }) {
+  const open = o.kind === "open";
+  const roundLine = o.rounds && o.rounds > 1 && o.round ? ` (round ${o.round} of ${o.rounds})` : "";
+  return {
+    subject: open ? `Voting is open: ${o.title}${roundLine} 🗳️` : `Please pray: ${o.title} voting starts ${saDate(o.opens)}`,
+    html: layout(b, {
+      preheader: open ? `Vote by ${saDate(o.closes!)}. Members only, and it's secret.` : `Voting starts ${saDate(o.opens)}. Please pray for wisdom.`,
+      eyebrow: open ? "Voting is open" : "Voting day coming",
+      heading: open ? `It's time to vote${roundLine}` : `Let's pray before we vote`,
+      content: p(open ? `Voting for <strong>${esc(o.title)}</strong>${o.event ? ` (${esc(o.event)})` : ""} is open until <strong>${esc(saDate(o.closes!))}</strong>. Pray, then choose the people you believe God is calling.`
+          : `Voting for <strong>${esc(o.title)}</strong>${o.event ? ` (${esc(o.event)})` : ""} starts on <strong>${esc(saDate(o.opens))}</strong>. Please take time to pray for wisdom and for the people who will serve.`) +
+        p("The roles to fill:") + box(o.roles.map((r) => `<strong>${esc(r.name)}</strong>${r.description ? ` · ${esc(r.description)}` : ""}`).join("<br>")) +
+        scripture("If any of you lacks wisdom, you should ask God, who gives generously to all without finding fault, and it will be given to you.", "James 1:5") +
+        button(o.url, open ? "Vote now" : "See the vote"),
+    }),
+    text: `${open ? `Voting is open for ${o.title}${roundLine} until ${saDate(o.closes!)}.` : `Voting for ${o.title} starts on ${saDate(o.opens)}. Please pray for wisdom.`}\nRoles: ${o.roles.map((r) => r.name).join(", ")}\n${o.url}` + textFooter(b),
+  };
+}
+
+export function electionAppointed(b: Brand, o: { name: string; role: string; title: string; event: string | null }) {
+  return {
+    subject: `You've been chosen: ${o.role} 🙏`,
+    html: layout(b, {
+      preheader: `The church has chosen you as ${o.role}.`,
+      eyebrow: "Appointed",
+      heading: `Congratulations, ${esc(o.name)}`,
+      content: p(`After prayer and voting for <strong>${esc(o.title)}</strong>${o.event ? ` (${esc(o.event)})` : ""}, the church family has chosen you as <strong>${esc(o.role)}</strong>.`) +
+        p("A leader will be in touch about the next steps. Thank you for your willingness to serve.") +
+        scripture("Whatever you do, work at it with all your heart, as working for the Lord.", "Colossians 3:23") + button(b.site + "/vote", "See the results"),
+    }),
+    text: `Congratulations, ${o.name}! You've been chosen as ${o.role} (${o.title}). A leader will be in touch.` + textFooter(b),
+  };
+}
+
+export function electionResults(b: Brand, o: { title: string; event: string | null; appointed: { role: string; name: string; votes: number }[] }) {
+  return {
+    subject: `Voting finished: ${o.title}`,
+    html: layout(b, {
+      preheader: "The final round has closed. Here are the people appointed.",
+      eyebrow: "Voting results",
+      heading: `${esc(o.title)}: appointed`,
+      content: p(`The final round has closed${o.event ? ` for ${esc(o.event)}` : ""}. These people have been appointed and emailed:`) +
+        box(o.appointed.length ? o.appointed.map((a) => `<strong>${esc(a.role)}</strong>: ${esc(a.name)} (${a.votes} vote${a.votes === 1 ? "" : "s"})`).join("<br>") : "Nobody received votes.") +
+        button(b.site + "/admin/#votes", "Open Voting in the admin"),
+    }),
+    text: `Voting finished for ${o.title}. Appointed: ${o.appointed.map((a) => `${a.role}: ${a.name} (${a.votes})`).join("; ") || "nobody"}.` + textFooter(b),
   };
 }
 

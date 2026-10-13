@@ -20,6 +20,7 @@ import { fridayRoutes, processFridayReminder } from "./routes/fridays.ts";
 import { processBetaLaunch } from "./routes/presenter.ts";
 import { assistantRoutes, processAssistantRollout } from "./routes/assistant.ts";
 import { processPrayerWeekly } from "./lib/prayer-weekly.ts";
+import { processElections } from "./routes/votes.ts";
 import { voteRoutes } from "./routes/votes.ts";
 import { processAnnouncements } from "./lib/newsletter.ts";
 import { processCheckins, processWelcomes } from "./lib/membership.ts";
@@ -88,6 +89,7 @@ export default {
       await processBetaLaunch(env, now).catch((e) => console.error("beta launch email failed", e));
       await processAssistantRollout(env, now).catch((e) => console.error("assistant rollout check failed", e));
       await processPrayerWeekly(env, now).catch((e) => console.error("weekly prayer email failed", e));
+      await processElections(env, now).catch((e) => console.error("elections failed", e));
 
       const h = now.getUTCHours(), m = now.getUTCMinutes();
       if (now.getUTCDay() === 6 && h === 8 && m < 10) {

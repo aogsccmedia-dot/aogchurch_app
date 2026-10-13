@@ -16,10 +16,11 @@ const ADDRESS = "17 Humber Street, Woodmead, Sandton";
 const MAPS = "https://maps.google.com/?q=17+Humber+Street+Woodmead+Sandton";
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export type AgentId = "concierge" | "whatson" | "events" | "services" | "programme" | "visit" | "tickets" | "prayer" | "votes" | "join" | "calendar";
+export type AgentId = "concierge" | "whatson" | "store" | "events" | "services" | "programme" | "visit" | "tickets" | "prayer" | "votes" | "join" | "calendar";
 export const AGENTS: Record<AgentId, { label: string; blurb: string }> = {
   concierge: { label: "Concierge", blurb: "Finds the right helper for you" },
   whatson: { label: "What's on", blurb: "This week or this month at church" },
+  store: { label: "Store", blurb: "Books by our brethren" },
   events: { label: "Events", blurb: "What's coming up and tickets" },
   services: { label: "Services", blurb: "Weekly service times" },
   programme: { label: "Programme", blurb: "The church year, month by month" },
@@ -41,6 +42,7 @@ export type Who = { userId: string; email: string; name: string | null; member: 
 
 const RULES: [AgentId, RegExp][] = [
   ["whatson", /\b((this|next) (week|weekend|month)|what'?s (on|happening)|happening (at church|this|next)|today at church|tonight at church|in (january|february|march|april|may|june|july|august|september|october|november|december))\b/],
+  ["store", /\b(store|shop|books|bookshop|bookstore|buy (a |the )?book|purchase)\b/],
   ["calendar", /\b(calendar|calender|remind|subscribe|sync|ical|ics|outlook|google cal|add (it|this|them|that) to)\b/],
   ["tickets", /\b(my (ticket|tickets|booking|bookings|registration|registrations|ref)|(do|did) i (have|get|register|book)( a| my| any)? ?(ticket|tickets|booking|place|seat)?|have i got (a |my |any )?(ticket|tickets)|am i (registered|booked)|qr)\b/],
   ["votes", /\b(vote|votes|voting|poll|nominat|award)\b/],
@@ -205,15 +207,21 @@ const prayer: Run = async () => ({
 });
 
 const votes: Run = async (env, _t, who) => {
-  if (!who?.member) return { agent: "votes", text: "Voting is for confirmed church members. Once you're confirmed, open votes show here.", facts: "", cards: [], actions: [{ label: "Membership", href: "/join" }], suggestions: ["How do I join?"] };
+  if (!who?.member) return { agent: "votes", text: "Voting is for confirmed church members. Once you're confirmed, votes show here.", facts: "", cards: [], actions: [{ label: "Membership", href: "/join" }], suggestions: ["How do I join?"] };
   const now = new Date().toISOString();
-  const { results } = await env.DB.prepare("SELECT id, title, event_name, closes_at FROM polls WHERE status = 'open' AND opens_at <= ? AND closes_at >= ? ORDER BY closes_at LIMIT 5").bind(now, now).all<{ id: string; title: string; event_name: string | null; closes_at: string }>();
-  if (!results.length) return { agent: "votes", text: "There are no open votes right now.", facts: "No open votes.", cards: [], actions: [{ label: "Voting page", href: "/vote" }], suggestions: ["What's coming up?"] };
-  return { agent: "votes", text: `${results.length === 1 ? "There's an open vote" : `There are ${results.length} open votes`}. Cast yours on the voting page; it's secret.`,
-    facts: facts(results.map((r) => `${r.title}${r.event_name ? ` (${r.event_name})` : ""}, closes ${fmtDate(r.closes_at)}`)),
-    cards: [{ kind: "info", title: "Open votes", lines: results.map((r) => `${r.title}${r.event_name ? ` · ${r.event_name}` : ""} · closes ${fmtDate(r.closes_at)}`) }],
-    actions: [{ label: "Vote now", href: "/vote", primary: true }], suggestions: ["What's coming up?"] };
+  const { results } = await env.DB.prepare(`SELECT p.id, p.title, p.event_name, (SELECT MIN(opens_at) FROM poll_rounds r WHERE r.poll_id = p.id AND r.closes_at >= ?) AS next_open,
+      (SELECT MAX(closes_at) FROM poll_rounds r WHERE r.poll_id = p.id) AS last_close FROM polls p WHERE p.status = 'open' AND p.completed_at IS NULL ORDER BY p.opens_at LIMIT 5`).bind(now).all<{ id: string; title: string; event_name: string | null; next_open: string | null; last_close: string }>();
+  const live = results.filter((r) => r.next_open);
+  if (!live.length) return { agent: "votes", text: `There's no vote planned at the moment${new Date().getUTCFullYear() === 2026 ? " in 2026" : ""}. When one is set up, you'll get an email and it shows here.`, facts: "No votes planned.", cards: [], actions: [{ label: "Voting page", href: "/vote" }], suggestions: ["What's happening this week?"] };
+  const lines = live.map((r) => `${r.title}${r.event_name ? ` (${r.event_name})` : ""}: ${r.next_open! <= now ? "voting now" : `opens ${fmtDate(r.next_open!)}`}`);
+  return { agent: "votes", text: "Here's what's coming up for voting. Pray, then vote on the voting page; your vote is secret.", facts: facts(lines),
+    cards: [{ kind: "info", title: "Votes", lines }], actions: [{ label: "Open voting", href: "/vote", primary: true }], suggestions: ["What's happening this week?"] };
 };
+
+const store: Run = async () => ({
+  agent: "store", text: "The AOG Store, with books written by our brethren, is coming soon. The shelves are empty for now; we'll let everyone know when the first books arrive.",
+  facts: "Store: coming soon, no books yet.", cards: [], actions: [{ label: "Visit the store", href: "/store", primary: true }], suggestions: ["What's happening this week?"],
+});
 
 const join: Run = async (env, _t, who) => {
   if (who?.member) return { agent: "join", text: "You're already a confirmed member. Welcome home!", facts: "The person is a confirmed member.", cards: [], actions: [{ label: "My profile", href: "/me" }], suggestions: ["What's coming up?"] };
@@ -268,7 +276,7 @@ const whatson: Run = async (env, t) => {
     suggestions: label === "this week" ? ["What's on this month?", "When is the youth service?"] : ["What's happening this week?", "Do I have a ticket?"] };
 };
 
-const RUN: Record<AgentId, Run> = { concierge, whatson, events, services: servicesAgent, programme, calendar, tickets, visit, prayer, votes, join };
+const RUN: Record<AgentId, Run> = { concierge, whatson, store, events, services: servicesAgent, programme, calendar, tickets, visit, prayer, votes, join };
 export const runAgent = (id: AgentId, env: Env, text: string, who: Who) => RUN[id](env, text, who);
 
 // ---------------------------------------------------------------- the church calendar feed (subscribe once)
