@@ -5,6 +5,7 @@ import { icon } from "./icons.js";
 import { initInsights } from "./admin-insights.js";
 import { initMore } from "./admin-more.js";
 import { arrivedBySwitch, switchReady } from "./switcher.js";
+import { helloOnce, renderTabs } from "./portal.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -18,7 +19,7 @@ const toLocal = (iso) => { if (!iso) return ""; const d = new Date(iso); return 
 const fromLocal = (v) => (v ? new Date(v).toISOString() : "");
 
 let me = null, perms = null;   // perms: youth leaders only (null = full admin)
-const allowed = (tab) => { const b = document.querySelector(`#nav [data-tab="${tab}"]`); if (!perms) return true; if (!b) return false; return !!b.dataset.perm && b.dataset.perm.split("|").some((p) => perms.includes(p)); };
+const allowed = (tab) => { const b = document.querySelector(`#nav [data-tab="${tab}"]`); if (!perms) return true; if (!b) return false; return !!b.dataset.perm && (b.dataset.perm === "*" || b.dataset.perm.split("|").some((p) => perms.includes(p))); };
 
 
 // ---- Instant feedback: the button you pressed shows a spinner the moment a save starts,
@@ -82,7 +83,12 @@ async function showLogin({ resume = false } = {}) {
   const meInfo = await fetch("/api/auth/me").then((r) => r.json()).catch(() => ({}));
   const viaSwitch = new URLSearchParams(location.search).has("switch") || arrivedBySwitch("admin");
   if (viaSwitch) history.replaceState(null, "", location.pathname + location.hash);
-  if (user && user.email && meInfo.can_admin) {
+  if (user && user.email && !meInfo.admin_account) {
+    // Admins and youth leaders don't need a code: if they're here, their account has no team role (any more).
+    $("#signed-in-admin").hidden = false;
+    $("#send-code").hidden = true;
+    $("#signed-in-as").innerHTML = `Signed in as ${esc(user.email)}. This account isn't on the church team. If you think it should be, ask the main admin. <a href="/assistant" style="color:var(--gold-2)">Go to Ask SCC</a>`;
+  } else if (user && user.email && meInfo.can_admin) {
     // Already signed in with Google on the website → just need the emailed code.
     $("#signed-in-admin").hidden = false;
     $("#signed-in-as").textContent = `Signed in as ${user.email}.`;
@@ -108,10 +114,10 @@ async function showLogin({ resume = false } = {}) {
         const done = busy("Signing you in and emailing your code…");
         try {
           const r = await api("/api/auth/google", { method: "POST", body: { credential: resp.credential } });
-          if (r.needs_code) { showCodeStep(r); return; }
-          // Delegated admins: their Google session is a normal one; ask for a code to their own email.
-          try { showCodeStep(await api("/api/auth/admin/request-code", { method: "POST", body: {} })); }
-          catch { loginErr("That Google account doesn't have admin access. Ask the main church admin to add you under Team & roles."); }
+          if (r.needs_code) { showCodeStep(r); return; }   // only the main admin account
+          const me2 = await fetch("/api/auth/me").then((x) => x.json()).catch(() => ({}));
+          if (me2.is_admin) { $("#login-view").hidden = true; boot(); return; }
+          loginErr("That Google account isn't on the church team. Ask the main church admin to add you under Team & roles.");
         } finally { done(); }
       }) });
       google.accounts.id.renderButton($("#admin-google"), { theme: "filled_black", size: "large", shape: "pill", text: "continue_with", width: 300 });
@@ -145,7 +151,7 @@ async function boot() {
   $("#who").textContent = me.email;
   const role = r.admin_role || "super";
   document.body.dataset.role = role;
-  perms = role === "youth" ? (r.admin_perms || []) : null;
+  perms = role === "super" ? null : (r.admin_perms || []);
   $("#role-chip").textContent = role === "super" ? "Main admin" : role === "youth" ? "Youth leader" : "Admin";
   // Youth leaders only see what the main admin has switched on for them.
   $$("#nav [data-tab]").forEach((b) => { b.hidden = !allowed(b.dataset.tab); });
@@ -155,8 +161,12 @@ async function boot() {
     $(".m-bar").innerHTML = quick.map(([t, ico, l]) => `<button data-go-tab="${t}" class="${t === "scan" ? "m-scan" : ""}">${icon(ico)}<span>${l}</span></button>`).join("");
     $$(".m-bar [data-go-tab]").forEach((b) => b.addEventListener("click", () => { location.hash = b.dataset.goTab; }));
   }
-  $("#to-profile").hidden = role === "super";
-  $("#m-switch").hidden = role === "super";
+  $("#to-profile").hidden = true; $("#m-switch").hidden = true;   // one portal now: the tabs at the top replace switching
+  renderTabs($("#portal-tabs"), r, "/admin/");
+  // Shortcuts only for what this person can open.
+  $$('[data-go="events-new"]').forEach((b) => { b.hidden = !!perms && !perms.includes("events"); });
+  $$('[data-go="letters-new"]').forEach((b) => { b.hidden = !!perms; });
+  helloOnce(r);
   if (new URLSearchParams(location.search).has("switch")) history.replaceState(null, "", location.pathname + location.hash);
   const hour = Number(new Intl.DateTimeFormat("en-ZA", { hour: "numeric", hour12: false, timeZone: TZ }).format(new Date()));
   $("#greeting").textContent = `${hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"}${me.given_name ? ", " + me.given_name : ""}`;
@@ -238,6 +248,7 @@ loaders.overview = async () => {
   $("#next-letter").innerHTML = next_letter
     ? `<p><b style="font-weight:450">${esc(next_letter.subject)}</b></p><p class="muted">${next_letter.status === "sending" ? "Sending now…" : "Scheduled for " + fmtDate(next_letter.scheduled_for)}</p><button class="btn btn-sm" data-go="letter:${esc(next_letter.id)}">Open</button>`
     : `<p class="muted">Nothing scheduled for this Sunday yet.</p><button class="btn btn-sm btn-gold" data-go="letters-new">Write this week's letter</button>`;
+  if (perms && !perms.includes("members")) { $("#latest").innerHTML = `<p class="muted">Members are looked after by admins with Members access.</p>`; return; }
   const { members } = await api("/api/admin/members?limit=5");
   $("#latest").innerHTML = members.length ? `<table class="table m-table"><tbody>${members.map(memberRow).join("")}</tbody></table>` : `<p class="muted">No sign-ups yet. Share the Join link!</p>`;
 };
@@ -495,6 +506,7 @@ function drawResponses() {
 }
 $("#resp-q").addEventListener("input", drawResponses);
 $("#resp-filter").addEventListener("change", drawResponses);
+$("#notify-holders").addEventListener("click", () => more.notifyHolders(currentEvent.id, currentEvent.title));
 $("#approve-all").addEventListener("click", safe(async () => {
   const n = responses.filter((r) => r.status === "pending").length;
   if (!confirm(`Approve all ${n} pending registration(s)? Each person will be emailed their ticket.`)) return;
@@ -842,10 +854,17 @@ let teamPerms = [];
 async function loadTeam() {
   const { admins, people, perms: all, youth_default } = await api(`/api/admin/team?q=${encodeURIComponent($("#team-q").value)}`);
   teamPerms = all; loadTeam.def = youth_default;
+  const reqs = await api("/api/admin/access-requests").catch(() => ({ requests: [], options: [] }));
+  const lab = (k) => (reqs.options.find((o) => o.key === k) || {}).label || (k === "admin" ? "Admin role" : k);
+  const pend = (reqs.requests || []).filter((x) => x.status === "pending");
+  $("#team-requests-card").hidden = !pend.length;
+  $("#team-requests").innerHTML = pend.map((x) => `<div class="item team-row" data-req="${esc(x.id)}"><div><b>${esc(x.name || x.email)}</b> <span class="pill">${x.current_role === "youth_leader" ? "Youth leader" : "Admin"}</span>
+      <div class="meta">Asks for: ${esc(x.wants.map(lab).join(", "))} · ${fmtDate(x.created_at)}</div>${x.note ? `<div class="meta">“${esc(x.note)}”</div>` : ""}</div>
+      <div class="team-actions"><button class="btn btn-sm btn-gold" data-req-yes>${icon("check")} Approve</button><button class="btn btn-sm" data-req-no>Decline</button></div></div>`).join("");
   $("#team-admins").innerHTML = admins.length ? admins.map((a) => `<div class="item team-row" data-user="${esc(a.user_id)}">
       <span class="avatar sm">${a.picture ? `<img src="${esc(a.picture)}" alt="" referrerpolicy="no-referrer">` : esc((a.name || a.email)[0].toUpperCase())}</span>
       <div><b>${esc(a.name || a.email)}</b><div class="meta">${esc(a.email)}${a.ref_code ? ` · ${esc(a.ref_code)}` : ""} · since ${fmtDate(a.created_at)}</div>
-        ${a.role === "youth_leader" ? `<div class="perm-row" aria-label="What they can open">${all.map(([k, l]) => `<label class="perm"><input type="checkbox" data-perm="${k}" ${a.perms.includes(k) ? "checked" : ""}>${esc(l)}</label>`).join("")}</div>` : ""}</div>
+        <div class="perm-row" aria-label="What they can open">${all.filter(([k]) => a.role !== "youth_leader" || k !== "people").map(([k, l]) => `<label class="perm"><input type="checkbox" data-perm="${k}" ${(a.perms || []).includes(k) ? "checked" : ""}>${esc(l)}</label>`).join("")}</div></div>
       <div class="team-actions"><select class="input" data-role aria-label="Role"><option value="admin" ${a.role !== "youth_leader" ? "selected" : ""}>Admin</option><option value="youth_leader" ${a.role === "youth_leader" ? "selected" : ""}>Youth leader</option></select>
         <button class="btn btn-sm" data-revoke="${esc(a.user_id)}">Remove</button></div></div>`).join("") : `<div class="empty">Only you for now.</div>`;
   $("#team-people").innerHTML = people.length ? people.map((p) => `<div class="item team-row">
@@ -861,8 +880,8 @@ $("[data-view=team]").addEventListener("change", safe(async (e) => {
   const user = row.dataset.user;
   if (e.target.matches("[data-role]")) {
     const role = e.target.value;
-    await api(`/api/admin/team/${user}`, { method: "PATCH", body: { role, perms: role === "youth_leader" ? loadTeam.def : undefined } });
-    toast(role === "youth_leader" ? "Now a youth leader (Fridays, scanner and reports to start)" : "Now a full admin"); loadTeam();
+    await api(`/api/admin/team/${user}`, { method: "PATCH", body: { role } });
+    toast(role === "youth_leader" ? "Now a youth leader (Fridays, scanner, reports and youth tickets to start). Emailed." : "Now an admin (reports and weekly services to start). Emailed."); loadTeam();
   }
   if (e.target.matches("[data-perm]")) {
     const list = $$("[data-perm]", row).filter((x) => x.checked).map((x) => x.dataset.perm);
@@ -871,12 +890,20 @@ $("[data-view=team]").addEventListener("change", safe(async (e) => {
   }
 }));
 $("[data-view=team]").addEventListener("click", safe(async (e) => {
+  const rq = e.target.closest("[data-req]");
+  if (rq && (e.target.closest("[data-req-yes]") || e.target.closest("[data-req-no]"))) {
+    const yes = !!e.target.closest("[data-req-yes]");
+    rq.style.opacity = ".5";
+    try { await api(`/api/admin/access-requests/${rq.dataset.req}`, { method: "PATCH", body: { decision: yes ? "approve" : "decline" } }); toast(yes ? "Approved. It works for them straight away, and they're emailed." : "Declined. They're emailed."); }
+    finally { loadTeam(); }
+    return;
+  }
   const g = e.target.closest("[data-grant]"), r = e.target.closest("[data-revoke]");
   if (g) {
     const who = g.closest(".team-row").querySelector("b").textContent, role = g.dataset.role;
     const msg = role === "youth_leader"
-      ? `Make ${who} a youth leader?\n\nTo start they can capture Fridays, use the door scanner and see reports. You can change what they can open at any time.\n\nWe'll email them a welcome with sign-in steps.`
-      : `Give ${who} admin access?\n\nThey'll be able to approve registrations, verify members, send and scan tickets, and handle prayer requests and complaints. They can't delete people or change roles.\n\nWe'll email them a welcome with sign-in steps.`;
+      ? `Make ${who} a youth leader?\n\nTo start they can capture Fridays, use the door scanner, see reports and approve tickets for youth events. You can change this at any time.\n\nWe'll email them what they can do.`
+      : `Make ${who} an admin?\n\nTo start they can see reports and manage weekly services. Tick anything else for them afterwards. They can be given members to look after.\n\nWe'll email them what they can do.`;
     if (!confirm(msg)) return;
     g.closest(".team-actions").outerHTML = `<span class="pill member">${role === "youth_leader" ? "Youth leader" : "Admin"}</span>`;
     toast(`${who} is now ${role === "youth_leader" ? "a youth leader" : "an admin"}. Welcome email on its way.`);
@@ -991,5 +1018,5 @@ $$("[data-ico]:not([data-go-tab])").forEach((b) => { b.innerHTML = icon(b.datase
 $$("[data-go-tab]").forEach((b) => { if (b.dataset.ico) b.insertAdjacentHTML("afterbegin", icon(b.dataset.ico)); b.addEventListener("click", () => { location.hash = b.dataset.goTab; }); });
 // Insights, weekly services and the board report live in their own module.
 const insights = initInsights({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate });
-initMore({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate, icon });
+const more = initMore({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate, icon });
 boot();

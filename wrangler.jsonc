@@ -32,6 +32,10 @@
     }
   ],
 
+  // Workers AI: open-weight models (Llama) for the Ask SCC member chat. Billed per use; the free daily allowance
+  // covers a church's traffic. The chat falls back to built-in answers if AI is unavailable.
+  "ai": { "binding": "AI" },
+
   // File uploads (photos, documents). KV today; switch to R2 when enabled.
   "kv_namespaces": [
     { "binding": "FILES_KV", "id": "0256e53df0cc4a1a9a1ee90483c8986a" }

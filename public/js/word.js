@@ -45,7 +45,7 @@ function render(el, data) {
   });
   el.querySelector("[data-word-share]").addEventListener("click", async () => {
     const text = `“${w.text}” ${w.ref}\n\nToday's Word from Sandton City Church`;
-    try { if (navigator.share) await navigator.share({ text, url: location.origin + "/#word" }); else { await navigator.clipboard.writeText(text + "\n" + location.origin); toast("Verse copied"); } } catch { /* cancelled */ }
+    try { if (navigator.share) await navigator.share({ text, url: location.origin + "/devotions" }); else { await navigator.clipboard.writeText(text + "\n" + location.origin); toast("Verse copied"); } } catch { /* cancelled */ }
   });
 }
 

@@ -107,13 +107,15 @@ body:not(.admin):not(.portal) { background: #fdfdff; }
 body:not(.admin):not(.portal)::before, body:not(.admin):not(.portal)::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
 body:not(.admin):not(.portal)::before {
   background:
-    radial-gradient(46% 42% at 8% 6%, rgba(178, 212, 246, .50), transparent 70%),
-    radial-gradient(40% 40% at 94% 14%, rgba(206, 190, 246, .42), transparent 70%),
-    radial-gradient(52% 44% at 76% 96%, rgba(250, 198, 222, .40), transparent 70%),
-    radial-gradient(38% 34% at 4% 92%, rgba(216, 204, 250, .30), transparent 70%);
+    radial-gradient(58% 52% at 6% 4%, rgba(160, 200, 245, .72), transparent 72%),
+    radial-gradient(52% 50% at 96% 10%, rgba(196, 176, 247, .64), transparent 72%),
+    radial-gradient(62% 52% at 78% 98%, rgba(248, 182, 214, .62), transparent 72%),
+    radial-gradient(46% 42% at 2% 94%, rgba(204, 188, 250, .52), transparent 72%),
+    radial-gradient(40% 36% at 50% 52%, rgba(232, 222, 252, .38), transparent 75%),
+    linear-gradient(160deg, #f2f7fe 0%, #f7f3fe 50%, #fdf3f8 100%);
 }
 body:not(.admin):not(.portal)::after {
-  opacity: .055; mix-blend-mode: multiply; background-size: 200px 200px;
+  opacity: .07; mix-blend-mode: multiply; background-size: 200px 200px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -334,3 +336,31 @@ a, button, .btn, summary, label, input[type="checkbox"], input[type="radio"], se
 .tk-x { position: absolute; right: 0; top: 0; bottom: 0; width: 38px; border: 0; background: linear-gradient(90deg, transparent, #eaf3fd 40%); font-size: 18px; color: var(--muted); cursor: pointer; }
 @keyframes tk-scroll { to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .tk-track { animation: none; } }
+
+/* ---------------------------------------------------------------- one portal: tabs + black welcome */
+.portal-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 6px; margin: 18px 0 22px; border-radius: 999px; background: rgba(255, 255, 255, .72); border: 1px solid var(--line); backdrop-filter: blur(10px); width: max-content; max-width: 100%; }
+.portal-tabs a { flex: none; display: inline-flex; gap: 7px; align-items: center; padding: 9px 15px; border-radius: 999px; font-size: 14.5px; color: var(--text-2); transition: background .15s, color .15s; }
+.portal-tabs a .i { width: 17px; height: 17px; }
+.portal-tabs a:hover { background: var(--hover); color: var(--text); }
+.portal-tabs a.on { background: #111016; color: #fff; }
+.hello-black { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; background: #0b0a0f; color: #fff; cursor: pointer; animation: hb-fade .25s ease-out; }
+.hello-black.out { opacity: 0; transition: opacity .4s ease; }
+.hb-in { display: grid; justify-items: center; gap: 10px; text-align: center; padding: 24px; }
+.hb-in img { border-radius: 50%; opacity: 0; animation: hb-up .5s .05s ease-out forwards; }
+.hb-hi { margin: 8px 0 0; font: 400 clamp(26px, 6vw, 40px)/1.15 "Playfair Display", Georgia, serif; opacity: 0; animation: hb-up .55s .15s ease-out forwards; }
+.hb-hi b { font-style: italic; font-weight: 400; background: linear-gradient(90deg, #cfe2fb, #e2d5fb, #f9d5e5); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hb-role { margin: 0; font-size: 12.5px; letter-spacing: .3em; text-transform: uppercase; color: #b9b3c9; opacity: 0; animation: hb-up .5s .3s ease-out forwards; }
+.hb-line { display: block; width: 0; height: 2px; margin-top: 10px; border-radius: 2px; background: linear-gradient(90deg, #cfe2fb, #e2d5fb, #f9d5e5); animation: hb-grow 1s .35s ease-out forwards; }
+@keyframes hb-fade { from { opacity: 0; } }
+@keyframes hb-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes hb-grow { to { width: 140px; } }
+@media (prefers-reduced-motion: reduce) { .hello-black *, .hello-black { animation: none !important; opacity: 1 !important; } .hb-line { width: 140px; } }
+/* Portal tabs: always in reach. Sticky under the header; on phones a full-width bar with icon-over-label buttons. */
+body.portal .portal-tabs { position: sticky; top: 78px; z-index: 20; box-shadow: 0 8px 26px rgba(40, 30, 80, .08); }
+.portal-tabs a.on .i { color: #e2d5fb; }
+@media (max-width: 700px) {
+  .portal-tabs { width: 100%; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; padding: 5px; border-radius: 18px; margin: 12px 0 18px; }
+  .portal-tabs a { flex-direction: column; gap: 3px; padding: 8px 4px; border-radius: 13px; font-size: 11.5px; text-align: center; justify-content: center; }
+  .portal-tabs a .i { width: 20px; height: 20px; }
+  body.portal .portal-tabs { top: 66px; }
+}

@@ -4,7 +4,7 @@ import { HttpError, Router, json, readJson } from "../lib/http.ts";
 import { randomToken, uuid } from "../lib/crypto.ts";
 import { Validator } from "../lib/validate.ts";
 import { getFile } from "../lib/storage.ts";
-import { isAdminEmail, parsePerms, requireAdmin, YOUTH_DEFAULT, YOUTH_PERMS, type Session } from "../lib/auth.ts";
+import { ADMIN_DEFAULT, isAdminEmail, parsePerms, requireAdmin, YOUTH_DEFAULT, YOUTH_PERMS, type Session } from "../lib/auth.ts";
 import { deleteOwnerFiles, readUpload, storeFiles } from "../lib/uploads.ts";
 import { parseSchema, sanitizeSchema, slugify } from "../lib/forms.ts";
 import { emailHealth, resendFailed, sendMail } from "../lib/email.ts";
@@ -22,6 +22,8 @@ import { ADMIN_ONLY_SETTINGS, COMPLAINT_STATUSES, EVENT_CATEGORIES, MEMBER_STATU
 type Ctx = { waitUntil(p: Promise<unknown>): void };
 type H = (req: Request, p: Record<string, string>, s: Session, ctx?: Ctx) => Promise<Response>;
 /** Run slow work (emails, PDFs) after responding, so admin buttons react instantly. */
+/** Permission keys → plain words (used in role emails and the portal). */
+export const permLabels = (perms: string[]) => perms.map((k) => YOUTH_PERMS.find(([x]) => x === k)?.[1] || k);
 const later = (ctx: Ctx | undefined, job: Promise<unknown>) => { const safeJob = job.catch((e) => console.error("background job failed", e)); if (ctx?.waitUntil) ctx.waitUntil(safeJob); else return safeJob; };
 
 async function audit(env: Env, s: Session, action: string, entity?: string, entityId?: string, detail?: unknown) {
@@ -59,9 +61,14 @@ export function adminRoutes(router: Router, env: Env): void {
     if (s.role !== "super") throw new HttpError(403, "Only the main church admin can do this.");
     return h(req, p, s, ctx);
   });
+  /** Team members without full Events access may only act on youth events (ministry group "youth"). */
+  const youthOnly = (s: Session) => s.role !== "super" && !(s.perms || []).includes("events");
+  const checkEventScope = (s: Session, e: { ministry_group?: string | null } | null) => {
+    if (youthOnly(s) && e?.ministry_group !== "youth") throw new HttpError(403, "You can only manage tickets for youth events.");
+  };
 
   // ---------- dashboard ----------
-  router.get("/api/admin/stats", guard(async () => {
+  router.get("/api/admin/stats", guard(async (_req, _p, sess) => {
     const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
     const now = new Date().toISOString();
     const q = (sql: string, ...a: unknown[]) => env.DB.prepare(sql).bind(...a);
@@ -92,7 +99,10 @@ export function adminRoutes(router: Router, env: Env): void {
     return json({ ok: true, stats: {
       members: n(0), new_members: n(1), this_week: n(2), new_prayers: n(3), new_messages: n(4), upcoming_events: n(5),
       subscribers: n(6), registrations_week: n(7), accounts: n(8), pending_payments: n(9), open_complaints: n(10), wall_pending: n(11),
-    }, interests: interests.results, next_letter: next, attention, email_enabled: !!env.EMAIL, email_health: await emailHealth(env), google_enabled: !!env.GOOGLE_CLIENT_ID });
+    }, interests: interests.results, next_letter: next,
+      // The team only sees items they can act on (complaints and messages stay with the main admin).
+      attention: sess.role === "super" ? attention : (attention as { kind: string }[]).filter((x) => (x.kind === "prayer" || x.kind === "wall") && (sess.perms || []).includes("prayer")),
+      email_enabled: !!env.EMAIL, email_health: await emailHealth(env), google_enabled: !!env.GOOGLE_CLIENT_ID });
   }));
 
   // ---------- members ----------
@@ -377,6 +387,7 @@ export function adminRoutes(router: Router, env: Env): void {
     const body = await readJson(req);
     const reg = await env.DB.prepare("SELECT * FROM event_registrations WHERE id = ?").bind(id).first<RegRow>();
     if (!reg) throw new HttpError(404, "Registration not found.");
+    if (youthOnly(s)) checkEventScope(s, await env.DB.prepare("SELECT ministry_group FROM events WHERE id = ?").bind(reg.event_id).first<{ ministry_group: string }>());
     const STATUSES = ["pending", "confirmed", "waitlist", "rejected", "cancelled"];
     const next = typeof body.status === "string" && STATUSES.includes(body.status) ? body.status : null;
     const note = typeof body.note === "string" ? body.note.slice(0, 500) : null;
@@ -398,13 +409,36 @@ export function adminRoutes(router: Router, env: Env): void {
   }));
 
   // Everything waiting for approval, across all events, in one list (newest first).
-  router.get("/api/admin/approvals", guard(async () => {
+  router.get("/api/admin/approvals", guard(async (_req, _p, s) => {
     const { results } = await env.DB.prepare(
       `SELECT r.id, r.name, r.email, r.phone, r.guests, r.amount_due, r.ref_code, r.created_at, r.pop_attachment_id, r.event_id,
-              e.title AS event_title, e.starts_at, a.content_type AS pop_type
+              e.title AS event_title, e.starts_at, e.ministry_group, a.content_type AS pop_type
          FROM event_registrations r JOIN events e ON e.id = r.event_id LEFT JOIN attachments a ON a.id = r.pop_attachment_id
-        WHERE r.status = 'pending' ORDER BY r.created_at DESC LIMIT 200`).all();
-    return json({ ok: true, approvals: results });
+        WHERE r.status = 'pending' ${youthOnly(s) ? "AND e.ministry_group = 'youth'" : ""} ORDER BY r.created_at DESC LIMIT 200`).all();
+    return json({ ok: true, approvals: results, scope: youthOnly(s) ? "youth" : "all" });
+  }));
+
+  // Tell everyone holding a ticket (confirmed, awaiting approval or waitlisted) about a change to the event.
+  router.post("/api/admin/events/:id/notify", guard(async (req, { id }, s, ctx) => {
+    const e = await env.DB.prepare("SELECT * FROM events WHERE id = ?").bind(id).first<EventRow>();
+    if (!e) throw new HttpError(404, "Event not found.");
+    checkEventScope(s, e as { ministry_group?: string });
+    const b = await readJson<{ message?: string; include_waitlist?: boolean }>(req);
+    const message = String(b.message || "").trim().slice(0, 2000);
+    if (message.length < 5) throw new HttpError(422, "Write what changed, e.g. “We now start at 19:00”.");
+    const statuses = b.include_waitlist === false ? ["confirmed", "pending"] : ["confirmed", "pending", "waitlist"];
+    const { results } = await env.DB.prepare(`SELECT name, email FROM event_registrations WHERE event_id = ? AND status IN (${statuses.map(() => "?").join(",")})`).bind(id, ...statuses).all<{ name: string; email: string }>();
+    const seen = new Set<string>(), to = results.filter((r) => r.email && !seen.has(r.email.toLowerCase()) && seen.add(r.email.toLowerCase()));
+    if (!to.length) throw new HttpError(409, "Nobody has a ticket for this event yet.");
+    const site = siteUrl(env);
+    const when = formatWhen(e.starts_at, e.ends_at);
+    await later(ctx, (async () => {
+      for (const r of to) {
+        await sendMail(env, { to: r.email, toName: r.name, ...T.eventUpdate({ site }, { name: (r.name || "").split(" ")[0] || "friend", title: e.title, when, location: e.location, message, url: `${site}/event?e=${encodeURIComponent(e.slug || e.id)}`, from: s.user.given_name || s.user.name || "The church team" }), template: "event_update" });
+      }
+    })());
+    await audit(env, s, "notify_ticket_holders", "event", id, { count: to.length });
+    return json({ ok: true, sent: to.length });
   }));
 
   // Approve every registration still awaiting approval for an event, in sign-up order.
@@ -592,48 +626,104 @@ export function adminRoutes(router: Router, env: Env): void {
          FROM users u LEFT JOIN members m ON (m.user_id = u.id OR m.email = u.email) AND m.status != 'revoked'
         WHERE lower(u.email) != ? AND (? = '' OR lower(u.email) LIKE ? OR lower(COALESCE(u.name, '')) LIKE ? OR lower(COALESCE(m.first_name || ' ' || m.last_name, '')) LIKE ?)
         GROUP BY u.id ORDER BY (m.ref_code IS NULL), u.name LIMIT 50`).bind(adminEmail(env), q, like, like, like).all();
-    return json({ ok: true, admins: admins.map((a) => ({ ...a, perms: a.role === "youth_leader" ? parsePerms(a.perms as string | null) : null })), people, perms: YOUTH_PERMS, youth_default: YOUTH_DEFAULT });
+    return json({ ok: true, admins: admins.map((a) => ({ ...a, perms: parsePerms(a.perms as string | null, a.role === "youth_leader" ? YOUTH_DEFAULT : ADMIN_DEFAULT) })), people, perms: YOUTH_PERMS, youth_default: YOUTH_DEFAULT, admin_default: ADMIN_DEFAULT });
   }));
   // Change someone's role (Admin ⇄ Youth leader) or a youth leader's permissions. Main admin only.
   router.patch("/api/admin/team/:userId", superOnly(async (req, { userId }, s) => {
     const b = await readJson<{ role?: string; perms?: string[] }>(req);
-    const row = await env.DB.prepare("SELECT role FROM admin_roles WHERE user_id = ?").bind(userId).first<{ role: string }>();
+    const row = await env.DB.prepare("SELECT role, perms FROM admin_roles WHERE user_id = ?").bind(userId).first<{ role: string; perms: string | null }>();
     if (!row) throw new HttpError(404, "Not on the team.");
     const role = b.role === "youth_leader" || b.role === "admin" ? b.role : row.role;
-    const perms = role === "youth_leader" ? JSON.stringify(parsePerms(JSON.stringify(Array.isArray(b.perms) ? b.perms : parsePerms(null)))) : null;
+    const dflt = role === "youth_leader" ? YOUTH_DEFAULT : ADMIN_DEFAULT;
+    // New role without a list → that role's starting set. Same role → the ticked list (or what they had).
+    const list = Array.isArray(b.perms) ? b.perms : role !== row.role ? dflt : parsePerms(row.perms, dflt);
+    const perms = JSON.stringify(parsePerms(JSON.stringify(list), dflt));
     await env.DB.prepare("UPDATE admin_roles SET role = ?, perms = ? WHERE user_id = ?").bind(role, perms, userId).run();
     await audit(env, s, "change_role", "user", userId, { role, perms });
     if (row.role === "admin" && role === "youth_leader") await reassignFrom(env, userId, null);   // youth leaders don't look after members
-    return json({ ok: true, role, perms: perms ? JSON.parse(perms) : null });
+    const u = await env.DB.prepare("SELECT email, name, given_name FROM users WHERE id = ?").bind(userId).first<{ email: string; name: string | null; given_name: string | null }>();
+    const before = row.role, beforePerms = (row as { perms?: string | null }).perms ?? null;
+    if (u && (before !== role || beforePerms !== perms)) {
+      const can = permLabels(JSON.parse(perms));
+      await sendMail(env, { to: u.email, ...T.roleChanged({ site: siteUrl(env) }, { name: u.given_name || (u.name || "").split(" ")[0] || "friend", role: role === "youth_leader" ? "Youth leader" : "Admin", can, up: before === "youth_leader" && role === "admin" }), template: "role_changed" });
+    }
+    return json({ ok: true, role, perms: JSON.parse(perms) });
   }));
   router.post("/api/admin/team", superOnly(async (req, _p, s, ctx) => {
     const { user_id, role: wantRole, perms: wantPerms } = await readJson<{ user_id?: string; role?: string; perms?: string[] }>(req);
     const role = wantRole === "youth_leader" ? "youth_leader" : "admin";
-    const perms = role === "youth_leader" ? parsePerms(JSON.stringify(Array.isArray(wantPerms) ? wantPerms : YOUTH_DEFAULT)) : null;
+    const dflt = role === "youth_leader" ? YOUTH_DEFAULT : ADMIN_DEFAULT;
+    const perms = parsePerms(JSON.stringify(Array.isArray(wantPerms) ? wantPerms : dflt), dflt);
     const u = await env.DB.prepare("SELECT id, email, name, given_name FROM users WHERE id = ?").bind(user_id || "").first<{ id: string; email: string; name: string | null; given_name: string | null }>();
     if (!u) throw new HttpError(404, "That person needs to sign in with Google on the website once before they can be made an admin.");
     const member = await env.DB.prepare("SELECT status FROM members WHERE (user_id = ? OR email = ?) AND status != 'revoked' LIMIT 1").bind(u.id, u.email).first<{ status: string }>();
     if (!member) throw new HttpError(422, "Only registered members can be given admin access. Ask them to join the church first.");
     if (isAdminEmail(env, u.email)) throw new HttpError(422, "That's the main admin account already.");
     if (await env.DB.prepare("SELECT 1 FROM admin_roles WHERE user_id = ?").bind(u.id).first()) return json({ ok: true, already: true });
-    await env.DB.prepare("INSERT OR IGNORE INTO admin_roles (user_id, email, granted_by, role, perms) VALUES (?, ?, ?, ?, ?)").bind(u.id, u.email.toLowerCase(), s.user.email, role, perms ? JSON.stringify(perms) : null).run();
+    await env.DB.prepare("INSERT OR IGNORE INTO admin_roles (user_id, email, granted_by, role, perms) VALUES (?, ?, ?, ?, ?)").bind(u.id, u.email.toLowerCase(), s.user.email, role, JSON.stringify(perms)).run();
     await audit(env, s, role === "youth_leader" ? "grant_youth_leader" : "grant_admin", "user", u.id, { email: u.email });
     const first = u.given_name || (u.name || "").split(" ")[0] || "friend";
     const mail = role === "youth_leader"
-      ? T.youthLeaderGranted({ site: siteUrl(env) }, { name: first, can: perms!.map((k) => YOUTH_PERMS.find(([x]) => x === k)?.[1] || k) })
-      : T.adminGranted({ site: siteUrl(env) }, { name: first });
+      ? T.youthLeaderGranted({ site: siteUrl(env) }, { name: first, can: permLabels(perms) })
+      : T.adminGranted({ site: siteUrl(env) }, { name: first, can: permLabels(perms) });
     await later(ctx, sendMail(env, { to: u.email, toName: u.name || undefined, ...mail, template: role === "youth_leader" ? "youth_leader_granted" : "admin_granted" }));
     return json({ ok: true });
   }));
-  router.delete("/api/admin/team/:userId", superOnly(async (_req, { userId }, s) => {
+  router.delete("/api/admin/team/:userId", superOnly(async (_req, { userId }, s, ctx) => {
+    const old = await env.DB.prepare("SELECT r.role, u.email, u.name, u.given_name FROM admin_roles r JOIN users u ON u.id = r.user_id WHERE r.user_id = ?").bind(userId).first<{ role: string; email: string; name: string | null; given_name: string | null }>();
     const r = await env.DB.prepare("DELETE FROM admin_roles WHERE user_id = ?").bind(userId).run();
     if (!r.meta.changes) throw new HttpError(404, "Not an admin.");
-    await env.DB.prepare("DELETE FROM sessions WHERE user_id = ? AND kind = 'admin'").bind(userId).run();
+    // Their sign-in stays; it's simply a member's sign-in again from the next click.
     await audit(env, s, "revoke_admin", "user", userId);
+    if (old) await later(ctx, sendMail(env, { to: old.email, ...T.roleRemoved({ site: siteUrl(env) }, { name: old.given_name || (old.name || "").split(" ")[0] || "friend", role: old.role === "youth_leader" ? "Youth leader" : "Admin" }), template: "role_removed" }));
     // Their people are shared out fairly among the remaining leaders.
     const moved = await reassignFrom(env, userId, null);
     return json({ ok: true, reassigned: moved });
   }));
+  // ---- Asking for more access: anyone on the team asks; only the main admin decides.
+  router.get("/api/admin/access-requests", guard(async (_req, _p, s) => {
+    const mine = s.role !== "super";
+    const { results } = await env.DB.prepare(`SELECT id, user_id, email, name, current_role, wants, note, status, decided_by, decided_at, created_at FROM access_requests
+      ${mine ? "WHERE user_id = ?" : "WHERE status = 'pending' OR created_at >= ?"} ORDER BY created_at DESC LIMIT 50`).bind(mine ? s.user.id : new Date(Date.now() - 30 * 86400_000).toISOString()).all<Record<string, unknown>>();
+    return json({ ok: true, requests: results.map((r) => ({ ...r, wants: JSON.parse(String(r.wants || "[]")) })), options: [...YOUTH_PERMS.map(([k, l]) => ({ key: k, label: l })), ...(s.role === "youth" ? [{ key: "admin", label: "Admin role (can look after members)" }] : [])] });
+  }));
+  router.post("/api/admin/access-requests", guard(async (req, _p, s, ctx) => {
+    if (s.role === "super") throw new HttpError(400, "You already have full access.");
+    const b = await readJson<{ wants?: string[]; note?: string }>(req);
+    const valid = new Set([...YOUTH_PERMS.map(([k]) => k as string), "admin"]);
+    const wants = [...new Set((b.wants || []).map(String).filter((k) => valid.has(k)))];
+    const have = s.perms || [];
+    const missing = wants.filter((k) => k === "admin" ? s.role === "youth" : !have.includes(k));
+    if (!missing.length) throw new HttpError(422, "Choose something you don't have yet.");
+    if (await env.DB.prepare("SELECT 1 FROM access_requests WHERE user_id = ? AND status = 'pending'").bind(s.user.id).first()) throw new HttpError(409, "You already have a request waiting. The main admin will reply soon.");
+    const id = uuid(), note = String(b.note || "").trim().slice(0, 600) || null;
+    const name = s.user.given_name || s.user.name || s.user.email;
+    await env.DB.prepare("INSERT INTO access_requests (id, user_id, email, name, current_role, wants, note) VALUES (?,?,?,?,?,?,?)").bind(id, s.user.id, s.user.email, name, s.role === "youth" ? "youth_leader" : "admin", JSON.stringify(missing), note).run();
+    const labels = missing.map((k) => k === "admin" ? "Admin role" : permLabels([k])[0]);
+    await later(ctx, sendMail(env, { to: adminEmail(env), ...T.accessRequested({ site: siteUrl(env) }, { name, email: s.user.email, role: s.role === "youth" ? "Youth leader" : "Admin", wants: labels, note: note || "" }), template: "access_request" }));
+    return json({ ok: true, id });
+  }));
+  router.patch("/api/admin/access-requests/:id", superOnly(async (req, { id }, s, ctx) => {
+    const { decision } = await readJson<{ decision?: string }>(req);
+    if (decision !== "approve" && decision !== "decline") throw new HttpError(400, "Approve or decline.");
+    const r = await env.DB.prepare("SELECT * FROM access_requests WHERE id = ? AND status = 'pending'").bind(id).first<{ user_id: string; email: string; name: string; wants: string }>();
+    if (!r) throw new HttpError(404, "That request has already been answered.");
+    const wants = JSON.parse(r.wants || "[]") as string[];
+    const role = await env.DB.prepare("SELECT role, perms FROM admin_roles WHERE user_id = ?").bind(r.user_id).first<{ role: string; perms: string | null }>();
+    let nowRole = role?.role === "youth_leader" ? "Youth leader" : "Admin", can: string[] = permLabels(parsePerms(role?.perms, role?.role === "youth_leader" ? YOUTH_DEFAULT : ADMIN_DEFAULT));
+    if (decision === "approve") {
+      if (!role) throw new HttpError(409, "They're no longer on the team.");
+      const asAdmin = wants.includes("admin") || role.role === "admin";
+      const perms = parsePerms(JSON.stringify([...parsePerms(role.perms, role.role === "youth_leader" ? YOUTH_DEFAULT : ADMIN_DEFAULT), ...wants.filter((k) => k !== "admin")]));
+      await env.DB.prepare("UPDATE admin_roles SET role = ?, perms = ? WHERE user_id = ?").bind(asAdmin ? "admin" : "youth_leader", JSON.stringify(perms), r.user_id).run();
+      nowRole = asAdmin ? "Admin" : "Youth leader"; can = permLabels(perms);
+    }
+    await env.DB.prepare("UPDATE access_requests SET status = ?, decided_by = ?, decided_at = ? WHERE id = ?").bind(decision === "approve" ? "approved" : "declined", s.user.email, new Date().toISOString(), id).run();
+    await audit(env, s, `access_${decision}`, "user", r.user_id, { wants });
+    await later(ctx, sendMail(env, { to: r.email, ...T.accessDecision({ site: siteUrl(env) }, { name: (r.name || "").split(" ")[0] || "friend", approved: decision === "approve", wants: wants.map((k) => k === "admin" ? "Admin role" : permLabels([k])[0]), role: nowRole, can }), template: "access_decision" }));
+    return json({ ok: true });
+  }));
+
   // ---- Leader care: "My people" (everyone sees their own; the main admin sees all), handovers and contact log
   router.get("/api/admin/people", guard(async (req, _p, s) => {
     const all = s.role === "super" && new URL(req.url).searchParams.get("all") === "1";
@@ -673,7 +763,7 @@ export function adminRoutes(router: Router, env: Env): void {
     return json({ ok: true, assigned: n });
   }));
 
-  router.get("/api/admin/whoami", guard(async (_req, _p, s) => json({ ok: true, email: s.user.email, name: s.user.name, role: s.role ?? "super", perms: s.role === "youth" ? s.perms : null, all_perms: YOUTH_PERMS })));
+  router.get("/api/admin/whoami", guard(async (_req, _p, s) => json({ ok: true, email: s.user.email, name: s.user.name, role: s.role ?? "super", perms: s.role === "super" ? null : s.perms, all_perms: YOUTH_PERMS })));
 
   // ---------- complaints ----------
   router.get("/api/admin/complaints", guard(async (req) => {

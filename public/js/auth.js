@@ -31,7 +31,7 @@ export function whenSignedIn(cb) { onSignedIn.push(cb); }
 async function handleCredential(resp) {
   document.querySelectorAll(".gsi-waiting").forEach((el) => el.classList.remove("gsi-waiting"));
   const here = location.pathname.replace(/\.html$/, "");
-  const onMe = here === "/me", midTask = /^\/(join|event|membership|ticket|presenter)$/.test(here);
+  const onMe = here === "/me" || here === "/assistant", midTask = /^\/(join|event|membership|ticket|presenter)$/.test(here);
   veilShow(onMe ? "Preparing your member page…" : "Signing you in…");
   try {
     const r = await api("/api/auth/google", { method: "POST", body: { credential: resp.credential } });
@@ -39,10 +39,10 @@ async function handleCredential(resp) {
     const me = await getMe(true);
     renderHeaderUser(me);
     if (!onMe && !midTask) {
-      // Members go to their profile; new people go to the join form, already filled in from Google.
-      const label = me.member ? "Preparing your member page…" : "Setting up your sign-up…";
+      // Members (and the team) land on Ask SCC, the church helper; new people go to the join form, filled in from Google.
+      const label = me.member || me.is_admin ? "Getting things ready…" : "Setting up your sign-up…";
       veilShow(label); veilCarry(label);
-      location.href = me.member ? "/me" : "/join";
+      location.href = me.member || me.is_admin ? "/assistant" : "/join";
       return;   // the next page fades the veil out once it has loaded
     }
     if (!onMe) veilShow("Filling in your details…");
@@ -138,16 +138,19 @@ export function renderHeaderUser(me) {
   const avatar = u.picture ? `<img src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : `<span>${esc(initials)}</span>`;
   slot.innerHTML = `<details class="user-menu"><summary aria-label="Account menu" class="avatar">${avatar}</summary>
     <div class="user-pop"><b>${esc(u.name || u.email)}</b><small>${esc(u.email)}</small>
-      ${me.admin_account ? "" : `<a href="/me">My profile</a>`}
-      ${me.admin_account ? `<a href="/admin/">Admin dashboard</a>` : me.can_admin || me.is_admin ? `<button type="button" class="switch-row" data-switch="admin"><span>Switch to admin</span><small>${me.is_admin ? "Ready" : "Code by email"}</small></button>` : ""}
+      <a href="/assistant">Ask SCC</a>
+      ${me.admin_account ? "" : `<a href="/me">My church</a>`}
+      <a href="/devotions">Devotions</a>
+      ${me.admin_account || me.is_admin ? `<a href="/admin/">${me.admin_role === "youth" ? "Youth leader portal" : "Admin"}</a>` : ""}
+      <a href="/settings">Settings</a>
       ${!me.member && !me.admin_account ? `<a href="/join">Complete joining</a>` : ""}
       <button type="button" data-signout>Sign out</button></div></details>`;
   slot.querySelector("[data-signout]").addEventListener("click", signOut);
   // Hide "Join" buttons for people who've already joined (and the admin, who never needs to).
   if (me.member || me.admin_account) document.querySelectorAll("[data-join-cta]").forEach((a) => {
-    a.href = me.admin_account ? "/admin/" : "/me";
+    a.href = me.admin_account ? "/admin/" : "/assistant";
     // Bottom bar: keep the person icon on every device, only the short label changes.
-    if (a.hasAttribute("data-tab-me")) { const s = a.querySelector("span"); if (s) s.textContent = me.admin_account ? "Admin" : "Profile"; a.setAttribute("aria-label", me.admin_account ? "Admin dashboard" : "My profile"); }
+    if (a.hasAttribute("data-tab-me")) { const s = a.querySelector("span"); if (s) s.textContent = me.admin_account ? "Admin" : "My SCC"; a.setAttribute("aria-label", me.admin_account ? "Admin dashboard" : "Ask SCC and my church"); }
     else a.textContent = me.admin_account ? "Dashboard" : "My profile";
   });
 }

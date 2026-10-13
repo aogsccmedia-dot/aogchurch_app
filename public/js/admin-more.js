@@ -9,14 +9,18 @@ export function initMore(ctx) {
 
   // ------------------------------------------------------------ Approvals
   let approvals = [];
+  let apScope = "all";
   async function loadApprovals(focusId) {
-    approvals = (await api("/api/admin/approvals")).approvals;
+    const r = await api("/api/admin/approvals");
+    approvals = r.approvals; apScope = r.scope || "all";
     drawApprovals(focusId);
   }
   function drawApprovals(focusId) {
     const list = $("#ap-list");
-    if (!approvals.length) { list.innerHTML = `<div class="empty">${icon("check")} All caught up. Nobody is waiting.</div>`; badge(); return; }
-    list.innerHTML = approvals.map((r) => {
+    const note = apScope === "youth" ? `<p class="muted ap-scope">Showing tickets for youth events.</p>` : "";
+    if (!approvals.length) { list.innerHTML = note + `<div class="empty">${icon("check")} All caught up. Nobody is waiting.</div>`; badge(); return; }
+    const events = [...new Map(approvals.map((r) => [r.event_id, r.event_title])).entries()];
+    list.innerHTML = note + `<div class="ap-events">${events.map(([id, t]) => `<button class="btn btn-sm" data-notify="${esc(id)}" data-title="${esc(t)}">${icon("mail")} Tell ${esc(t)} ticket holders about a change</button>`).join("")}</div>` + approvals.map((r) => {
       const img = r.pop_type && r.pop_type.startsWith("image/");
       return `<article class="ap-card${r.id === focusId ? " focus" : ""}" data-id="${esc(r.id)}">
         <a class="ap-proof" href="/api/admin/files/${esc(r.pop_attachment_id || "")}" target="_blank" rel="noopener" ${r.pop_attachment_id ? "" : "hidden"}>
@@ -48,6 +52,7 @@ export function initMore(ctx) {
     } catch (e) { approvals.splice(idx, 0, r); drawApprovals(); toast(e.message || "Couldn't save. Try again."); }
   }
   $("#ap-list").addEventListener("click", (e) => {
+    const n = e.target.closest("[data-notify]"); if (n) return notifyHolders(n.dataset.notify, n.dataset.title);
     const card = e.target.closest(".ap-card"); if (!card) return;
     if (e.target.closest("[data-yes]")) decide(card, "confirmed");
     if (e.target.closest("[data-no]")) decide(card, "rejected");
@@ -175,5 +180,62 @@ export function initMore(ctx) {
     loadVotes();
   }));
 
-  return { loadApprovals };
+
+  // ------------------------------------------------------------ Tell ticket holders about a change
+  function notifyHolders(eventId, title) {
+    let dlg = document.getElementById("notify-dlg");
+    dlg?.remove();
+    dlg = document.createElement("dialog"); dlg.id = "notify-dlg"; dlg.className = "sheet";
+    dlg.innerHTML = `<form class="form-grid notify-form" method="dialog">
+      <h3>Tell ticket holders about a change</h3>
+      <p class="muted">Everyone with a ticket for <b>${esc(title)}</b> (confirmed, awaiting approval and waitlist) gets this by email, with the event details.</p>
+      <label class="field"><span>What changed?</span><textarea class="input" name="message" rows="4" maxlength="2000" required placeholder="e.g. We now start at 19:00. Doors open at 18:30."></textarea></label>
+      <label class="check"><input type="checkbox" name="waitlist" checked> Include people on the waitlist</label>
+      <div class="row"><button class="btn btn-gold" type="submit">${icon("mail")} Send email</button><button class="btn" type="button" data-x>Cancel</button></div></form>`;
+    document.body.append(dlg);
+    dlg.querySelector("[data-x]").addEventListener("click", () => dlg.close());
+    dlg.querySelector("form").addEventListener("submit", safe(async (e) => {
+      e.preventDefault();
+      const f = e.target, btn = f.querySelector("[type=submit]");
+      btn.disabled = true;
+      try {
+        const r = await api(`/api/admin/events/${encodeURIComponent(eventId)}/notify`, { method: "POST", body: { message: f.message.value, include_waitlist: f.waitlist.checked } });
+        dlg.close(); toast(`Sent to ${r.sent} ${r.sent === 1 ? "person" : "people"}`);
+      } finally { btn.disabled = false; }
+    }));
+    dlg.showModal(); dlg.querySelector("textarea").focus();
+  }
+
+  // ------------------------------------------------------------ Ask SCC (main admin)
+  async function loadAssistant() {
+    const d = await api("/api/admin/assistant");
+    const ai = (d.by_mode || []).find((m) => m.mode === "ai") || {}, rules = (d.by_mode || []).find((m) => m.mode === "rules") || {};
+    const total = (ai.n || 0) + (rules.n || 0);
+    const pct = (a, b) => b ? Math.round((a / b) * 100) + "%" : "—";
+    $("#as-body").innerHTML = `
+      <div class="card as-controls">
+        <label class="toggle-row"><input type="checkbox" id="as-enabled" ${d.enabled ? "checked" : ""}> <b>Ask SCC is on</b></label>
+        <div><b>AI answers reach</b> <span class="as-pct">${d.ai_pct}%</span> of members ${d.ai_ready ? "" : `<span class="pill">AI not connected: built-in answers only</span>`}
+          <div class="seg as-steps">${d.steps.map((x) => `<button data-pct="${x}" class="${x === d.ai_pct ? "on" : ""}">${x}%</button>`).join("")}</div></div>
+        <label class="toggle-row"><input type="checkbox" id="as-auto" ${d.auto ? "checked" : ""}> Widen automatically while healthy, roll back if answers fail (checked daily at 07:00)</label>
+        ${d.last_change ? `<p class="muted">Last change: ${esc(d.last_change)}</p>` : ""}
+        <p class="muted">Model: ${esc(d.models[0])} (fallback ${esc(d.models[1])}) · prompt ${esc(d.prompt_version)}</p>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><b>${total}</b><span>Questions (7 days)</span></div>
+        <div class="kpi"><b>${d.last24?.people || 0}</b><span>People (24 h)</span></div>
+        <div class="kpi"><b>${pct(ai.errors || 0, ai.n || 0)}</b><span>AI fallbacks</span></div>
+        <div class="kpi"><b>${pct((ai.up || 0) + (rules.up || 0), (ai.up || 0) + (rules.up || 0) + (ai.down || 0) + (rules.down || 0))}</b><span>Helpful</span></div>
+        <div class="kpi"><b>${ai.ms || rules.ms || 0} ms</b><span>Average answer time</span></div>
+      </div>
+      <div class="card"><h3>Which helpers people use</h3>${(d.by_agent || []).length ? d.by_agent.map((a) => `<div class="bar"><span>${esc(a.label)}</span><span class="track"><i style="width:${Math.round((a.n / Math.max(1, d.by_agent[0].n)) * 100)}%"></i></span><b>${a.n}</b></div>`).join("") : `<p class="muted">No questions yet.</p>`}</div>`;
+    const save = (body) => api("/api/admin/assistant", { method: "PATCH", body }).then(() => { toast("Saved"); loadAssistant(); }).catch((e) => toast(e.message));
+    $("#as-enabled").addEventListener("change", (e) => save({ enabled: e.target.checked }));
+    $("#as-auto").addEventListener("change", (e) => save({ auto: e.target.checked }));
+    $$(".as-steps [data-pct]").forEach((b) => b.addEventListener("click", () => save({ ai_pct: Number(b.dataset.pct) })));
+  }
+  loaders.assistant = () => loadAssistant();
+  $("#as-refresh").addEventListener("click", () => safe(loadAssistant)());
+
+  return { loadApprovals, notifyHolders };
 }

@@ -1,0 +1,57 @@
+  <main id="main" class="wrap">
+    <nav id="portal-tabs" class="portal-tabs" aria-label="Your portal" hidden></nav>
+    <div id="st-loading" class="me-loading" role="status"><span class="spinner" aria-hidden="true"></span><p>Loading…</p></div>
+    <div id="st-signin" class="cta-band" hidden><h2>Sign in to see your settings</h2><div id="st-google" class="google-slot"></div></div>
+    <div id="st-view" class="st-grid" hidden>
+      <section class="st-card">
+        <h2>Account</h2>
+        <div class="st-account"><span class="avatar" id="st-avatar"></span><div><b id="st-name"></b><p class="muted-text" id="st-email"></p></div></div>
+        <button class="btn btn-sm" id="st-signout">Sign out</button>
+      </section>
+      <section class="st-card" id="st-role" hidden>
+        <h2>My role</h2>
+        <p class="muted-text" id="st-role-line"></p>
+        <ul class="st-can" id="st-can"></ul>
+        <details class="st-ask" id="st-ask"><summary class="btn btn-sm">Request more access</summary>
+          <form id="st-ask-form" class="st-ask-form">
+            <div id="st-ask-options" class="st-checks"></div>
+            <label class="field"><span>Why do you need it? (optional)</span><textarea class="input" name="note" rows="2" maxlength="600" placeholder="e.g. I run the youth camp registrations"></textarea></label>
+            <button class="btn btn-gold btn-sm" type="submit">Send to the main admin</button>
+          </form>
+        </details>
+        <div id="st-requests"></div>
+      </section>
+      <section class="st-card">
+        <h2>Emails</h2>
+        <div class="toggle"><div><b>Weekly letter</b><p class="muted-text">Sunday afternoons · services &amp; encouragement</p></div><label class="switch"><input type="checkbox" id="st-letter" aria-label="Weekly letter"></label></div>
+        <div class="toggle"><div><b>Service reminders</b><p class="muted-text">A short email before services, with the topic</p></div><label class="switch"><input type="checkbox" id="st-reminders" aria-label="Service reminders"></label></div>
+        <div class="toggle"><div><b>Weekly prayer list</b><p class="muted-text">Mondays · the prayer wall's requests to pray for</p></div><label class="switch"><input type="checkbox" id="st-prayer" aria-label="Weekly prayer list"></label></div>
+      </section>
+      <section class="st-card" id="st-membership">
+        <h2>Membership</h2>
+        <div id="me-member"></div>
+      </section>
+      <section id="complaints" class="st-card st-wide" hidden>
+        <h2>Concerns &amp; complaints</h2>
+        <p class="muted-text">If something hasn't been right, we want to know and put it right. Only leaders who handle complaints see this. Read our <a href="/complaints" style="color:var(--gold-2);text-decoration:underline">complaints policy</a>.</p>
+        <div id="cmp-eligible" hidden>
+          <form id="cmp-form" class="panel" novalidate>
+            <div class="grid-2">
+              <div class="field"><label class="req" for="cmp-cat">What is it about?</label><select class="input" id="cmp-cat" name="category" required><option value="">Choose…</option>
+                <option value="leadership">Leadership</option><option value="ministry">A ministry or team</option><option value="event">An event</option><option value="safeguarding">Safeguarding / safety</option>
+                <option value="finance">Finances or payments</option><option value="privacy">Privacy / my information</option><option value="facilities">Facilities &amp; parking</option><option value="other">Something else</option></select><span class="error"></span></div>
+              <div class="field"><label class="req" for="cmp-subject">Subject</label><input class="input" id="cmp-subject" name="subject" required minlength="4" maxlength="140" placeholder="In a few words"><span class="error"></span></div>
+            </div>
+            <div class="field"><label class="req" for="cmp-details">What happened?</label><textarea class="input" id="cmp-details" name="details" required minlength="20" maxlength="5000" placeholder="When and where it happened, who was involved, and anything we should know."></textarea><span class="error"></span></div>
+            <div class="field"><label for="cmp-outcome">What would help put it right? (optional)</label><textarea class="input" id="cmp-outcome" name="desired_outcome" maxlength="1000" rows="2"></textarea><span class="error"></span></div>
+            <label class="check"><input type="checkbox" name="confidential"> Keep this confidential: pastors only</label>
+            <p class="hint">If anyone is in immediate danger, please call 10111 (SAPS) or 112 first.</p>
+            <button class="btn btn-gold" type="submit">Send my complaint</button>
+            <div class="notice" data-status hidden></div>
+          </form>
+        </div>
+        <div id="cmp-not-eligible" class="notice" hidden>Complaints can be raised once a leader has approved your membership. If something is urgent, please use the <a href="/visit#contact" style="color:var(--gold-2)">contact form</a>.</div>
+        <div id="cmp-mine" class="cmp-mine"></div>
+      </section>
+    </div>
+  </main>

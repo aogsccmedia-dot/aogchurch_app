@@ -58,3 +58,18 @@ If the deploy says the hostname is already in use, remove the old record or rout
 - **Staging.** Add an `env.staging` block in `wrangler.jsonc` with its own D1/KV and a `staging.aogsccyouth.com` custom domain, and a workflow that deploys `--env staging` from a `staging` branch.
 - **Rate limits** live in D1 (`rate_limits`). For heavy traffic, switch to the Workers Rate Limiting binding.
 - **Spam.** Honeypots plus per-IP limits are in place. To add Cloudflare Turnstile, create a widget, add the site key to the forms and verify the token in `routes/public.ts`.
+
+## Dev branch → production (canary)
+
+Push to `dev` to release with a safety net (`.github/workflows/deploy-dev.yml`):
+
+1. **Verify**: type-check, tests and a Wrangler build.
+2. **Preview**: `wrangler versions upload` creates the new version with **no traffic**. It is smoke-tested on
+   aogsccyouth.com using the `Cloudflare-Workers-Version-Overrides` header, so only the test requests reach it.
+3. **Canary**: D1 migrations (always additive) are applied, then `wrangler versions deploy` sends **10%** of visitors to
+   the new version, then **50%**, then **100%**, checking health, events and the home page at every stage.
+   Any failure runs `wrangler versions deploy <old>@100%`: everyone is back on the previous version within seconds.
+4. **Promote**: `main` is fast-forwarded to the live commit. If a branch rule blocks the bot, merge `dev` into `main` yourself.
+
+Pushes to `main` still deploy directly (`deploy.yml`). Both workflows share one queue, so two releases never overlap.
+To roll back by hand at any time: Cloudflare dashboard → Workers → aogchurch-app → Deployments → pick the previous version.

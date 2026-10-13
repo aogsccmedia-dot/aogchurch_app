@@ -7,10 +7,13 @@ export interface Brand { site: string }
 export const esc = (s: unknown) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 
+// Same palette as the website: white with washed-out baby blue, lilac and baby pink, the black-and-white logo and our gold.
 const C = {
-  page: "#efe8dc", card: "#fffdf9", ink: "#2b241d", body: "#4a4137", muted: "#8a7f72",
-  gold: "#c8963e", goldSoft: "#f3e3c3", night: "#0d0b09", line: "#eadfcd",
+  page: "#f5f4fb", card: "#ffffff", ink: "#1c1a22", body: "#4a4656", muted: "#777386",
+  gold: "#c8963e", goldText: "#8a5c14", goldSoft: "#f6ecd9", night: "#111016", line: "#e9e7f1",
+  blue: "#dceafb", lilac: "#e9e0fb", pink: "#fbe3ee", foot: "#faf9fd",
 };
+const PASTEL = `linear-gradient(90deg, ${"#cfe2fb"} 0%, ${"#e2d5fb"} 50%, ${"#f9d5e5"} 100%)`;
 // Same fonts as the website: Jost for text, Playfair Display for headings (falls back gracefully where web fonts are blocked).
 const SANS = "'Jost', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 // Playfair Display: open-source high-contrast display serif, closest to Magilio.
@@ -18,16 +21,16 @@ const SANS = "'Jost', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 const SERIF = "'Playfair Display', Georgia, 'Times New Roman', serif";
 
 export function button(href: string, label: string): string {
-  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:28px 0 8px"><tr><td style="border-radius:10px;background:${C.gold}">
-    <a href="${esc(href)}" style="display:inline-block;padding:14px 26px;font:600 15px/1 ${SANS};color:#1a1206;text-decoration:none;border-radius:10px;letter-spacing:.02em">${esc(label)}</a>
+  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:28px 0 8px"><tr><td style="border-radius:999px;background:${C.gold};box-shadow:0 6px 18px rgba(200,150,62,.35)">
+    <a href="${esc(href)}" style="display:inline-block;padding:15px 28px;font:600 15px/1 ${SANS};color:#1a1206;text-decoration:none;border-radius:999px;letter-spacing:.02em">${esc(label)}&nbsp;&rarr;</a>
   </td></tr></table>`;
 }
 
 export function scripture(text: string, ref: string): string {
   return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:26px 0"><tr>
-    <td style="border-left:3px solid ${C.gold};padding:4px 0 4px 18px">
+    <td style="border-left:3px solid ${C.gold};background:${C.foot};border-radius:0 12px 12px 0;padding:14px 18px">
       <p style="margin:0;font:italic 19px/1.5 ${SERIF};color:${C.ink}">“${esc(text)}”</p>
-      <p style="margin:8px 0 0;font:600 12px/1 ${SANS};letter-spacing:.16em;text-transform:uppercase;color:${C.gold}">${esc(ref)}</p>
+      <p style="margin:8px 0 0;font:600 12px/1 ${SANS};letter-spacing:.16em;text-transform:uppercase;color:${C.goldText}">${esc(ref)}</p>
     </td></tr></table>`;
 }
 
@@ -39,30 +42,31 @@ export function layout(b: Brand, o: { preheader: string; eyebrow?: string; headi
   const hero = o.welcome
     ? `<tr><td align="center" style="padding:26px 24px 0;background:${C.card}"><img src="${esc(b.site)}/assets/email/welcome.gif" width="480" alt="Welcome" style="display:block;width:100%;max-width:480px;height:auto;border:0"></td></tr>`
     : o.heroImage ? `<tr><td style="padding:0"><img src="${esc(o.heroImage)}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>` : "";
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><title>${esc(o.heading)}</title>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>${esc(o.heading)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>@import url('https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap');</style></head>
 <body style="margin:0;padding:0;background:${C.page}">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${esc(o.preheader)}&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:${C.page}"><tr><td align="center" style="padding:28px 12px">
-  <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background:${C.card};border-radius:18px;overflow:hidden;box-shadow:0 10px 40px rgba(60,40,10,.08)">
-    <tr><td align="center" style="background:${C.night};padding:30px 24px 26px">
-      <a href="${esc(b.site)}" style="text-decoration:none"><img src="${esc(b.site)}/assets/logo-192.png" width="72" height="72" alt="AOG Sandton City Church" style="display:block;margin:0 auto 14px;border-radius:50%;border:0"></a>
-      <p style="margin:0;font:600 11px/1 ${SANS};letter-spacing:.32em;text-transform:uppercase;color:#f6d28b">AOG Sandton City Church</p>
-      <p style="margin:8px 0 0;font:italic 13px/1 ${SERIF};color:#b9b0a3">Bound in fellowship by the Spirit</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${C.page}" style="background:${C.page};background-image:linear-gradient(160deg, ${C.blue} 0%, ${C.lilac} 45%, ${C.pink} 100%)"><tr><td align="center" style="padding:32px 12px">
+  <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background:${C.card};border-radius:22px;overflow:hidden;border:1px solid ${C.line};box-shadow:0 18px 50px rgba(60,50,110,.10)">
+    <tr><td style="height:6px;line-height:6px;font-size:0;background:${C.lilac};background-image:${PASTEL}">&nbsp;</td></tr>
+    <tr><td align="center" style="padding:30px 24px 6px;background:${C.card}">
+      <a href="${esc(b.site)}" style="text-decoration:none"><img src="${esc(b.site)}/assets/logo-192.png" width="64" height="64" alt="AOG Sandton City Church" style="display:block;margin:0 auto 12px;border-radius:50%;border:0;background:${C.night}"></a>
+      <p style="margin:0;font:600 11px/1 ${SANS};letter-spacing:.32em;text-transform:uppercase;color:${C.ink}">AOG Sandton City Church</p>
+      <p style="margin:8px 0 0;font:italic 13px/1 ${SERIF};color:${C.muted}">Bound in fellowship by the Spirit</p>
     </td></tr>
     ${hero}
-    <tr><td style="padding:38px 40px 14px">
-      ${o.eyebrow ? `<p style="margin:0 0 10px;font:600 11px/1 ${SANS};letter-spacing:.24em;text-transform:uppercase;color:${C.gold}">${esc(o.eyebrow)}</p>` : ""}
+    <tr><td style="padding:30px 40px 10px">
+      ${o.eyebrow ? `<p style="margin:0 0 12px"><span style="display:inline-block;padding:6px 12px;border-radius:999px;background:${C.lilac};font:600 11px/1 ${SANS};letter-spacing:.18em;text-transform:uppercase;color:#4b3f7a">${esc(o.eyebrow)}</span></p>` : ""}
       <h1 style="margin:0 0 20px;font:400 30px/1.2 ${SERIF};color:${C.ink}">${esc(o.heading)}</h1>
       ${o.content}
     </td></tr>
-    <tr><td style="padding:10px 40px 36px">
-      <p style="margin:24px 0 0;font:16px/1.6 ${SANS};color:${C.body}">With love,<br><span style="font:italic 18px/1.6 ${SERIF};color:${C.ink}">Your family at Sandton City Church</span></p>
+    <tr><td style="padding:6px 40px 34px">
+      <p style="margin:22px 0 0;font:16px/1.6 ${SANS};color:${C.body}">With love,<br><span style="font:italic 18px/1.6 ${SERIF};color:${C.ink}">Your family at Sandton City Church</span></p>
     </td></tr>
-    <tr><td style="background:#f8f2e8;border-top:1px solid ${C.line};padding:22px 40px;text-align:center">
+    <tr><td style="background:${C.foot};border-top:1px solid ${C.line};padding:22px 40px;text-align:center">
       <p style="margin:0 0 6px;font:13px/1.6 ${SANS};color:${C.muted}">17 Humber Street, Woodmead, Sandton</p>
-      <p style="margin:0;font:13px/1.6 ${SANS};color:${C.muted}"><a href="${esc(b.site)}" style="color:${C.gold};text-decoration:none">aogsccyouth.com</a>${o.unsubscribeUrl ? ` &nbsp;·&nbsp; <a href="${esc(o.unsubscribeUrl)}" style="color:${C.muted}">Unsubscribe</a>` : ""}</p>
+      <p style="margin:0;font:13px/1.6 ${SANS};color:${C.muted}"><a href="${esc(b.site)}" style="color:${C.goldText};text-decoration:none;font-weight:600">aogsccyouth.com</a>${o.unsubscribeUrl ? ` &nbsp;·&nbsp; <a href="${esc(o.unsubscribeUrl)}" style="color:${C.muted}">Unsubscribe</a>` : ""}</p>
       ${o.footerNote ? `<p style="margin:10px 0 0;font:12px/1.6 ${SANS};color:${C.muted}">${o.footerNote}</p>` : ""}
     </td></tr>
   </table>
@@ -162,7 +166,7 @@ export function eventConfirmation(b: Brand, o: { name: string; status: string; r
   calendarUrl: string; eventUrl: string; price?: string | null; cover?: string | null; outlookUrl?: string | null; icsUrl?: string | null; approved?: boolean; tickets?: { count: number; url: string; pdfUrl?: string } | null }) {
   const wait = o.status === "waitlist";
   const ok = !wait && o.approved;
-  const cal = (href: string, label: string) => `<a href="${esc(href)}" style="display:inline-block;margin:0 8px 8px 0;padding:10px 14px;border-radius:8px;background:#f3ead9;font:600 13px/1 ${SANS};color:${C.ink};text-decoration:none">${esc(label)}</a>`;
+  const cal = (href: string, label: string) => `<a href="${esc(href)}" style="display:inline-block;margin:0 8px 8px 0;padding:10px 14px;border-radius:999px;background:#f1edfb;font:600 13px/1 ${SANS};color:${C.ink};text-decoration:none">${esc(label)}</a>`;
   return {
     subject: wait ? `You're on the waitlist for ${o.title}` : ok ? `Congratulations — you're confirmed for ${o.title} 🎉` : `You're registered: ${o.title}`,
     html: layout(b, {
@@ -170,11 +174,11 @@ export function eventConfirmation(b: Brand, o: { name: string; status: string; r
       eyebrow: wait ? "Waitlist" : ok ? "Approved · you're in" : "You're in",
       heading: wait ? `You're on the waitlist, ${esc(o.name)}` : ok ? `Congratulations, ${esc(o.name)}!` : `See you there, ${esc(o.name)}!`,
       content: p(wait ? `<strong>${esc(o.title)}</strong> is full right now, but you're on the waitlist and we'll be in touch the moment a spot opens up.` : ok ? `Great news: we've verified your payment and your seat at <strong>${esc(o.title)}</strong> is confirmed. We can't wait to worship with you!` : `You're registered for <strong>${esc(o.title)}</strong>. We can't wait to worship with you.`) +
-        `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:8px 0 18px;background:${C.goldSoft};border-radius:14px;overflow:hidden"><tr>
+        `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:8px 0 18px;background:${C.foot};border:1px solid ${C.line};border-radius:14px;overflow:hidden"><tr>
           ${o.cover ? `<td width="140" valign="top" style="padding:0"><img src="${esc(o.cover)}" width="140" height="140" alt="" style="display:block;width:140px;height:140px;object-fit:cover;border:0"></td>` : ""}
           <td valign="middle" style="padding:16px 20px;font:15px/1.65 ${SANS};color:${C.ink}">
           <span style="font:500 19px/1.3 ${SERIF};color:${C.ink}">${esc(o.title)}</span><br>${esc(o.when)}${o.location ? `<br>${esc(o.location)}` : ""}
-          ${o.price ? `<br><span style="color:${C.gold};font-weight:600">${esc(o.price)}</span>` : ""}<br><span style="color:${C.muted};font-size:13px">Ref ${esc(o.ref)}</span></td></tr></table>` +
+          ${o.price ? `<br><span style="color:${C.goldText};font-weight:600">${esc(o.price)}</span>` : ""}<br><span style="color:${C.muted};font-size:13px">Ref ${esc(o.ref)}</span></td></tr></table>` +
         (o.message ? p(esc(o.message)) : "") +
         (o.tickets ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 16px"><tr><td style="padding:16px 18px;border-radius:14px;background:#14110e">
             <p style="margin:0 0 4px;font:600 11px/1 ${SANS};letter-spacing:.2em;text-transform:uppercase;color:#f6d28b">🎟 Your ${o.tickets.count === 1 ? "ticket" : `${o.tickets.count} tickets`}</p>
@@ -182,7 +186,7 @@ export function eventConfirmation(b: Brand, o: { name: string; status: string; r
             ${o.tickets.pdfUrl ? `<a href="${esc(o.tickets.pdfUrl)}" style="display:inline-block;margin:0 8px 8px 0;padding:13px 20px;border-radius:9px;background:#d6a650;font:600 15px/1 ${SANS};color:#1a1206;text-decoration:none">⬇ Download my ${o.tickets.count === 1 ? "ticket" : "tickets"} (PDF)</a>` : ""}
             <a href="${esc(o.tickets.url)}" style="display:inline-block;margin:0 0 8px;padding:12px 18px;border-radius:9px;border:1px solid #6b5a3e;font:600 14px/1 ${SANS};color:#f6d28b;text-decoration:none">Show on my phone</a>
             <p style="margin:6px 0 0;font:12.5px/1.5 ${SANS};color:#b9b0a3">The PDF is also attached to this email.</p></td></tr></table>` : "") +
-        (wait ? "" : `<p style="margin:18px 0 8px;font:600 11px/1 ${SANS};letter-spacing:.2em;text-transform:uppercase;color:${C.gold}">Add it to your calendar</p>
+        (wait ? "" : `<p style="margin:18px 0 8px;font:600 11px/1 ${SANS};letter-spacing:.2em;text-transform:uppercase;color:${C.goldText}">Add it to your calendar</p>
           <p style="margin:0 0 6px">${cal(o.calendarUrl, "Google")}${o.icsUrl ? cal(o.icsUrl, "Apple / iPhone") : ""}${o.outlookUrl ? cal(o.outlookUrl, "Outlook") : ""}</p>
           <p style="margin:0 0 16px;font:13px/1.6 ${SANS};color:${C.muted}">A calendar invite (.ics) is also attached to this email.</p>`) +
         button(o.eventUrl, "View event details"),
@@ -192,7 +196,7 @@ export function eventConfirmation(b: Brand, o: { name: string; status: string; r
 }
 
 function eventBox(o: { title: string; when: string; location: string | null; ref: string; cover?: string | null; extra?: string }) {
-  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:8px 0 18px;background:${C.goldSoft};border-radius:14px;overflow:hidden"><tr>
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:8px 0 18px;background:${C.foot};border:1px solid ${C.line};border-radius:14px;overflow:hidden"><tr>
     ${o.cover ? `<td width="120" valign="top" style="padding:0"><img src="${esc(o.cover)}" width="120" height="120" alt="" style="display:block;width:120px;height:120px;object-fit:cover;border:0"></td>` : ""}
     <td valign="middle" style="padding:16px 20px;font:15px/1.65 ${SANS};color:${C.ink}">
     <span style="font:500 18px/1.3 ${SERIF};color:${C.ink}">${esc(o.title)}</span><br>${esc(o.when)}${o.location ? `<br>${esc(o.location)}` : ""}
@@ -207,7 +211,7 @@ export function eventPending(b: Brand, o: { name: string; ref: string; title: st
       eyebrow: "Received · being verified",
       heading: `Thank you, ${esc(o.name)}!`,
       content: p(`We've received your registration and proof of payment for <strong>${esc(o.title)}</strong>, and our team is verifying it now. This usually takes a day or two.`) +
-        eventBox({ ...o, extra: o.amount ? `<br><span style="color:${C.gold};font-weight:600">${esc(o.amount)} · ${o.people} ${o.people === 1 ? "person" : "people"}</span>` : "" }) +
+        eventBox({ ...o, extra: o.amount ? `<br><span style="color:${C.goldText};font-weight:600">${esc(o.amount)} · ${o.people} ${o.people === 1 ? "person" : "people"}</span>` : "" }) +
         p("As soon as it's approved we'll send you a second email confirming your seat, with your ticket and a calendar invite. You don't need to do anything else.") +
         button(o.eventUrl, "View event"),
     }),
@@ -223,7 +227,7 @@ export function eventDeclined(b: Brand, o: { name: string; ref: string; title: s
       eyebrow: "Registration update",
       heading: `Hi ${esc(o.name)}, a quick update`,
       content: p(`We weren't able to confirm the proof of payment for your registration to <strong>${esc(o.title)}</strong>.`) +
-        (o.note ? `<p style="margin:0 0 16px;padding:14px 16px;border-left:3px solid ${C.gold};background:#faf4ea;font:15px/1.6 ${SANS};color:${C.ink}">${esc(o.note)}</p>` : "") +
+        (o.note ? `<p style="margin:0 0 16px;padding:14px 16px;border-left:3px solid ${C.gold};background:${C.foot};font:15px/1.6 ${SANS};color:${C.ink}">${esc(o.note)}</p>` : "") +
         eventBox(o) +
         p("No stress — simply reply to this email and we'll sort it out together, or register again with the correct proof of payment. We'd love to see you there.") +
         button(o.eventUrl, "Register again"),
@@ -273,14 +277,14 @@ export function announcement(b: Brand, a: AnnouncementData, firstName: string | 
   const row = (title: string, when: string, loc?: string | null, note?: string | null, url?: string) =>
     `<tr><td style="padding:14px 0;border-bottom:1px solid ${C.line}">
       <p style="margin:0;font:600 16px/1.4 ${SANS};color:${C.ink}">${url ? `<a href="${esc(url)}" style="color:${C.ink};text-decoration:none">${esc(title)}</a>` : esc(title)}</p>
-      <p style="margin:4px 0 0;font:14px/1.5 ${SANS};color:${C.gold}">${esc(when)}</p>
+      <p style="margin:4px 0 0;font:14px/1.5 ${SANS};color:${C.goldText}">${esc(when)}</p>
       ${loc ? `<p style="margin:2px 0 0;font:14px/1.5 ${SANS};color:${C.muted}">${esc(loc)}</p>` : ""}
       ${note ? `<p style="margin:6px 0 0;font:14px/1.6 ${SANS};color:${C.body}">${esc(note)}</p>` : ""}</td></tr>`;
   const items = [
     ...a.services.map((s) => row(s.title, s.when, s.location, s.note)),
     ...a.events.map((e) => row(e.title, e.when, e.location, null, e.url)),
   ];
-  const schedule = items.length ? `<p style="margin:30px 0 4px;font:600 11px/1 ${SANS};letter-spacing:.24em;text-transform:uppercase;color:${C.gold}">This week at church</p>
+  const schedule = items.length ? `<p style="margin:30px 0 4px;font:600 11px/1 ${SANS};letter-spacing:.24em;text-transform:uppercase;color:${C.goldText}">This week at church</p>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">${items.join("")}</table>` : "";
   const greeting = p(firstName ? `Dear ${esc(firstName)},` : "Dear friend,");
   return {
@@ -351,7 +355,7 @@ const since = (iso: string) => new Date(iso).toLocaleDateString("en-ZA", { month
 
 function twoButtons(yes: { href: string; label: string }, no: { href: string; label: string }) {
   return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:26px 0 8px"><tr>
-    <td style="border-radius:10px;background:${C.gold}"><a href="${esc(yes.href)}" style="display:inline-block;padding:14px 24px;font:600 15px/1 ${SANS};color:#1a1206;text-decoration:none;border-radius:10px">${esc(yes.label)}</a></td>
+    <td style="border-radius:999px;background:${C.gold}"><a href="${esc(yes.href)}" style="display:inline-block;padding:14px 24px;font:600 15px/1 ${SANS};color:#1a1206;text-decoration:none;border-radius:999px">${esc(yes.label)}</a></td>
     <td width="12"></td>
     <td style="border-radius:10px;border:1px solid ${C.line};background:#ffffff"><a href="${esc(no.href)}" style="display:inline-block;padding:13px 20px;font:600 14px/1 ${SANS};color:${C.body};text-decoration:none;border-radius:10px">${esc(no.label)}</a></td>
   </tr></table>`;
@@ -410,7 +414,7 @@ export function adminMemberRevoked(b: Brand, o: { name: string; ref: string; rea
       eyebrow: "Member update",
       heading: `${esc(o.name)} revoked their membership`,
       content: p(`Reference <strong>${esc(o.ref)}</strong>, via ${esc(o.via)}.`) +
-        (o.reason ? `<p style="margin:0 0 16px;padding:14px 16px;border-left:3px solid ${C.gold};background:#faf4ea;font:15px/1.6 ${SANS};color:${C.ink}">“${esc(o.reason)}”</p>` : "") +
+        (o.reason ? `<p style="margin:0 0 16px;padding:14px 16px;border-left:3px solid ${C.gold};background:${C.foot};font:15px/1.6 ${SANS};color:${C.ink}">“${esc(o.reason)}”</p>` : "") +
         p("A short, kind follow-up from a leader can mean a lot.") + button(b.site + "/admin/#members", "Open members"),
     }),
     text: `${o.name} (${o.ref}) revoked their membership via ${o.via}.${o.reason ? ` Reason: ${o.reason}` : ""}`,
@@ -429,9 +433,9 @@ export function complaintReceived(b: Brand, o: { name: string; ref: string; subj
       heading: `Thank you, ${esc(o.name)}`,
       content: p(`We've received your complaint “<strong>${esc(o.subject)}</strong>”. Thank you for trusting us with it. Raising a concern takes courage, and we take it seriously.`) +
         p("A leader will review it and respond within <strong>7 working days</strong>. You can follow its progress on your profile at any time.") +
-        p(`Your reference is <strong style="letter-spacing:.06em">${esc(o.ref)}</strong>.`) + button(b.site + "/me#complaints", "View my complaints"),
+        p(`Your reference is <strong style="letter-spacing:.06em">${esc(o.ref)}</strong>.`) + button(b.site + "/settings#complaints", "View my complaints"),
     }),
-    text: `Thank you, ${o.name}. We've received your complaint "${o.subject}" (${o.ref}). A leader will respond within 7 working days. ${b.site}/me#complaints` + textFooter(b),
+    text: `Thank you, ${o.name}. We've received your complaint "${o.subject}" (${o.ref}). A leader will respond within 7 working days. ${b.site}/settings#complaints` + textFooter(b),
   };
 }
 
@@ -443,10 +447,10 @@ export function complaintUpdate(b: Brand, o: { name: string; ref: string; subjec
       eyebrow: "Complaint update",
       heading: `Hi ${esc(o.name)}, an update for you`,
       content: p(`Your complaint “<strong>${esc(o.subject)}</strong>” (${esc(o.ref)}) is now <strong>${esc(COMPLAINT_STATUS_LABEL[o.status] || o.status)}</strong>.`) +
-        (o.response ? `<p style="margin:0 0 16px;padding:14px 16px;border-left:3px solid ${C.gold};background:#faf4ea;font:15px/1.65 ${SANS};color:${C.ink}">${esc(o.response).replace(/\n/g, "<br>")}</p>` : "") +
-        p("If you'd like to talk about it further, simply reply to this email.") + button(b.site + "/me#complaints", "View my complaints"),
+        (o.response ? `<p style="margin:0 0 16px;padding:14px 16px;border-left:3px solid ${C.gold};background:${C.foot};font:15px/1.65 ${SANS};color:${C.ink}">${esc(o.response).replace(/\n/g, "<br>")}</p>` : "") +
+        p("If you'd like to talk about it further, simply reply to this email.") + button(b.site + "/settings#complaints", "View my complaints"),
     }),
-    text: `Your complaint "${o.subject}" (${o.ref}) is now ${COMPLAINT_STATUS_LABEL[o.status] || o.status}.${o.response ? `\n\n${o.response}` : ""}\n${b.site}/me#complaints` + textFooter(b),
+    text: `Your complaint "${o.subject}" (${o.ref}) is now ${COMPLAINT_STATUS_LABEL[o.status] || o.status}.${o.response ? `\n\n${o.response}` : ""}\n${b.site}/settings#complaints` + textFooter(b),
   };
 }
 
@@ -485,36 +489,128 @@ export function memberVerified(b: Brand, o: { name: string; ref: string; leader?
   };
 }
 
+const box = (html: string) => `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 18px"><tr><td style="padding:16px 18px;border-radius:14px;background:#f1edfb;font:15px/1.7 ${SANS};color:${C.ink}">${html}</td></tr></table>`;
+const bullets = (items: string[]) => items.map((x) => `• ${esc(x)}`).join("<br>");
+const MEMBER_CAN = ["Your profile, tickets and QR codes", "Events and Get Ticket", "Devotions and the prayer wall", "Ask SCC, the church chat", "Voting (for confirmed members)"];
+const SIGN_IN = `<strong>How to sign in</strong><br>Sign in on aogsccyouth.com as you always do (Google, or email and password). Your <strong>Admin</strong> tab appears at the top of your profile. No extra codes, no switching.`;
+
 export function youthLeaderGranted(b: Brand, o: { name: string; can: string[] }) {
   return {
-    subject: "You're now a youth leader on the church website ✨",
+    subject: "You're now a youth leader ✨",
     html: layout(b, {
-      preheader: "You can now help on Fridays: scanning tickets, capturing the night's numbers and reports.",
+      preheader: "Your normal sign-in now opens the youth leader portal too.",
       eyebrow: "Youth leader",
       heading: `Welcome to the team, ${esc(o.name)}`,
-      content: p(`You've been made a <strong>youth leader</strong> on the AOG Sandton City Church website. You can now help with: <strong>${esc(o.can.join(", "))}</strong>.`) +
-        `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 18px"><tr><td style="padding:16px 18px;border-radius:14px;background:#f3ead9;font:15px/1.7 ${SANS};color:${C.ink}">
-          <strong>How to sign in</strong><br>1. Go to aogsccyouth.com/admin<br>2. Continue with Google using <strong>this email address</strong><br>3. Enter the 6-digit code we email you.</td></tr></table>` +
-        button(b.site + "/admin/", "Open the leaders' portal"),
+      content: p("You've been made a <strong>youth leader</strong> at AOG Sandton City Church. Here's what you can now do:") + box(bullets(o.can)) + box(SIGN_IN) +
+        p("Need something else? Use <strong>Request more access</strong> in your portal and the main admin will reply.") + button(b.site + "/admin/", "Open my portal"),
     }),
-    text: `Welcome to the team, ${o.name}! You're now a youth leader and can help with: ${o.can.join(", ")}. Sign in at ${b.site}/admin/ with Google and the code we email you.` + textFooter(b),
+    text: `Welcome to the team, ${o.name}! You're now a youth leader. You can: ${o.can.join("; ")}. Sign in on ${b.site} as usual; your Admin tab appears at the top.` + textFooter(b),
   };
 }
 
-export function adminGranted(b: Brand, o: { name: string }) {
+export function adminGranted(b: Brand, o: { name: string; can: string[] }) {
   return {
-    subject: "Welcome to the AOG SCC admin team 🔑",
+    subject: "Welcome to the admin team 🔑",
     html: layout(b, {
-      preheader: "You can now help approve registrations, verify members and send tickets.",
-      eyebrow: "Admin role assigned",
+      preheader: "Your normal sign-in now opens the admin portal too.",
+      eyebrow: "Admin role",
       heading: `Welcome to the admin team, ${esc(o.name)}`,
-      content: p("The leaders of AOG Sandton City Church have assigned you an <strong>admin role</strong> on the church website. You can now approve event registrations and payments, verify members, send and scan tickets, and help with prayer requests and complaints.") +
-        `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 18px"><tr><td style="padding:16px 18px;border-radius:14px;background:#f3ead9;font:15px/1.7 ${SANS};color:${C.ink}">
-          <strong>How to sign in</strong><br>1. Go to aogsccyouth.com/admin<br>2. Continue with Google using <strong>this email address</strong><br>3. Enter the 6-digit code we email you. It's sent every time, for security.</td></tr></table>` +
-        button(b.site + "/admin/", "Open the admin dashboard") +
-        p(`<span style="font-size:13px;color:${C.muted}">You can switch back to your normal member profile at any time. Please keep members' information confidential and follow our code of conduct.</span>`),
+      content: p("The leaders of AOG Sandton City Church have given you an <strong>admin role</strong>. To start, you can:") + box(bullets(o.can)) + box(SIGN_IN) +
+        p("The main admin can switch on more for you. Use <strong>Request more access</strong> in Settings whenever you need something.") +
+        p(`<span style="font-size:13px;color:${C.muted}">Please keep members' information confidential and follow our code of conduct.</span>`) + button(b.site + "/admin/", "Open my portal"),
     }),
-    text: `Welcome to the team, ${o.name}! You now have admin access. Sign in with Google, then open ${b.site}/admin/ and enter the code we email you.` + textFooter(b),
+    text: `Welcome to the admin team, ${o.name}! Sign in on ${b.site} as usual; your Admin tab appears at the top.` + textFooter(b),
+  };
+}
+
+export function roleChanged(b: Brand, o: { name: string; role: string; can: string[]; up: boolean }) {
+  return {
+    subject: `Your role is now: ${o.role}`,
+    html: layout(b, {
+      preheader: `What you can do as ${o.role}.`,
+      eyebrow: o.up ? "Role upgraded" : "Role updated",
+      heading: `${o.up ? "Congratulations" : "A quick update"}, ${esc(o.name)}`,
+      content: p(`Your role at AOG Sandton City Church is now <strong>${esc(o.role)}</strong>. Here's what you can do:`) + box(bullets(o.can)) +
+        p("Everything else stays the same: one sign-in, and your portal shows exactly what you can use. Need more? Use <strong>Request more access</strong> in your portal.") + button(b.site + "/admin/", "Open my portal"),
+    }),
+    text: `Your role is now ${o.role}. You can: ${o.can.join("; ")}. ${b.site}/admin/` + textFooter(b),
+  };
+}
+
+export function roleRemoved(b: Brand, o: { name: string; role: string }) {
+  return {
+    subject: "Your leader access has changed",
+    html: layout(b, {
+      preheader: "You're still part of the family, with everything a member can do.",
+      eyebrow: "Role update",
+      heading: `Thank you for serving, ${esc(o.name)}`,
+      content: p(`Your <strong>${esc(o.role)}</strong> access has been removed. Thank you for everything you've done for the church family.`) +
+        p("You can still use everything a member can:") + box(bullets(MEMBER_CAN)) +
+        p("If you think this was a mistake, reply to this email or speak to the main admin.") + button(b.site + "/me", "Open my profile"),
+    }),
+    text: `Your ${o.role} access has been removed. Thank you for serving! You can still use: ${MEMBER_CAN.join("; ")}. ${b.site}/me` + textFooter(b),
+  };
+}
+
+export function accessRequested(b: Brand, o: { name: string; email: string; role: string; wants: string[]; note: string }) {
+  return {
+    subject: `Access request from ${o.name}`,
+    html: layout(b, {
+      preheader: `${o.name} (${o.role}) asked for more access.`,
+      eyebrow: "Access request",
+      heading: `${esc(o.name)} is asking for more access`,
+      content: p(`${esc(o.name)} &lt;${esc(o.email)}&gt;, currently <strong>${esc(o.role)}</strong>, would like:`) + box(bullets(o.wants)) +
+        (o.note ? p(`“${esc(o.note)}”`) : "") + button(b.site + "/admin/#team", "Review in Team & roles"),
+    }),
+    text: `${o.name} <${o.email}> (${o.role}) asked for: ${o.wants.join("; ")}.${o.note ? ` Note: ${o.note}` : ""} Review: ${b.site}/admin/#team` + textFooter(b),
+  };
+}
+
+export function accessDecision(b: Brand, o: { name: string; approved: boolean; wants: string[]; role: string; can: string[] }) {
+  return {
+    subject: o.approved ? "Your access request was approved ✅" : "About your access request",
+    html: layout(b, {
+      preheader: o.approved ? "You can use it straight away." : "The main admin replied to your request.",
+      eyebrow: "Access request",
+      heading: o.approved ? `Approved, ${esc(o.name)}` : `Thanks for asking, ${esc(o.name)}`,
+      content: (o.approved ? p(`You now have: <strong>${esc(o.wants.join(", "))}</strong>. As <strong>${esc(o.role)}</strong> you can:`) + box(bullets(o.can))
+        : p(`The main admin didn't approve <strong>${esc(o.wants.join(", "))}</strong> this time. Everything you could do before stays the same. Feel free to talk to them about it.`)) +
+        button(b.site + "/admin/", "Open my portal"),
+    }),
+    text: o.approved ? `Approved: you now have ${o.wants.join(", ")}. ${b.site}/admin/` : `Your request for ${o.wants.join(", ")} wasn't approved this time. Everything else stays the same.` + textFooter(b),
+  };
+}
+
+export function eventUpdate(b: Brand, o: { name: string; title: string; when: string; location: string | null; message: string; url: string; from: string }) {
+  return {
+    subject: `Update: ${o.title}`,
+    html: layout(b, {
+      preheader: o.message.slice(0, 110),
+      eyebrow: "Event update",
+      heading: `A change to ${esc(o.title)}`,
+      content: p(`Hi ${esc(o.name)}, you have a ticket for <strong>${esc(o.title)}</strong>, so we wanted you to know:`) +
+        `<p style="margin:0 0 16px;padding:14px 16px;border-left:3px solid ${C.gold};background:${C.foot};font:15px/1.65 ${SANS};color:${C.ink}">${esc(o.message).replace(/\n/g, "<br>")}</p>` +
+        box(`<strong>${esc(o.title)}</strong><br>${esc(o.when)}${o.location ? `<br>${esc(o.location)}` : ""}`) +
+        p(`Your ticket stays the same. — ${esc(o.from)}`) + button(o.url, "See the event"),
+    }),
+    text: `Update for ${o.title}:\n\n${o.message}\n\n${o.when}${o.location ? `, ${o.location}` : ""}\nYour ticket stays the same.\n${o.url}` + textFooter(b),
+  };
+}
+
+export function prayerWeekly(b: Brand, o: { name: string; items: { who: string; request: string; prayed: number }[]; unsub: string }) {
+  return {
+    subject: `This week, let's pray for ${o.items.length} ${o.items.length === 1 ? "request" : "requests"} 🙏`,
+    html: layout(b, {
+      preheader: "The prayer wall this week. Take a moment to pray for each one.",
+      eyebrow: "Prayer wall · this week",
+      heading: `Let's pray together, ${esc(o.name)}`,
+      content: p("These requests are on our prayer wall. Please take a moment this week to pray for each one, then tap “I prayed” so they know they're not alone.") +
+        o.items.map((x) => `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 10px"><tr><td style="padding:14px 16px;border-radius:14px;background:${C.foot};border:1px solid ${C.line};font:15px/1.6 ${SANS};color:${C.ink}">
+          <span style="font:600 12px/1 ${SANS};letter-spacing:.08em;text-transform:uppercase;color:${C.goldText}">${esc(x.who)}</span><br>${esc(x.request)}<br><span style="font-size:13px;color:${C.muted}">${x.prayed} ${x.prayed === 1 ? "person has" : "people have"} prayed</span></td></tr></table>`).join("") +
+        scripture("The prayer of a righteous person is powerful and effective.", "James 5:16") + button(b.site + "/prayer#wall", "Open the prayer wall"),
+      unsubscribeUrl: o.unsub,
+    }),
+    text: `This week on the prayer wall:\n\n${o.items.map((x) => `• ${x.who}: ${x.request}`).join("\n")}\n\nPray and tap "I prayed": ${b.site}/prayer#wall` + textFooter(b, o.unsub),
   };
 }
 
@@ -569,7 +665,7 @@ export function leaderAssigned(b: Brand, o: { leader: string; member: string; fi
       content: p(o.handedBy ? `${esc(o.handedBy)} has handed ${esc(o.first)} over to you. Please introduce yourself and keep in touch.` : `${esc(o.first)} has just been confirmed as a member of AOG Sandton City Church, and you're their leader. Please reach out this week to welcome them personally, answer questions and help them find their place.`) +
         `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 18px">${row("Reference", esc(o.ref))}${o.phone ? row("Phone", esc(o.phone)) : ""}${o.email ? row("Email", esc(o.email)) : ""}${o.age != null ? row("Age", String(o.age)) : ""}${o.interests ? row("Interested in", esc(o.interests)) : ""}</table>` +
         (wa ? twoButtons({ href: `https://wa.me/${wa}?text=${encodeURIComponent(`Hi ${o.first}! It's ${o.leader} from AOG Sandton City Church. Welcome to the family 💛`)}`, label: "Message on WhatsApp" }, { href: `tel:${o.phone || ""}`, label: "Call" }) : "") +
-        p(`<span style="font-size:13px;color:${C.muted}">Tomorrow we'll check in with you to see if you've connected. You can see everyone in your care under <a href="${esc(o.peopleUrl)}" style="color:${C.gold}">My people</a> in the admin.</span>`),
+        p(`<span style="font-size:13px;color:${C.muted}">Tomorrow we'll check in with you to see if you've connected. You can see everyone in your care under <a href="${esc(o.peopleUrl)}" style="color:${C.goldText}">My people</a> in the admin.</span>`),
     }),
     text: `Hi ${o.leader},\n\n${o.handedBy ? `${o.handedBy} has handed ${o.member} over to you.` : `${o.member} has been confirmed as a member and assigned to you.`} Please reach out this week.\n\nReference: ${o.ref}\n${o.phone ? `Phone: ${o.phone}\n` : ""}${o.email ? `Email: ${o.email}\n` : ""}\nMy people: ${o.peopleUrl}` + textFooter(b),
   };
@@ -641,25 +737,41 @@ export function accountCode(b: Brand, code: string) {
   };
 }
 
-export function presenterWelcome(b: Brand, o: { name: string; slot: number; key: string }) {
+export function presenterWelcome(b: Brand, o: { name: string; slot: number; key: string; open?: boolean }) {
+  const when = o.open ? "Downloads are open now." : "Downloads open on <strong>1 February 2027</strong>. We'll email you the moment they do.";
   return {
-    subject: `You're beta tester #${o.slot} for SCC Presenter`,
+    subject: `Your SCC Presenter beta place: #${o.slot} of 20`,
     html: layout(b, {
-      preheader: `Your beta key is ${o.key}. Download SCC Presenter for Windows or Mac.`,
+      preheader: o.open ? `Your beta key is ${o.key}.` : `Place #${o.slot} is yours. The beta arrives on 1 February 2027.`,
       eyebrow: "SCC Presenter beta",
-      heading: `Welcome to the beta, ${esc(o.name)}`,
-      content: p(`Thank you for helping us test SCC Presenter. You're tester <strong>#${o.slot} of 20</strong>.`) +
-        p(`Your beta key: <strong style="font-size:18px;letter-spacing:.06em">${esc(o.key)}</strong>. Type it in the app under Settings → Beta so your feedback reaches us.`) +
-        p("Please try it at a real service or rehearsal, then tap <strong>Feedback</strong> in the app's top bar. Tell us what worked, what was confusing and what broke. The beta runs until 31 December 2026; the full release arrives on 31 January 2027.") +
+      heading: `Your place is saved, ${esc(o.name)}`,
+      content: p(`Thank you for signing up to test SCC Presenter. You're <strong>#${o.slot} of 20</strong>.`) +
+        p(`Your beta key: <strong style="font-size:18px;letter-spacing:.06em">${esc(o.key)}</strong>. You'll type it in the app under Settings → Beta so your feedback reaches us.`) +
+        p(when) + button(b.site + "/presenter", o.open ? "Download SCC Presenter" : "See what's coming"),
+    }),
+    text: `Thank you, ${o.name}! You're #${o.slot} of 20 for the SCC Presenter beta.\nYour beta key: ${o.key}\n${o.open ? "Downloads are open now" : "Downloads open on 1 February 2027. We'll email you"}: ${b.site}/presenter` + textFooter(b),
+  };
+}
+
+export function presenterBetaOpen(b: Brand, o: { name: string; slot: number; key: string }) {
+  return {
+    subject: "SCC Presenter beta is here 🎉",
+    html: layout(b, {
+      preheader: "Your beta place is ready. Download SCC Presenter for Windows or Mac.",
+      eyebrow: "SCC Presenter beta",
+      heading: `It's here, ${esc(o.name)}`,
+      content: p(`The SCC Presenter beta is open, and place <strong>#${o.slot}</strong> is yours.`) +
+        p(`Your beta key: <strong style="font-size:18px;letter-spacing:.06em">${esc(o.key)}</strong>. Paste it in the app under Settings → Beta.`) +
+        p("Please try it at a real service or rehearsal, then tap <strong>Feedback</strong> in the app's top bar.") +
         button(b.site + "/presenter", "Download SCC Presenter"),
     }),
-    text: `Welcome to the SCC Presenter beta, ${o.name}! You're tester #${o.slot} of 20.\nYour beta key: ${o.key}\nDownload: ${b.site}/presenter\nSend feedback from the app's top bar. The beta runs until 31 December 2026.` + textFooter(b),
+    text: `The SCC Presenter beta is open, ${o.name}! Place #${o.slot} is yours.\nYour beta key: ${o.key}\nDownload: ${b.site}/presenter` + textFooter(b),
   };
 }
 
 export function presenterFeedbackAdmin(b: Brand, o: { tester: string; slot: number; overall: number | null; ease: number | null; good: string; problems: string; missing: string; recommend: string; install: string; source: string }) {
   const stars = (n: number | null) => (n ? "★".repeat(n) + "☆".repeat(5 - n) : "—");
-  const row = (k: string, v: string) => v ? `<tr><td style="padding:6px 10px 6px 0;color:#7a6f60;vertical-align:top;white-space:nowrap">${esc(k)}</td><td style="padding:6px 0">${esc(v).replace(/\n/g, "<br>")}</td></tr>` : "";
+  const row = (k: string, v: string) => v ? `<tr><td style="padding:6px 10px 6px 0;color:${C.muted};vertical-align:top;white-space:nowrap">${esc(k)}</td><td style="padding:6px 0">${esc(v).replace(/\n/g, "<br>")}</td></tr>` : "";
   return {
     subject: `Presenter beta feedback from ${o.tester} (${stars(o.overall)})`,
     html: layout(b, {

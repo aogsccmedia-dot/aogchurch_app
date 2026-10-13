@@ -17,6 +17,9 @@ import { insightsRoutes } from "./routes/insights.ts";
 import { presenterRoutes } from "./routes/presenter.ts";
 import { codeRoutes } from "./routes/code.ts";
 import { fridayRoutes, processFridayReminder } from "./routes/fridays.ts";
+import { processBetaLaunch } from "./routes/presenter.ts";
+import { assistantRoutes, processAssistantRollout } from "./routes/assistant.ts";
+import { processPrayerWeekly } from "./lib/prayer-weekly.ts";
 import { voteRoutes } from "./routes/votes.ts";
 import { processAnnouncements } from "./lib/newsletter.ts";
 import { processCheckins, processWelcomes } from "./lib/membership.ts";
@@ -55,6 +58,7 @@ export default {
       programmeRoutes(router, env);
       insightsRoutes(router, env);
       presenterRoutes(router, env);
+      assistantRoutes(router, env);
       codeRoutes(router, env);
       fridayRoutes(router, env);
       voteRoutes(router, env);
@@ -81,6 +85,9 @@ export default {
       await backfillLeaders(env).catch((e) => console.error("leader catch-up failed", e));
       await processFollowups(env, now).catch((e) => console.error("leader follow-ups failed", e));
       await processFridayReminder(env, now).catch((e) => console.error("friday reminder failed", e));
+      await processBetaLaunch(env, now).catch((e) => console.error("beta launch email failed", e));
+      await processAssistantRollout(env, now).catch((e) => console.error("assistant rollout check failed", e));
+      await processPrayerWeekly(env, now).catch((e) => console.error("weekly prayer email failed", e));
 
       const h = now.getUTCHours(), m = now.getUTCMinutes();
       if (now.getUTCDay() === 6 && h === 8 && m < 10) {

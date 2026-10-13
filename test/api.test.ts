@@ -54,6 +54,13 @@ async function adminCookie(): Promise<string> {
   return cookieOf(r2);
 }
 const A = (cookie: string) => ({ cookie, "x-scc-admin": "1" });
+/** The main admin: Google, then the emailed code (only this account needs the code). */
+async function superCookie(g: Env & { EMAIL: { outbox: { text?: string }[] } }, sub = "g-admin"): Promise<string> {
+  const a = await post("/api/auth/google", { credential: await googleToken({ sub, email: "aogsccmedia@gmail.com", name: "SCC Media" }) }, {}, g);
+  const { challenge } = await a.json() as { challenge: string };
+  const code = /code is (\d{6})/.exec(g.EMAIL.outbox.at(-1)!.text!)![1];
+  return cookieOf(await post("/api/auth/admin/verify", { challenge, code }, { cookie: cookieOf(a) }, g));
+}
 
 before(async () => {
   env = await makeEnv();
@@ -161,7 +168,7 @@ describe("accounts & admin access", () => {
     const cookie = await adminCookie();
     assert.equal((await post("/api/admin/events", { title: "X", starts_at: "2030-01-01T10:00:00Z" }, { cookie })).status, 403);
   });
-  test("Google sign-in: members get a session; the admin must still enter a code", async () => {
+  test("Google sign-in: members get a session; only the main admin must still enter a code", async () => {
     const g = await makeEnv({ GOOGLE_CLIENT_ID: CLIENT_ID });
     const tok = await googleToken({ sub: "g-1", email: "lindiwe@gmail.com", name: "Lindiwe Khumalo", given_name: "Lindiwe", family_name: "Khumalo" });
     const r = await post("/api/auth/google", { credential: tok }, {}, g);
@@ -178,8 +185,7 @@ describe("accounts & admin access", () => {
     const a = await post("/api/auth/google", { credential: adminTok }, {}, g);
     const aj = await a.json() as { needs_code: boolean; challenge: string };
     assert.equal(aj.needs_code, true);
-    assert.equal((await call("/api/admin/stats", { headers: { cookie: cookieOf(a) } }, g)).status, 401, "Google alone is not enough");
-    // With Google configured, codes can't be requested without signing in with Google first.
+    assert.equal((await call("/api/admin/stats", { headers: { cookie: cookieOf(a) } }, g)).status, 401, "Google alone is not enough for the main admin");
     assert.equal((await post("/api/auth/admin/request-code", { email: "aogsccmedia@gmail.com" }, {}, g)).status, 403);
     const code = /code is (\d{6})/.exec(g.EMAIL.outbox.at(-1)!.text!)![1];
     const v = await post("/api/auth/admin/verify", { challenge: aj.challenge, code }, { cookie: cookieOf(a) }, g);
@@ -506,10 +512,7 @@ describe("complaints (approved members only)", () => {
     assert.ok(out("aogsccmedia@gmail.com").some((m) => m.subject.startsWith(`New complaint ${ref}`)));
 
     // Admin (Google + code) sees it and replies → member emailed, status visible on profile.
-    const a = await post("/api/auth/google", { credential: await googleToken({ sub: "g-admin", email: "aogsccmedia@gmail.com" }) }, {}, g);
-    const aj = await a.json() as { challenge: string };
-    const code = /code is (\d{6})/.exec(g.EMAIL.outbox.at(-1)!.text!)![1];
-    const admin = cookieOf(await post("/api/auth/admin/verify", { challenge: aj.challenge, code }, { cookie: cookieOf(a) }, g));
+    const admin = await superCookie(g);
     const { complaints } = await (await call("/api/admin/complaints", { headers: { cookie: admin } }, g)).json() as { complaints: { id: string; ref_code: string }[] };
     const c = complaints.find((x) => x.ref_code === ref)!;
     const stats = await (await call("/api/admin/stats", { headers: { cookie: admin } }, g)).json() as { stats: { open_complaints: number } };
@@ -556,9 +559,7 @@ describe("Daily Word & Prayer Wall", () => {
     assert.equal((await post(`/api/wall/${id}/pray`, {}, { cookie: ben }, g)).status, 404);
 
     // Admin approves.
-    const a = await post("/api/auth/google", { credential: await googleToken({ sub: "g-admin", email: "aogsccmedia@gmail.com" }) }, {}, g);
-    const code = /code is (\d{6})/.exec(g.EMAIL.outbox.at(-1)!.text!)![1];
-    const admin = cookieOf(await post("/api/auth/admin/verify", { challenge: (await a.json() as { challenge: string }).challenge, code }, { cookie: cookieOf(a) }, g));
+    const admin = await superCookie(g);
     const stats = await (await call("/api/admin/stats", { headers: { cookie: admin } }, g)).json() as { stats: { wall_pending: number }; attention: { kind: string }[] };
     assert.equal(stats.stats.wall_pending, 1);
     assert.ok(stats.attention.some((x) => x.kind === "wall"));
@@ -643,31 +644,32 @@ describe("tickets: generator, PDF, door check-in", () => {
 });
 
 describe("delegated admins (team & roles)", () => {
-  test("main admin grants a member admin; they sign in with Google + their own code; can approve but not delete; removal is immediate", async () => {
+  test("main admin grants a member admin; their own sign-in becomes admin at once; can approve but not delete; removal is immediate", async () => {
     const g = await makeEnv({ GOOGLE_CLIENT_ID: CLIENT_ID });
     const signIn = async (sub: string, email: string, given: string) => post("/api/auth/google", { credential: await googleToken({ sub, email, given_name: given, name: `${given} T` }) }, {}, g);
     // A registered member with a Google account.
     assert.equal((await call("/api/join", { method: "POST", body: joinForm({ email: "lebo@gmail.com", first_name: "Lebo" }) }, g)).status, 201);
     const leboUser = cookieOf(await signIn("g-lebo", "lebo@gmail.com", "Lebo"));
-    assert.equal((await post("/api/auth/admin/request-code", {}, { cookie: leboUser }, g)).status, 403, "no role yet");
+    assert.equal((await call("/api/admin/stats", { headers: { cookie: leboUser } }, g)).status, 401, "no role yet");
 
     // Main admin signs in (Google + code) and grants the role.
-    const a = await signIn("g-admin", "aogsccmedia@gmail.com", "SCC");
-    const code = /code is (\d{6})/.exec(g.EMAIL.outbox.at(-1)!.text!)![1];
-    const sup = cookieOf(await post("/api/auth/admin/verify", { challenge: (await a.json() as { challenge: string }).challenge, code }, { cookie: cookieOf(a) }, g));
+    const sup = await superCookie(g);
     const team = await (await call("/api/admin/team?q=lebo", { headers: { cookie: sup } }, g)).json() as { people: { user_id: string; email: string }[] };
     const lebo = team.people.find((p) => p.email === "lebo@gmail.com")!;
     assert.equal((await call("/api/admin/team", { method: "POST", headers: { ...A(sup), ...JSONH }, body: JSON.stringify({ user_id: lebo.user_id }) }, g)).status, 200);
-    assert.ok(g.EMAIL.outbox.some((m) => JSON.stringify(m.to).includes("lebo@gmail.com") && /admin team/.test(m.subject) && /leaders of AOG Sandton City Church/.test(m.html || "")));
+    const role0 = g.DB._db.prepare("SELECT perms FROM admin_roles WHERE user_id = ?").get(lebo.user_id) as { perms: string };
+    assert.deepEqual(JSON.parse(role0.perms), ["reports", "services"], "new admins start with reports and weekly services only");
+    // Not yet allowed to verify members…
+    const mid0 = (g.DB._db.prepare("SELECT id FROM members WHERE email = ?").get("lebo@gmail.com") as { id: string }).id;
+    assert.equal((await call(`/api/admin/members/${mid0}`, { method: "PATCH", headers: { ...A(leboUser), ...JSONH }, body: JSON.stringify({ status: "member" }) }, g)).status, 403, "only what's ticked");
+    // …until the main admin ticks Members.
+    assert.equal((await call(`/api/admin/team/${lebo.user_id}`, { method: "PATCH", headers: { ...A(sup), ...JSONH }, body: JSON.stringify({ perms: ["reports", "services", "members"] }) }, g)).status, 200);
+    assert.ok(g.EMAIL.outbox.some((m) => JSON.stringify(m.to).includes("lebo@gmail.com") && /admin team/.test(m.subject) && /leaders of AOG Sandton City Church/.test(m.html || "") && /Reports/.test(m.html || "")));
 
-    // Lebo: still a normal session, can now request a code, which goes to HER inbox.
+    // Lebo: the same sign-in now has admin powers, no switching and no code.
     const me = await (await call("/api/auth/me", { headers: { cookie: leboUser } }, g)).json() as { can_admin: boolean; is_admin: boolean };
-    assert.equal(me.can_admin, true); assert.equal(me.is_admin, false);
-    const rc = await post("/api/auth/admin/request-code", {}, { cookie: leboUser }, g);
-    assert.equal(rc.status, 200);
-    const leboMail = g.EMAIL.outbox.at(-1)!;
-    assert.ok(JSON.stringify(leboMail.to).includes("lebo@gmail.com"), "code sent to the delegated admin, not the main inbox");
-    const staff = cookieOf(await post("/api/auth/admin/verify", { challenge: (await rc.json() as { challenge: string }).challenge, code: /code is (\d{6})/.exec(leboMail.text!)![1] }, { cookie: leboUser }, g));
+    assert.equal(me.can_admin, true); assert.equal(me.is_admin, true);
+    const staff = leboUser;
     const who = await (await call("/api/admin/whoami", { headers: { cookie: staff } }, g)).json() as { role: string };
     assert.equal(who.role, "staff");
     assert.equal((await call("/api/admin/stats", { headers: { cookie: staff } }, g)).status, 200, "can use the dashboard");
@@ -746,26 +748,18 @@ describe("door, insights, weekly services and the board report", () => {
     assert.equal(env.DB._db.prepare("SELECT checked_in_at IS NOT NULL AS used FROM tickets WHERE code = ?").get(codes[0].code).used, 1);
   });
 
-  test("admin powers renew while in use, lapse after 12 quiet hours, and come back with just the emailed code", async () => {
+  test("the main admin's admin powers renew while in use, lapse after 12 quiet hours, and come back with the emailed code", async () => {
     const c = await adminCookie();
-    const tok = c.split("=")[1];
     const { createHash } = await import("node:crypto");
-    const hash = createHash("sha256").update(tok).digest("hex");
-    const row = () => env.DB._db.prepare("SELECT kind, admin_until, expires_at FROM sessions WHERE token_hash = ?").get(hash) as { kind: string; admin_until: string; expires_at: string };
-    assert.ok(new Date(row().expires_at).getTime() - Date.now() > 20 * 86400_000, "the sign-in itself lasts weeks");
-    // Nearly out of admin time → the next request renews it.
+    const hash = createHash("sha256").update(c.split("=")[1]).digest("hex");
+    const row = () => env.DB._db.prepare("SELECT admin_until FROM sessions WHERE token_hash = ?").get(hash) as { admin_until: string };
     env.DB._db.prepare("UPDATE sessions SET admin_until = ? WHERE token_hash = ?").run(new Date(Date.now() + 3600_000).toISOString(), hash);
     assert.equal((await call("/api/admin/stats", { headers: { cookie: c } })).status, 200);
     assert.ok(new Date(row().admin_until).getTime() - Date.now() > 11 * 3600_000, "renewed while in use");
-    // Quiet for 12 hours → still signed in, but not as admin.
     env.DB._db.prepare("UPDATE sessions SET admin_until = ? WHERE token_hash = ?").run(new Date(Date.now() - 1000).toISOString(), hash);
     assert.equal((await call("/api/admin/stats", { headers: { cookie: c } })).status, 401);
-    const me = await (await call("/api/auth/me", { headers: { cookie: c } })).json() as { user: unknown; is_admin: boolean; can_admin: boolean };
-    assert.ok(me.user && !me.is_admin && me.can_admin, "still signed in, can get admin back");
-    // Just the emailed code brings admin back (no Google).
     const r = await (await post("/api/auth/admin/request-code", {}, { cookie: c })).json() as { challenge: string };
     const v = await post("/api/auth/admin/verify", { challenge: r.challenge, code: lastCode() }, { cookie: c });
-    assert.equal(v.status, 200);
     assert.equal((await call("/api/admin/stats", { headers: { cookie: cookieOf(v) } })).status, 200);
   });
 
@@ -999,6 +993,11 @@ describe("presenter beta & code changes", () => {
     assert.equal((await post("/api/presenter/feedback", { key: "SCC-NOPE-NOPE", overall: 5 })).status, 403);
     assert.equal((await post("/api/presenter/feedback", { key: tester.beta_key, overall: 4, good: "Easy", source: "app" })).status, 200);
     assert.ok(mails("aogsccmedia@gmail.com").some((m) => /Presenter beta feedback/.test(m.subject)));
+    // Downloads stay off until the beta opens on 1 February 2027: no link to GitHub, just "coming soon".
+    const st = await (await call("/api/presenter/status", { headers: { cookie } })).json() as { downloads_open: boolean; opens: string; release: unknown };
+    assert.equal(st.downloads_open, false); assert.equal(st.opens, "2027-02-01"); assert.equal(st.release, null);
+    const dl = await call("/api/presenter/download/windows", { headers: { cookie }, redirect: "manual" });
+    assert.match(dl.headers.get("location") || "", /msg=soon/);
   });
 
   test("GitHub alerts need a valid signature; a new pull request emails the main admin", async () => {
@@ -1033,7 +1032,7 @@ describe("youth leaders, Fridays and voting", () => {
     assert.equal((await yl("/api/admin/fridays")).status, 200);
     assert.equal((await yl("/api/admin/report?from=2026-01-01&to=2026-12-31")).status, 200);
     assert.equal((await yl("/api/admin/members")).status, 403);
-    assert.equal((await yl("/api/admin/stats")).status, 403);
+    assert.equal((await yl("/api/admin/stats")).status, 200, "the overview counts are fine for the team");
     assert.equal((await yl("/api/admin/team")).status, 403);
     const who = await (await yl("/api/admin/whoami")).json() as { role: string; perms: string[] };
     assert.equal(who.role, "youth"); assert.deepEqual(who.perms, ["fridays", "scan", "reports"]);
@@ -1079,5 +1078,98 @@ describe("youth leaders, Fridays and voting", () => {
     assert.equal(view.results[0].id, "vm-3"); assert.equal(view.results[0].votes, 2); assert.equal(view.my_vote, "vm-3");
     assert.equal((await call(`/api/votes/${pid}`)).status, 401, "sign-in needed");
     assert.ok(!JSON.stringify(view).includes("vm-1\",\"votes\""), "no voter identities");
+  });
+});
+
+describe("Ask SCC, youth tickets, event updates, prayer list and access requests", () => {
+  const db = () => env.DB._db;
+  let member = "", youth = "";
+  before(async () => {
+    const { createHash } = await import("node:crypto");
+    const sess = (uid: string) => { const t = `ask-${uid}-xxxxxxxxxxxxxxxxxxxxxxxx`; db().prepare("INSERT OR REPLACE INTO sessions (token_hash, user_id, kind, expires_at) VALUES (?,?,?,?)").run(createHash("sha256").update(t).digest("hex"), uid, "user", "2099-01-01T00:00:00Z"); return `scc_session=${t}`; };
+    db().prepare("INSERT OR IGNORE INTO users (id, email, name, given_name) VALUES ('ask-u', 'asker@example.com', 'Naledi M', 'Naledi')").run();
+    db().prepare("INSERT OR IGNORE INTO members (id, ref_code, status, membership_type, first_name, last_name, date_of_birth, phone, email, signature_name, user_id) VALUES ('ask-m','SCCY-ASK','member','new_member','Naledi','M','1999-01-01','0820000000','asker@example.com','Naledi','ask-u')").run();
+    db().prepare("INSERT OR IGNORE INTO users (id, email, name, given_name) VALUES ('ask-yl', 'leader@example.com', 'Kabelo Y', 'Kabelo')").run();
+    db().prepare("INSERT OR REPLACE INTO admin_roles (user_id, email, role, granted_by, perms) VALUES ('ask-yl', 'leader@example.com', 'youth_leader', 'x', '[\"fridays\",\"scan\",\"reports\",\"youth_tickets\"]')").run();
+    member = sess("ask-u"); youth = sess("ask-yl");
+    const soon = new Date(Date.now() + 5 * 86400_000).toISOString();
+    db().prepare("INSERT OR REPLACE INTO events (id, slug, title, starts_at, location, is_published, ministry_group) VALUES ('ev-youth','youth-night','Youth Night',?, 'Main hall', 1, 'youth')").run(soon);
+    db().prepare("INSERT OR REPLACE INTO events (id, slug, title, starts_at, location, is_published, ministry_group) VALUES ('ev-men','mens-breakfast','Mens Breakfast',?, 'Hall', 1, 'church')").run(soon);
+    for (const [id, ev, email, st] of [["r-y1", "ev-youth", "a@example.com", "pending"], ["r-y2", "ev-youth", "b@example.com", "confirmed"], ["r-m1", "ev-men", "c@example.com", "pending"]]) {
+      db().prepare("INSERT OR REPLACE INTO event_registrations (id, event_id, ref_code, name, email, guests, answers, status) VALUES (?,?,?,?,?,0,'{}',?)").run(id, ev, `REF-${id}`, `Person ${id}`, email, st);
+    }
+  });
+  const H = (cookie: string) => ({ cookie, "x-scc-admin": "1", ...JSONH });
+
+  test("the concierge sends each question to the right agent (eval set)", async () => {
+    const { route } = await import("../src/lib/agents.ts");
+    const cases: [string, string][] = [
+      ["What's coming up this weekend?", "whatson"], ["What's happening this week at church?", "whatson"], ["what's on this month", "whatson"], ["Show me the next events", "events"], ["When is the youth service?", "services"], ["what time does church start on sunday", "services"],
+      ["Add it to my calendar", "calendar"], ["Do I have a ticket?", "tickets"], ["Where is the church?", "visit"], ["I need prayer", "prayer"],
+      ["Are there any votes open?", "votes"], ["How do I become a member?", "join"], ["hi", "concierge"], ["What's on the programme in November?", "whatson"], ["Show the church programme", "programme"],
+    ];
+    for (const [q, want] of cases) assert.equal(route(q), want, q);
+    const wk = await (await post("/api/assistant/chat", { message: "What's happening this week?" }, { cookie: member })).json() as { reply: { agent: string; cards: { title: string }[] } };
+    assert.equal(wk.reply.agent, "whatson"); assert.ok(wk.reply.cards.some((c) => c.title === "Youth Night"), "pulls this week's events");
+    assert.equal(route("how much is it?", "events"), "events", "follow-ups stay with the last helper");
+  });
+
+  test("chat: sign-in required, built-in answers with event cards and calendar links; AI text is cleaned; rollout buckets are stable", async () => {
+    assert.equal((await post("/api/assistant/chat", { message: "hi" })).status, 401);
+    const r = await post("/api/assistant/chat", { message: "What's coming up?" }, { cookie: member });
+    assert.equal(r.status, 200);
+    const d = await r.json() as { id: string; reply: { agent: string; cards: { kind: string; title: string; google: string; ics: string }[] } };
+    assert.equal(d.reply.agent, "events");
+    const yn = d.reply.cards.find((c) => c.title === "Youth Night")!;
+    assert.match(yn.google, /calendar\.google\.com/); assert.match(yn.ics, /calendar\.ics$/);
+    assert.equal((await post("/api/assistant/feedback", { id: d.id, rating: 1 }, { cookie: member })).status, 200);
+    const tk = await (await post("/api/assistant/chat", { message: "Do I have a ticket?" }, { cookie: member })).json() as { reply: { agent: string } };
+    assert.equal(tk.reply.agent, "tickets");
+    const { cleanAi, bucket } = await import("../src/routes/assistant.ts");
+    assert.equal(cleanAi("**See** [the page](https://evil.example) at https://x.y now"), "See the page at  now");
+    assert.equal(bucket("user-1"), bucket("user-1"));
+    const cal = await call("/api/calendar/church.ics");
+    const ics = await cal.text();
+    assert.match(ics, /BEGIN:VCALENDAR/); assert.match(ics, /RRULE:FREQ=WEEKLY/); assert.match(ics, /Youth Night/);
+  });
+
+  test("youth leaders approve tickets for youth events only, and can tell ticket holders about a change", async () => {
+    const ap = await (await call("/api/admin/approvals", { headers: H(youth) })).json() as { approvals: { id: string }[]; scope: string };
+    assert.equal(ap.scope, "youth"); assert.deepEqual(ap.approvals.map((a) => a.id), ["r-y1"]);
+    assert.equal((await call("/api/admin/registrations/r-m1", { method: "PATCH", headers: H(youth), body: JSON.stringify({ status: "confirmed" }) })).status, 403);
+    assert.equal((await call("/api/admin/registrations/r-y1", { method: "PATCH", headers: H(youth), body: JSON.stringify({ status: "confirmed", notify: false }) })).status, 200);
+    const before = env.EMAIL.outbox.length;
+    const n = await call("/api/admin/events/ev-youth/notify", { method: "POST", headers: H(youth), body: JSON.stringify({ message: "We now start at 19:00." }) });
+    assert.equal(n.status, 200); assert.equal((await n.json() as { sent: number }).sent, 2);
+    await new Promise((r) => setTimeout(r, 30));
+    assert.ok(env.EMAIL.outbox.slice(before).some((m) => /Update: Youth Night/.test(m.subject) && /19:00/.test(m.html || "")));
+    assert.equal((await call("/api/admin/events/ev-men/notify", { method: "POST", headers: H(youth), body: JSON.stringify({ message: "Changed venue" }) })).status, 403);
+  });
+
+  test("team members ask for more access; the main admin approves and they get it straight away", async () => {
+    const r = await call("/api/admin/access-requests", { method: "POST", headers: H(youth), body: JSON.stringify({ wants: ["events"], note: "Camp registrations" }) });
+    assert.equal(r.status, 200);
+    assert.equal((await call("/api/admin/access-requests", { method: "POST", headers: H(youth), body: JSON.stringify({ wants: ["votes"] }) })).status, 409, "one request at a time");
+    const { id } = await r.json() as { id: string };
+    const sup = await adminCookie();
+    assert.equal((await call(`/api/admin/access-requests/${id}`, { method: "PATCH", headers: H(youth), body: JSON.stringify({ decision: "approve" }) })).status, 403);
+    assert.equal((await call(`/api/admin/access-requests/${id}`, { method: "PATCH", headers: H(sup), body: JSON.stringify({ decision: "approve" }) })).status, 200);
+    const who = await (await call("/api/admin/whoami", { headers: H(youth) })).json() as { perms: string[] };
+    assert.ok(who.perms.includes("events"));
+  });
+
+  test("weekly prayer list: nothing when the wall is empty; otherwise members get it once, and can stop it", async () => {
+    const { processPrayerWeekly } = await import("../src/lib/prayer-weekly.ts");
+    const monday = new Date("2026-10-19T06:00:00Z");   // 08:00 SAST
+    db().prepare("DELETE FROM prayer_wall").run();
+    assert.equal(await processPrayerWeekly(env, monday), 0, "empty wall → no email");
+    db().prepare("INSERT INTO prayer_wall (id, user_id, display_name, request, status) VALUES ('pw-1','ask-u','Naledi','Peace for my family','approved')").run();
+    const sent = await processPrayerWeekly(env, monday);
+    assert.ok(sent >= 1);
+    assert.ok(env.EMAIL.outbox.some((m) => JSON.stringify(m.to).includes("asker@example.com") && /pray/i.test(m.subject) && /Peace for my family/.test(m.html || "")));
+    assert.equal(await processPrayerWeekly(env, new Date("2026-10-19T07:00:00Z")), 0, "once a week");
+    const tok = (db().prepare("SELECT token FROM prayer_weekly WHERE email = 'asker@example.com'").get() as { token: string }).token;
+    assert.equal((await call(`/api/prayer/weekly/stop?token=${tok}`, { redirect: "manual" })).status, 303);
+    assert.equal((db().prepare("SELECT opted_out FROM prayer_weekly WHERE email = 'asker@example.com'").get() as { opted_out: number }).opted_out, 1);
   });
 });

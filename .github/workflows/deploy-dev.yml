@@ -1,0 +1,156 @@
+# Dev → production, with a canary.
+#
+# Every push to the `dev` branch:
+#   1. verify      type-check, tests and a Wrangler build (the same checks as every PR)
+#   2. preview     upload the new version WITHOUT sending it any traffic, then smoke-test it on the real domain
+#                  with a version override (only our test requests reach it)
+#   3. canary      apply the database migrations (they only ever add), then send 10% of visitors to the new
+#                  version, watch it, then 50%, then 100%; any failed check rolls everyone back to the old version
+#   4. promote     fast-forward `main` to the commit that is now live, so main always matches production
+#
+# Visitors stay on one version during the rollout (version affinity by session), so nobody flips between two.
+# Pushes to `main` still deploy straight away with deploy.yml, as before.
+name: Dev → production (canary)
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: write      # to fast-forward main after a successful rollout
+  deployments: write
+
+concurrency:
+  group: production    # shared with deploy.yml: never two production rollouts at once
+  cancel-in-progress: false
+
+env:
+  CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN || vars.CLOUDFLARE_API_TOKEN }}
+  CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID || vars.CF_ACCOUNT_ID }}
+  WORKER: aogchurch-app
+  SITE: https://aogsccyouth.com
+
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  canary:
+    name: Preview, canary and promote
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment:
+      name: dev
+      url: https://aogsccyouth.com
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Already live through main?
+        id: skip
+        shell: bash
+        run: |
+          git fetch origin main --quiet
+          if git merge-base --is-ancestor HEAD origin/main; then
+            echo "::notice title=Nothing to roll out::This commit is already on main, which deploys it directly."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Cloudflare credentials
+        if: steps.skip.outputs.skip == 'false'
+        shell: bash
+        run: |
+          TOKEN="$(printf '%s' "$CF_TOKEN" | tr -d '[:space:]"' | sed -E 's/^[Bb]earer//' | LC_ALL=C tr -cd 'A-Za-z0-9_-')"
+          ACCOUNT="$(printf '%s' "$CF_ACCOUNT" | tr -d '[:space:]"')"
+          [ -n "$TOKEN" ] || { echo "::error::Cloudflare API token missing"; exit 1; }
+          echo "::add-mask::$TOKEN"
+          echo "CLOUDFLARE_API_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        if: steps.skip.outputs.skip == 'false'
+        with: { node-version: 22 }
+
+      - name: Install
+        if: steps.skip.outputs.skip == 'false'
+        run: npm install --no-audit --no-fund
+
+      - name: Which version is live now
+        if: steps.skip.outputs.skip == 'false'
+        id: old
+        shell: bash
+        run: |
+          npx wrangler deployments status --json > status.json
+          OLD=$(node -e 'const d=require("./status.json");const v=(d.versions||[]).sort((a,b)=>b.percentage-a.percentage)[0];process.stdout.write(v?(v.version_id||v.id):"")')
+          [ -n "$OLD" ] || { echo "::error::Couldn't read the live version"; cat status.json; exit 1; }
+          echo "id=$OLD" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Live version::$OLD"
+
+      - name: Upload the new version (no traffic yet)
+        if: steps.skip.outputs.skip == 'false'
+        id: new
+        shell: bash
+        run: |
+          set -o pipefail
+          npx wrangler versions upload --tag "${GITHUB_SHA::7}" --message "dev ${GITHUB_SHA::7}" 2>&1 | tee upload.log
+          NEW=$(grep -oE 'Worker Version ID: [0-9a-f-]{36}' upload.log | awk '{print $4}' | tail -1)
+          [ -n "$NEW" ] || { echo "::error::No version ID in the upload output"; exit 1; }
+          echo "id=$NEW" >> "$GITHUB_OUTPUT"
+          echo "::notice title=New version::$NEW"
+
+      - name: Smoke-test the new version before anyone sees it
+        if: steps.skip.outputs.skip == 'false'
+        shell: bash
+        env:
+          NEW: ${{ steps.new.outputs.id }}
+        run: |
+          H="Cloudflare-Workers-Version-Overrides: $WORKER=\"$NEW\""
+          fail=0
+          for path in /api/health /api/events /api/settings / /events /assistant /api/calendar/church.ics; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' -H "$H" "$SITE$path" || echo 000)
+            echo "$path → $code"
+            [ "$code" = "200" ] || fail=1
+          done
+          [ $fail = 0 ] || { echo "::error title=Preview failed::The new version didn't pass its smoke test. Nothing was changed for visitors."; exit 1; }
+
+      - name: Apply database migrations (they only ever add)
+        if: steps.skip.outputs.skip == 'false'
+        run: npx wrangler d1 migrations apply aogscc-youth-db --remote
+
+      - name: Canary — 10%, then 50%, then 100%
+        if: steps.skip.outputs.skip == 'false'
+        shell: bash
+        env:
+          OLD: ${{ steps.old.outputs.id }}
+          NEW: ${{ steps.new.outputs.id }}
+        run: |
+          check() {   # a few real requests; any error fails the stage
+            for i in $(seq 1 12); do
+              for path in /api/health /api/events /; do
+                code=$(curl -sS -o /dev/null -w '%{http_code}' "$SITE$path" || echo 000)
+                [ "$code" = "200" ] || { echo "::error::$path returned $code"; return 1; }
+              done
+              sleep 10
+            done
+          }
+          rollback() {
+            echo "::error title=Rolled back::Stage $1 failed. Everyone is back on the previous version."
+            npx wrangler versions deploy "$OLD@100%" --yes --message "rollback from ${GITHUB_SHA::7}"
+            exit 1
+          }
+          for pct in 10 50; do
+            npx wrangler versions deploy "$NEW@$pct%" "$OLD@$((100 - pct))%" --yes --message "canary ${GITHUB_SHA::7} at $pct%"
+            echo "::notice title=Canary::$pct% of visitors on ${GITHUB_SHA::7}"
+            check || rollback "$pct%"
+          done
+          npx wrangler versions deploy "$NEW@100%" --yes --message "live ${GITHUB_SHA::7}"
+          check || rollback "100%"
+          echo "::notice title=Live::${GITHUB_SHA::7} is live for everyone"
+
+      - name: Promote — main now matches production
+        if: steps.skip.outputs.skip == 'false'
+        continue-on-error: true    # if a branch rule stops the bot, the site is still live; merge dev into main by hand
+        run: git push origin HEAD:main

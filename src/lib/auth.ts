@@ -18,24 +18,33 @@ export const YOUTH_PERMS = [
   ["reports", "Reports"],
   ["services", "Weekly services"],
   ["events", "Events & forms"],
-  ["members", "Members & my people"],
+  ["members", "Members (all)"],
+  ["people", "My people (members assigned to me)"],
   ["votes", "Voting"],
   ["prayer", "Prayer requests"],
+  ["youth_tickets", "Approve tickets for youth events"],
 ] as const;
-export const YOUTH_DEFAULT = ["fridays", "scan", "reports"];
+export const YOUTH_DEFAULT = ["fridays", "scan", "reports", "youth_tickets"];
+/** New admins start with reports and weekly services only; the main admin ticks anything else. */
+export const ADMIN_DEFAULT = ["reports", "services"];
 
 /** Which permission an admin API call needs (null = full admins only). */
 export function permFor(method: string, path: string): string | null {
   const p = path.replace(/\/+$/, "");
-  if (p === "/api/admin/whoami" || p === "/api/admin/meta") return "*";
-  if (/^\/api\/admin\/files\//.test(p) && method === "GET") return "events|services|reports";
+  if (p === "/api/admin/whoami" || p === "/api/admin/meta" || (p === "/api/admin/stats" && method === "GET")) return "*";
+  if (/^\/api\/admin\/files\//.test(p) && method === "GET") return "events|services|reports|youth_tickets";
+  if (/^\/api\/admin\/access-requests?(\/|$)/.test(p)) return "*";   // anyone on the team can ask for more access (super decides)
+  // Youth events: youth leaders with "youth_tickets" approve tickets and tell ticket holders about changes (checked per event).
+  if ((p === "/api/admin/approvals" && method === "GET") || (/^\/api\/admin\/registrations\/[^/]+$/.test(p) && method === "PATCH")
+    || (/^\/api\/admin\/events\/[^/]+\/notify$/.test(p) && method === "POST")) return "events|youth_tickets";
   if (/^\/api\/admin\/fridays(\/|$)/.test(p)) return "fridays";
   if (/^\/api\/admin\/tickets\/(check-in|[^/]+)$/.test(p) && p !== "/api/admin/tickets/undo") return "scan";
   if (method === "GET" && (p === "/api/admin/events" || /^\/api\/admin\/events\/[^/]+\/tickets$/.test(p))) return "scan|events";
   if (/^\/api\/admin\/(reports|report|report\.csv|ledger)(\/|$)/.test(p)) return "reports";
   if (/^\/api\/admin\/(services|sessions|rsvps)(\/|$)/.test(p)) return "services";
   if (/^\/api\/admin\/(events|registrations|insights|approvals)(\/|$)/.test(p)) return "events";
-  if (/^\/api\/admin\/(members|people)(\/|$)/.test(p)) return "members";
+  if (/^\/api\/admin\/people(\/|$)/.test(p)) return "members|people";
+  if (/^\/api\/admin\/members(\/|$)/.test(p)) return "members";
   if (/^\/api\/admin\/votes(\/|$)/.test(p)) return "votes";
   if (/^\/api\/admin\/(prayers|wall)(\/|$)/.test(p)) return "prayer";
   return null;
@@ -45,9 +54,9 @@ export function youthMay(perms: string[] | undefined, need: string | null): bool
   if (need === "*") return true;
   return need.split("|").some((n) => (perms || []).includes(n));
 }
-export function parsePerms(raw: string | null | undefined): string[] {
+export function parsePerms(raw: string | null | undefined, dflt: readonly string[] = YOUTH_DEFAULT): string[] {
   try { const v = JSON.parse(raw || "null"); if (Array.isArray(v)) return v.filter((x) => YOUTH_PERMS.some(([k]) => k === x)); } catch { /* fall through */ }
-  return [...YOUTH_DEFAULT];
+  return [...dflt];
 }
 
 // ---------------------------------------------------------------- Google ID tokens
@@ -148,21 +157,22 @@ export async function getSession(env: Env, req: Request): Promise<Session | null
   ).bind(hash, new Date(now).toISOString()).first<User & { kind: "user" | "admin"; admin_until: string | null }>();
   if (!row) return null;
   const { kind, admin_until, ...user } = row;
-  if (kind !== "admin") return { user, kind };
-  // Admin powers lapse after 12 quiet hours (the person stays signed in as a member) and renew while in use.
-  if (admin_until) {
-    const left = new Date(admin_until).getTime() - now;
-    if (left <= 0) return { user, kind: "user" };
-    if (left < (ADMIN_HOURS / 2) * 3600_000) {
-      await env.DB.prepare("UPDATE sessions SET admin_until = ? WHERE token_hash = ?").bind(new Date(now + ADMIN_HOURS * 3600_000).toISOString(), hash).run();
+  // The main (super) admin account still needs the emailed code after Google: its powers only come with a
+  // verified admin session, which lapses after 12 quiet hours and renews while in use.
+  if (isAdminEmail(env, user.email)) {
+    if (kind !== "admin") return { user, kind: "user" };
+    if (admin_until) {
+      const left = new Date(admin_until).getTime() - now;
+      if (left <= 0) return { user, kind: "user" };
+      if (left < (ADMIN_HOURS / 2) * 3600_000) await env.DB.prepare("UPDATE sessions SET admin_until = ? WHERE token_hash = ?").bind(new Date(now + ADMIN_HOURS * 3600_000).toISOString(), hash).run();
     }
+    return { user, kind: "admin", role: "super" };
   }
-  // Admin sessions: the super admin (ADMIN_EMAIL), or someone the super admin has given a role.
-  // If a role is removed, the session quietly drops back to a normal member session.
-  if (isAdminEmail(env, user.email)) return { user, kind, role: "super" };
+  // Everyone else: one account. Admins and youth leaders get exactly the parts the main admin ticked for them,
+  // on their normal sign-in, with no switching and no codes. Remove the role and it's a member's sign-in again.
   const r = await env.DB.prepare("SELECT role, perms FROM admin_roles WHERE user_id = ?").bind(user.id).first<{ role: string; perms: string | null }>();
-  if (r?.role === "youth_leader") return { user, kind, role: "youth", perms: parsePerms(r.perms) };
-  if (r) return { user, kind, role: "staff" };
+  if (r?.role === "youth_leader") return { user, kind: "admin", role: "youth", perms: parsePerms(r.perms) };
+  if (r) return { user, kind: "admin", role: "staff", perms: parsePerms(r.perms, ADMIN_DEFAULT) };
   return { user, kind: "user" };
 }
 
@@ -189,9 +199,9 @@ export async function requireSuper(env: Env, req: Request): Promise<Session> {
 export async function requireAdmin(env: Env, req: Request): Promise<Session> {
   const s = await getSession(env, req);
   if (!s || s.kind !== "admin") throw new HttpError(401, "Please sign in as the church admin.");
-  // Youth leaders only reach the parts the main admin has switched on for them.
-  if (s.role === "youth" && !youthMay(s.perms, permFor(req.method, new URL(req.url).pathname))) {
-    throw new HttpError(403, "Youth leaders don't have access to this. Ask the main admin if you need it.");
+  // Admins and youth leaders only reach the parts the main admin has switched on for them.
+  if (s.role !== "super" && !youthMay(s.perms, permFor(req.method, new URL(req.url).pathname))) {
+    throw new HttpError(403, "You don't have access to this yet. Use “Request more access” in Settings and the main admin will decide.");
   }
   return s;
 }

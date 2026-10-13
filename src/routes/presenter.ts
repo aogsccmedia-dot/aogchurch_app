@@ -1,4 +1,5 @@
-// SCC Presenter (desktop app) beta: email + password accounts, the first 20 testers, downloads and feedback.
+// SCC Presenter (desktop app) beta: email + password accounts, the first 20 testers reserve a place now,
+// downloads open on 1 February 2027 (no download links before then), and feedback.
 import type { Env } from "../env.ts";
 import { adminEmail, siteUrl } from "../env.ts";
 import { HttpError, Router, clientIp, json, readJson } from "../lib/http.ts";
@@ -8,12 +9,13 @@ import { hashPassword, verifyPassword, uuid } from "../lib/crypto.ts";
 import { sendMail } from "../lib/email.ts";
 import * as T from "../emails/templates.ts";
 
-export const BETA = { slots: 20, ends: "2026-12-31", endsAt: "2027-01-01T00:00:00+02:00", fullRelease: "2027-01-31" };
+export const BETA = { slots: 20, opens: "2027-02-01", opensAt: "2027-02-01T00:00:00+02:00" };
 const REPO = "aogsccmedia-dot/scc-presenter";
 const ASSETS = { windows: "SCC-Presenter-Setup.exe", mac: "SCC-Presenter.dmg" } as const;
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,}$/i;
 
-export const betaOpen = (now = Date.now()) => now < Date.parse(BETA.endsAt);
+/** Downloads are switched off until the beta opens on 1 February 2027. */
+export const downloadsOpen = (now = Date.now()) => now >= Date.parse(BETA.opensAt);
 
 type Release = { version: string; published_at: string; windows: boolean; mac: boolean } | null;
 
@@ -114,8 +116,9 @@ export function presenterRoutes(router: Router, env: Env): void {
     const s = await getSession(env, req);
     const me = s ? await testerFor(s.user.id) : null;
     const n = await taken();
-    return json({ ok: true, slots: BETA.slots, taken: n, left: Math.max(0, BETA.slots - n), open: betaOpen() && n < BETA.slots, ended: !betaOpen(),
-      ends: BETA.ends, full_release: BETA.fullRelease, release: await latestRelease(), signed_in: !!s, user: s ? { email: s.user.email, name: s.user.given_name || s.user.name } : null,
+    const live = downloadsOpen();
+    return json({ ok: true, slots: BETA.slots, taken: n, left: Math.max(0, BETA.slots - n), open: n < BETA.slots, downloads_open: live,
+      opens: BETA.opens, release: live ? await latestRelease() : null, signed_in: !!s, user: s ? { email: s.user.email, name: s.user.given_name || s.user.name } : null,
       tester: me ? { slot: me.slot, beta_key: me.beta_key, downloads: me.downloads } : null });
   });
 
@@ -123,7 +126,6 @@ export function presenterRoutes(router: Router, env: Env): void {
     await rateLimit(env, "betajoin", clientIp(req), 6, 900);
     const s = await getSession(env, req);
     if (!s) throw new HttpError(401, "Please sign in first.");
-    if (!betaOpen()) throw new HttpError(410, "The beta has ended. The full release arrives on 31 January 2027.");
     const existing = await testerFor(s.user.id);
     if (existing) return json({ ok: true, tester: { slot: existing.slot, beta_key: existing.beta_key, downloads: existing.downloads } });
     const verified = await env.DB.prepare("SELECT email_verified_at, google_sub FROM users WHERE id = ?").bind(s.user.id).first<{ email_verified_at: string | null; google_sub: string | null }>();
@@ -134,13 +136,13 @@ export function presenterRoutes(router: Router, env: Env): void {
     // and nobody can get a 21st, even if they press Join at the same moment.
     for (let attempt = 0; attempt < 4; attempt++) {
       const n = await taken();
-      if (n >= BETA.slots) throw new HttpError(409, "All 20 beta places have been taken. The full release arrives on 31 January 2027.");
+      if (n >= BETA.slots) throw new HttpError(409, "All 20 beta places have been taken. SCC Presenter beta arrives on 1 February 2027.");
       const id = uuid(), key = betaKey();
       try {
         const r = await env.DB.prepare(`INSERT INTO beta_testers (id, user_id, email, name, slot, beta_key, church, role, os)
           SELECT ?,?,?,?, (SELECT COALESCE(MAX(slot), 0) + 1 FROM beta_testers), ?,?,?,? WHERE (SELECT COUNT(*) FROM beta_testers) < ?`)
           .bind(id, s.user.id, s.user.email, name, key, clip(b.church, 120) || null, clip(b.role, 80) || null, clip(b.os, 20) || null, BETA.slots).run();
-        if (!r.meta.changes) throw new HttpError(409, "All 20 beta places have been taken. The full release arrives on 31 January 2027.");
+        if (!r.meta.changes) throw new HttpError(409, "All 20 beta places have been taken. SCC Presenter beta arrives on 1 February 2027.");
       } catch (e) {
         if (e instanceof HttpError) throw e;
         const again = await testerFor(s.user.id);
@@ -149,8 +151,8 @@ export function presenterRoutes(router: Router, env: Env): void {
       }
       const t = await testerFor(s.user.id);
       if (!t) throw new HttpError(409, "All 20 beta places have been taken.");
-      await sendMail(env, { to: t.email, ...T.presenterWelcome(brand, { name, slot: t.slot, key: t.beta_key }), template: "presenter_welcome" });
-      await sendMail(env, { to: adminEmail(env), subject: `New SCC Presenter beta tester #${t.slot}: ${name}`, html: `<p>${T.esc(name)} &lt;${T.esc(t.email)}&gt; joined the SCC Presenter beta as tester #${t.slot}.</p><p><a href="${brand.site}/admin#report">Open the admin portal</a></p>`, text: `${name} <${t.email}> joined the SCC Presenter beta as tester #${t.slot}.\nChurch: ${clip(b.church, 120) || "-"}\nRole: ${clip(b.role, 80) || "-"}\n\n${brand.site}/admin#report`, template: "presenter_admin" });
+      await sendMail(env, { to: t.email, ...T.presenterWelcome(brand, { name, slot: t.slot, key: t.beta_key, open: downloadsOpen() }), template: "presenter_welcome" });
+      await sendMail(env, { to: adminEmail(env), subject: `New SCC Presenter beta tester #${t.slot}: ${name}`, html: `<p>${T.esc(name)} &lt;${T.esc(t.email)}&gt; reserved SCC Presenter beta place #${t.slot}.</p><p><a href="${brand.site}/admin#report">Open the admin portal</a></p>`, text: `${name} <${t.email}> reserved SCC Presenter beta place #${t.slot}.\nChurch: ${clip(b.church, 120) || "-"}\nRole: ${clip(b.role, 80) || "-"}\n\n${brand.site}/admin#report`, template: "presenter_admin" });
       return json({ ok: true, tester: { slot: t.slot, beta_key: t.beta_key, downloads: 0 } });
     }
     throw new HttpError(409, "All 20 beta places have been taken.");
@@ -163,7 +165,7 @@ export function presenterRoutes(router: Router, env: Env): void {
     if (!s) return back("signin");
     const t = await testerFor(s.user.id);
     if (!t) return back("join");
-    if (!betaOpen()) return back("ended");
+    if (!downloadsOpen()) return back("soon");
     const rel = await latestRelease();
     if (!rel || !rel[os]) return back("preparing");
     await env.DB.batch([
@@ -203,4 +205,18 @@ export function presenterRoutes(router: Router, env: Env): void {
     ]);
     return json({ ok: true, beta: BETA, release: await latestRelease(), testers: testers.results, feedback: feedback.results, downloads: downloads.results });
   });
+}
+
+/** On 1 February 2027, email everyone who reserved a beta place that downloads are open (once). */
+export async function processBetaLaunch(env: Env, now = new Date()): Promise<number> {
+  if (!downloadsOpen(now.getTime())) return 0;
+  const key = "presenter_beta_launch_sent";
+  if (await env.DB.prepare("SELECT 1 FROM settings WHERE key = ?").bind(key).first()) return 0;
+  await env.DB.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)").bind(key, now.toISOString()).run();
+  const { results } = await env.DB.prepare("SELECT email, COALESCE(name, '') AS name, slot, beta_key FROM beta_testers ORDER BY slot").all<{ email: string; name: string; slot: number; beta_key: string }>();
+  let n = 0;
+  for (const t of results) {
+    if (await sendMail(env, { to: t.email, ...T.presenterBetaOpen({ site: siteUrl(env) }, { name: t.name || "there", slot: t.slot, key: t.beta_key }), template: "presenter_beta_open" })) n++;
+  }
+  return n;
 }

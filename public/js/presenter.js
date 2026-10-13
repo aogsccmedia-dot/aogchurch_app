@@ -1,4 +1,5 @@
-// SCC Presenter beta page: places left, sign in (Google or email + password), join, download, feedback.
+// SCC Presenter beta page: places left, sign in (Google or email + password), reserve a place.
+// Downloads stay off until the beta opens on 1 February 2027; then the download buttons appear.
 import { api, esc, toast } from "./site.js";
 import { getMe, googleButton, whenSignedIn, renderHeaderUser } from "./auth.js";
 import { otpField } from "./otp.js";
@@ -12,7 +13,7 @@ const OS = { windows: { name: "Windows", note: "Windows 10 or 11 · 64-bit", fil
 const fmt = (iso) => new Intl.DateTimeFormat("en-ZA", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso + "T12:00:00"));
 let state = null;
 
-const MSG = { signin: "Please sign in to download.", join: "Join the beta to download.", ended: "The beta has ended. The full release arrives on 31 January 2027.", preparing: "The download is being prepared. Please check back in a few minutes." };
+const MSG = { signin: "Please sign in first.", join: "Reserve a beta place first.", soon: "Downloads open on 1 February 2027.", preparing: "The download is being prepared. Please check back in a few minutes." };
 
 async function load() {
   state = await api("/api/presenter/status");
@@ -24,25 +25,23 @@ function placesBar(s) {
   return `<div class="places"><div class="places-top"><b>${s.left}</b> of ${s.slots} beta places left</div><div class="places-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${s.slots}" aria-valuenow="${s.taken}"><i style="width:${pct}%"></i></div></div>`;
 }
 
+const soonChip = (s) => `<span class="soon-chip glow">${icon("calendar")} Beta arrives ${fmt(s.opens)}</span>`;
+
 function render() {
   const s = state;
-  if (s.ended) {
-    card.innerHTML = `<p class="eyebrow gold">Beta closed</p><h2>Thank you, testers!</h2><p>The beta ended on ${fmt(s.ends)}. The full release of SCC Presenter arrives on <b>${fmt(s.full_release)}</b>.</p><span class="soon-chip">${icon("calendar")} Coming soon · ${fmt(s.full_release)}</span>`;
-    return;
-  }
   if (s.tester) return renderTester(s);
   if (!s.signed_in) return renderSignIn(s);
   if (!s.open) {
-    card.innerHTML = `<p class="eyebrow gold">Beta full</p><h2>All 20 places are taken</h2><p>Thank you for your interest. The full release of SCC Presenter arrives on <b>${fmt(s.full_release)}</b>, free for every church.</p><span class="soon-chip">${icon("calendar")} Coming ${fmt(s.full_release)}</span>`;
+    card.innerHTML = `<p class="eyebrow gold">Coming soon</p><h2>All 20 beta places are reserved</h2><p>Thank you for your interest. SCC Presenter stays free for every church.</p>${soonChip(s)}`;
     return;
   }
   renderJoin(s);
 }
 
 function renderSignIn(s) {
-  card.innerHTML = `<p class="eyebrow gold">Join the beta</p><h2>Be one of the first 20 testers</h2>
+  card.innerHTML = `<p class="eyebrow gold">Coming soon</p><h2>Beta arrives ${fmt(s.opens)}</h2>
     ${placesBar(s)}
-    <p class="muted-text">Sign in, claim your place and download SCC Presenter. Testing runs until ${fmt(s.ends)}.</p>
+    <p class="muted-text">Reserve one of the first 20 places. We'll email you the day it opens.</p>
     <div class="gbtn" id="pres-g"></div>
     <div class="or"><span>or use email</span></div>
     <div class="seg pres-tabs" role="tablist"><button class="on" data-mode="new">Create account</button><button data-mode="login">Sign in</button></div>
@@ -102,26 +101,35 @@ async function signedIn() {
 }
 
 function renderJoin(s) {
-  card.innerHTML = `<p class="eyebrow gold">Join the beta</p><h2>Claim your place${s.user?.name ? `, ${esc(s.user.name)}` : ""}</h2>
+  card.innerHTML = `<p class="eyebrow gold">Beta arrives ${fmt(s.opens)}</p><h2>Reserve your place${s.user?.name ? `, ${esc(s.user.name)}` : ""}</h2>
     ${placesBar(s)}
     <form class="pres-form" id="join-form">
       <label class="field"><span>Your church or ministry</span><input class="input" name="church" maxlength="120" placeholder="e.g. AOG Sandton City Church"></label>
       <label class="field"><span>What do you do on Sundays?</span><select class="input" name="role"><option value="">Choose…</option><option>Media / projection</option><option>Worship team</option><option>Pastor / leader</option><option>Livestream / sound</option><option>Other</option></select></label>
       <label class="field"><span>Your computer</span><select class="input" name="os"><option value="windows">Windows</option><option value="mac">Mac</option></select></label>
       <p class="fine">By joining you agree to try SCC Presenter and share honest feedback. We'll email your beta key to ${esc(s.user?.email || "you")}.</p>
-      <button class="btn btn-gold" type="submit">Claim my beta place</button>
+      <button class="btn btn-gold btn-glow" type="submit">Reserve my place</button>
     </form>`;
   const f = card.querySelector("#join-form");
   if (myOs) f.os.value = myOs;
   f.addEventListener("submit", async (e) => {
     e.preventDefault();
-    try { await api("/api/presenter/join", { method: "POST", body: { church: f.church.value, role: f.role.value, os: f.os.value } }); await load(); toast("You're in! Your beta key is on its way by email."); }
+    try { await api("/api/presenter/join", { method: "POST", body: { church: f.church.value, role: f.role.value, os: f.os.value } }); await load(); toast("Your place is reserved. Check your email."); }
     catch (err) { toast(err.message); await load(); }
   });
 }
 
 function renderTester(s) {
-  const t = s.tester, rel = s.release;
+  const t = s.tester;
+  if (!s.downloads_open) {
+    card.innerHTML = `<p class="eyebrow gold">Place #${t.slot} of ${s.slots} · reserved</p><h2>You're on the list. Thank you!</h2>
+      <div class="beta-key"><span>Your beta key</span><code id="bkey">${esc(t.beta_key)}</code><button class="btn btn-sm" type="button" id="bcopy">Copy</button></div>
+      ${soonChip(s)}
+      <p class="fine">Downloads open on ${fmt(s.opens)}. We'll email you that morning.</p>`;
+    card.querySelector("#bcopy").addEventListener("click", () => navigator.clipboard?.writeText(t.beta_key).then(() => toast("Beta key copied")));
+    return;
+  }
+  const rel = s.release;
   const order = myOs === "mac" ? ["mac", "windows"] : ["windows", "mac"];
   const btn = (os, primary) => rel && rel[os]
     ? `<a class="btn ${primary ? "btn-gold" : ""} dl-btn" href="/api/presenter/download/${os}" data-os="${os}">${icon("download")}<span><b>Download for ${OS[os].name}</b><small>${OS[os].note} · v${esc(rel.version)}</small></span></a>`
@@ -140,7 +148,7 @@ function renderTester(s) {
         "Go to Settings → Beta in the app and paste your beta key.",
       ]).map((x) => `<li>${x}</li>`).join("")}</ol></details>
     <button class="btn" type="button" id="fb-open">${icon("messageCircle")} Send feedback</button>
-    <p class="fine">Tip: the app also has a <b>Feedback</b> button at the top. Testing runs until ${fmt(s.ends)}.</p>`;
+    <p class="fine">Tip: the app also has a <b>Feedback</b> button at the top.</p>`;
   card.querySelector("#bcopy").addEventListener("click", () => navigator.clipboard?.writeText(t.beta_key).then(() => toast("Beta key copied")));
   card.querySelector("#fb-open").addEventListener("click", feedbackForm);
   card.querySelectorAll(".dl-btn[data-os]").forEach((a) => a.addEventListener("click", () => {

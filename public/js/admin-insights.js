@@ -428,8 +428,8 @@ export function initInsights(ctx) {
     const dl = Object.fromEntries((d.downloads || []).map((x) => [x.os, x.n]));
     const tdate = (iso) => iso ? longDay(iso) : "—";
     $("#presenter-doc").innerHTML = `
-      <div class="kpis">${kpi(`${d.testers.length} / ${d.beta.slots}`, "Testers")}${kpi(num((dl.windows || 0) + (dl.mac || 0)), "Downloads", `Windows ${num(dl.windows || 0)} · Mac ${num(dl.mac || 0)}`)}${kpi(num(fbs.length), "Feedback")}${kpi(avg("overall"), "Average rating", `Ease ${avg("ease")}`)}</div>
-      <p class="muted">Beta runs until ${esc(d.beta.ends)} · full release ${esc(d.beta.fullRelease)} · latest build ${d.release ? "v" + esc(d.release.version) : "being prepared"}.</p>
+      <div class="kpis">${kpi(`${d.testers.length} / ${d.beta.slots}`, "Reserved places")}${kpi(num((dl.windows || 0) + (dl.mac || 0)), "Downloads", `Windows ${num(dl.windows || 0)} · Mac ${num(dl.mac || 0)}`)}${kpi(num(fbs.length), "Feedback")}${kpi(avg("overall"), "Average rating", `Ease ${avg("ease")}`)}</div>
+      <p class="muted">Beta places reserved now · downloads open ${esc(d.beta.opens)} (no download links before then) · latest build ${d.release ? "v" + esc(d.release.version) : "being prepared"}.</p>
       <div class="card"><h3>Testers</h3>${d.testers.length ? `<div class="list">${d.testers.map((t) => `<div class="row-item"><b>#${t.slot} ${esc(t.name || "")}</b> <span class="muted">${esc(t.email)}</span><br><small class="muted">${esc(t.church || "")}${t.role ? " · " + esc(t.role) : ""} · ${esc(t.os || "")} · ${num(t.downloads)} download${t.downloads === 1 ? "" : "s"} · ${num(t.feedback)} feedback · joined ${tdate(t.created_at)}</small></div>`).join("")}</div>` : `<p class="muted">No testers yet. Share aogsccyouth.com/presenter.</p>`}</div>
       <div class="card"><h3>Feedback</h3>${fbs.length ? fbs.map((f) => {
         let sys = null; try { sys = f.system ? JSON.parse(f.system) : null; } catch { /* ignore */ }

@@ -39,6 +39,13 @@ export function faithRoutes(router: Router, env: Env): void {
   });
 
   // ---------- Prayer Wall ----------
+  // One-click "stop the weekly prayer email" (from the link in each email).
+  router.get("/api/prayer/weekly/stop", async (req) => {
+    const token = new URL(req.url).searchParams.get("token") || "";
+    if (token) await env.DB.prepare("UPDATE prayer_weekly SET opted_out = 1, updated_at = ? WHERE token = ?").bind(new Date().toISOString(), token).run();
+    return new Response(null, { status: 303, headers: { Location: "/prayer?weekly=off" } });
+  });
+
   router.get("/api/wall", async (req) => {
     const s = await getSession(env, req);
     const uid = s?.user.id ?? "";

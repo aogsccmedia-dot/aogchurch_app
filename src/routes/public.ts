@@ -152,7 +152,7 @@ export function publicRoutes(router: Router, env: Env): void {
     // Every admin hears about every new ticket (in the background, so the person isn't kept waiting).
     const teamMail = (async () => {
       const mail = T.adminNewRegistration({ site: siteUrl(env) }, { name: name!, title: e.title, ref, amount: amountDue ? `R${amountDue}` : "", guests, status, regId: id, eventId: e.id });
-      for (const t of await teamRecipients(env, "events")) await sendMail(env, { to: t.email, ...mail, template: status === "pending" ? "admin_payment_review" : "admin_new_ticket" });
+      for (const t of await teamRecipients(env, (e as { ministry_group?: string }).ministry_group === "youth" ? "events|youth_tickets" : "events")) await sendMail(env, { to: t.email, ...mail, template: status === "pending" ? "admin_payment_review" : "admin_new_ticket" });
     })().catch((err) => console.error("team registration email failed", err));
     if (ctx?.waitUntil) ctx.waitUntil(teamMail); else await teamMail;
     return json({ ok: true, status, ref, message: e.confirmation_message, amount_due: amountDue }, 201);

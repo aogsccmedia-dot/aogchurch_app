@@ -31,20 +31,21 @@ export function authRoutes(router: Router, env: Env): void {
     const member = await env.DB.prepare("SELECT ref_code, status, first_name, preferred_name, created_at FROM members WHERE (user_id = ? OR email = ?) AND status != 'revoked' ORDER BY created_at DESC LIMIT 1")
       .bind(s.user.id, s.user.email).first();
     const sub = await env.DB.prepare("SELECT status FROM subscribers WHERE email = ?").bind(s.user.email).first<{ status: string }>();
-    return json({ ok: true, user: s.user, is_admin: s.kind === "admin", admin_role: s.role ?? null, admin_perms: s.role === "youth" ? s.perms : null, can_admin: await canAdmin(env, s.user), admin_account: isAdminEmail(env, s.user.email),
+    return json({ ok: true, user: s.user, is_admin: s.kind === "admin", admin_role: s.role ?? null, admin_perms: s.role && s.role !== "super" ? s.perms : null, can_admin: await canAdmin(env, s.user), admin_account: isAdminEmail(env, s.user.email),
       member, subscribed: sub?.status === "active", google_client_id: env.GOOGLE_CLIENT_ID || null });
   });
 
-  /** Sign in with Google (everyone). The admin account must additionally pass an emailed code. */
+  /** Sign in with Google (everyone). The main admin account must additionally pass an emailed code. */
   router.post("/api/auth/google", async (req) => {
     await rateLimit(env, "google", clientIp(req), 30, 600);
     const { credential } = await readJson<{ credential?: string }>(req);
     if (!credential) throw new HttpError(400, "Missing Google credential.");
     const g = await verifyGoogleToken(env, credential);
     const user = await upsertUser(env, g);
+    // Only the main admin account needs an emailed code on top of Google. Everyone else, including admins and
+    // youth leaders, is signed in straight away with exactly the access they've been given.
     if (isAdminEmail(env, user.email)) {
       const c = await sendAdminCode(env, user.id);
-      // Also give a normal user session so the public site recognises them.
       return json({ ok: true, needs_code: true, ...c }, 200, { "Set-Cookie": await createSession(env, req, user.id, "user") });
     }
     // Link any earlier join-form record made with the same email.
@@ -104,7 +105,19 @@ export function authRoutes(router: Router, env: Env): void {
          JOIN events e ON e.id = r.event_id WHERE (r.user_id = ? OR r.email = ?) AND r.status NOT IN ('cancelled') ORDER BY e.starts_at DESC LIMIT 50`,
     ).bind(s.user.id, s.user.email).all();
     const sub = await env.DB.prepare("SELECT status FROM subscribers WHERE email = ?").bind(s.user.email).first<{ status: string }>();
-    return json({ ok: true, user: s.user, member, registrations, subscribed: sub?.status === "active", service_reminders: await remindersOn(env, s.user.email), is_admin: s.kind === "admin" });
+    const pw = await env.DB.prepare("SELECT opted_out FROM prayer_weekly WHERE email = ?").bind(s.user.email.toLowerCase()).first<{ opted_out: number }>();
+    return json({ ok: true, user: s.user, member, registrations, subscribed: sub?.status === "active", service_reminders: await remindersOn(env, s.user.email), prayer_weekly: !pw?.opted_out, is_admin: s.kind === "admin" });
+  });
+
+  // The Monday prayer-wall email: on unless switched off here or from the link in the email.
+  router.patch("/api/me/prayer-weekly", async (req) => {
+    const s = await getSession(env, req);
+    if (!s) throw new HttpError(401, "Please sign in.");
+    const { on } = await readJson<{ on?: boolean }>(req);
+    const email = s.user.email.toLowerCase();
+    await env.DB.prepare("INSERT INTO prayer_weekly (email, token, opted_out) VALUES (?, ?, ?) ON CONFLICT(email) DO UPDATE SET opted_out = excluded.opted_out, updated_at = ?")
+      .bind(email, crypto.randomUUID().replace(/-/g, ""), on ? 0 : 1, new Date().toISOString()).run();
+    return json({ ok: true, on: !!on });
   });
 
   // Membership: confirm "still a member" or revoke, from the profile page.
