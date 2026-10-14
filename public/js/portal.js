@@ -7,23 +7,33 @@ import { faceInner } from "./faces.js";
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 export const roleName = (me) => me?.admin_role === "super" ? "Main admin" : me?.admin_role === "youth" ? "Youth leader" : me?.admin_role ? "Admin" : null;
 
-export function tabsFor(me) {
+// The bottom bar: four big buttons that always fit, on any screen. Everything else sits under "More".
+export function mainTabs(me) {
+  return [
+    me.admin_account ? ["/admin/", "layoutDashboard", "Admin"] : ["/me", "home", "Home"],
+    ["/assistant", "sparkles", "Ask SCC"],
+    ["/devotions", "bookOpen", "Devotions"],
+  ];
+}
+export function moreTabs(me) {
   const role = roleName(me);
   return [
-    !me.admin_account && ["/me", "home", "Home"],
-    ["/devotions", "bookOpen", "Devotions"],
-    ["/assistant", "sparkles", "Ask SCC"],
     ["/vote", "vote", "Vote"],
     ["/store", "landmark", "Store"],
-    role && ["/admin/", "layoutDashboard", me.admin_role === "youth" ? "Leader" : "Admin"],
+    role && !me.admin_account && ["/admin/", "layoutDashboard", me.admin_role === "youth" ? "Youth leader portal" : "Admin portal"],
     ["/settings", "settings", "Settings"],
+    ["/help", "messageCircle", "How to use the app"],
   ].filter(Boolean);
 }
+export const tabsFor = (me) => [...mainTabs(me), ...moreTabs(me)];
 
-/** Draw the portal tabs into `el` (a <nav>). `active` is the path of the current page. */
+/** Inside the admin portal (which has its own bottom actions), the same four buttons sit at the top in `el`. */
 export function renderTabs(el, me, active) {
-  if (!el || !me?.user) return;
-  el.innerHTML = tabsFor(me).map(([href, ico, label]) => `<a href="${href}" class="${href.replace(/\/$/, "") === active.replace(/\/$/, "") ? "on" : ""}"${href.replace(/\/$/, "") === active.replace(/\/$/, "") ? ' aria-current="page"' : ""}>${icon(ico)}<span>${esc(label)}</span></a>`).join("");
+  if (!me?.user) return;
+  sheetMe = me;
+  if (!el) return renderBottom(me);
+  el.innerHTML = barHtml(me);
+  el.classList.add("four");
   el.hidden = false;
 }
 
@@ -55,18 +65,12 @@ export function renderPortalNav(me) {
   }
   root.classList.add("signed-in");
   // The app bar: one top navigation for everyone who's signed in (no side menu).
-  const tabsEl = document.querySelector("[data-app-tabs]");
-  if (tabsEl) {
-    const html = tabsFor(me).map(([h, i, l]) => link(h, i, l)).join("");
-    if (tabsEl.innerHTML !== html) tabsEl.innerHTML = html;
-    const on = tabsEl.querySelector(".on"); if (on) tabsEl.scrollLeft = on.offsetLeft - (tabsEl.clientWidth - on.offsetWidth) / 2;
-    const role = roleName(me), r = document.querySelector("[data-app-role]");
-    if (r) { r.textContent = role || "Member"; r.dataset.kind = me.admin_role || "member"; }
-    const av = document.querySelector("[data-app-avatar]"), u = me.user;
-    if (av) av.innerHTML = faceInner(u);
-    wireTabScroll(tabsEl);
-    const brand = document.querySelector(".app-brand"); if (brand) brand.href = me.admin_account ? "/admin/" : "/me";
-  }
+  const role = roleName(me), r = document.querySelector("[data-app-role]");
+  if (r) { r.textContent = role || "Member"; r.dataset.kind = me.admin_role || "member"; }
+  const av = document.querySelector("[data-app-avatar]");
+  if (av) av.innerHTML = faceInner(me.user);
+  const brand = document.querySelector(".app-brand"); if (brand) brand.href = me.admin_account ? "/admin/" : "/me";
+  renderBottom(me);
   // The logo takes you Home inside the app (signing out is the way back to the website).
   document.querySelectorAll(".site-header .brand, .menu .brand").forEach((b) => { b.href = me.admin_account ? "/admin/" : "/me"; });
   prefetchTabs(me);
@@ -79,22 +83,51 @@ export function renderPortalNav(me) {
   }
 }
 
-// The tab row can be swiped sideways on small screens: soft edges and arrows show there's more.
-function wireTabScroll(el) {
-  if (el.dataset.wired) return update(); el.dataset.wired = "1";
-  function update() {
-    const w = el.parentElement, max = el.scrollWidth - el.clientWidth;
-    w.classList.toggle("more-left", el.scrollLeft > 4);
-    w.classList.toggle("more-right", el.scrollLeft < max - 4);
-  }
-  const wrap = document.createElement("div"); wrap.className = "app-tabs-wrap";
-  el.parentNode.insertBefore(wrap, el); wrap.append(el);
-  const mk = (dir) => { const b = document.createElement("button"); b.type = "button"; b.className = `tabs-arrow ${dir}`; b.setAttribute("aria-label", dir === "left" ? "More tabs on the left" : "More tabs on the right");
-    b.innerHTML = icon(dir === "left" ? "arrowLeft" : "arrowRight"); b.addEventListener("click", () => el.scrollBy({ left: (dir === "left" ? -1 : 1) * el.clientWidth * .7, behavior: "smooth" })); return b; };
-  wrap.prepend(mk("left")); wrap.append(mk("right"));
-  el.addEventListener("scroll", update, { passive: true }); addEventListener("resize", update);
-  update();
+const inMore = (me) => moreTabs(me).some(([h]) => isOn(h));
+function barHtml(me) {
+  const more = inMore(me);
+  return mainTabs(me).map(([h, i, l]) => link(h, i, l)).join("")
+    + `<button type="button" class="${more ? "on" : ""}" data-app-more aria-haspopup="dialog" aria-expanded="false">${icon("menu")}<span>More</span></button>`;
 }
+
+let sheetMe = null;
+function renderBottom(me) {
+  sheetMe = me;
+  let el = document.querySelector("[data-app-bottom]");
+  if (!el) { el = document.createElement("nav"); el.className = "app-bottom"; el.dataset.appBottom = ""; el.setAttribute("aria-label", "Your portal"); document.body.append(el); }
+  const html = barHtml(me);
+  if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }
+  document.body.classList.add("has-bottom");
+}
+
+function openSheet() {
+  const me = sheetMe; if (!me?.user) return;
+  closeSheet();
+  const u = me.user, role = roleName(me) || "Member";
+  const el = document.createElement("div");
+  el.className = "app-sheet"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "More");
+  el.innerHTML = `<div class="sheet-card"><header class="sheet-me"><span class="avatar">${faceInner(u)}</span><div><b>${esc(u.name || u.email)}</b><span>${esc(role)}</span></div>
+      <button type="button" class="sheet-x" data-sheet-close aria-label="Close">${icon("x")}</button></header>
+    <nav class="sheet-links">${moreTabs(me).map(([h, i, l]) => link(h, i, l)).join("")}</nav>
+    <button type="button" class="btn sheet-out" data-app-signout>${icon("logOut")} Sign out</button></div>`;
+  document.body.append(el);
+  document.querySelector("[data-app-more]")?.setAttribute("aria-expanded", "true");
+  requestAnimationFrame(() => el.classList.add("open"));
+  el.querySelector(".sheet-links a, .sheet-x")?.focus({ preventScroll: true });
+}
+function closeSheet() {
+  document.querySelectorAll(".app-sheet").forEach((s) => s.remove());
+  document.querySelectorAll("[data-app-more]").forEach((b) => b.setAttribute("aria-expanded", "false"));
+}
+document.addEventListener("click", (e) => {
+  const t = e.target;
+  if (t.closest?.("[data-app-more]")) { e.preventDefault(); return document.querySelector(".app-sheet") ? closeSheet() : openSheet(); }
+  if (t.closest?.("[data-sheet-close]") || t.classList?.contains("app-sheet")) return closeSheet();
+  // The admin portal signs out with its own button.
+  if (t.closest?.(".app-sheet [data-app-signout]") && document.getElementById("logout")) { e.preventDefault(); closeSheet(); document.getElementById("logout").click(); }
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
+addEventListener("pageshow", closeSheet);
 
 // Blazing-fast tabs: fetch the portal pages in the background so each tap opens instantly.
 let prefetched = false;
@@ -113,9 +146,9 @@ function prefetchTabs(me) {
 
 // A tapped tab (or any portal link) shows as chosen straight away, while the next page loads.
 document.addEventListener("click", (e) => {
-  const a = e.target.closest?.(".portal-nav a, .portal-tabs a");
+  const a = e.target.closest?.(".app-bottom a, .portal-tabs a, .sheet-links a");
   if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
-  a.parentElement.querySelectorAll("a").forEach((x) => x.classList.toggle("on", x === a));
+  if (!a.closest(".sheet-links")) a.parentElement.querySelectorAll("a, button").forEach((x) => x.classList.toggle("on", x === a));
   a.classList.add("going");
 });
 

@@ -1583,3 +1583,51 @@ html.signed-in .muted-text, html.signed-in .know small, html.signed-in .slide .m
 .app-tabs-wrap.more-left.more-right .app-tabs { -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); }
 .app-tabs a { font-size: 15px; padding: 9px 14px; }
 @media (max-width: 860px) { .app-tabs-wrap { grid-area: tabs; justify-self: stretch; } .app-tabs { width: 100%; } .app-tabs a { font-size: 15px; padding: 10px 13px; } }
+
+/* ---- Signed in: four big buttons fixed at the bottom of every screen (Home · Ask SCC · Devotions · More) ---- */
+.app-bottom { display: none; }
+.app-gap { min-width: 0; }
+html.signed-in .app-bar-in { grid-template-columns: auto 1fr auto; grid-template-areas: none; padding-bottom: 10px; }
+html.signed-in .app-bar-in > * { grid-area: auto; }
+html.signed-in .app-bottom, body.has-bottom .app-bottom {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; position: fixed; z-index: 70; left: 50%; transform: translateX(-50%);
+  bottom: calc(10px + env(safe-area-inset-bottom)); width: min(560px, calc(100% - 20px)); padding: 6px; border-radius: 22px;
+  background: rgba(255, 255, 255, .96); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(31, 28, 52, .12); box-shadow: 0 10px 30px rgba(31, 28, 52, .16);
+}
+.app-bottom a, .app-bottom button { display: grid; justify-items: center; align-content: center; gap: 4px; min-height: 58px; padding: 6px 4px; border: 0; border-radius: 16px; background: none;
+  font: inherit; font-size: 13px; font-weight: 500; color: #4a4760; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color .12s, color .12s; text-align: center; }
+.app-bottom .i { width: 24px; height: 24px; stroke-width: 2; }
+.app-bottom span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.app-bottom a:hover, .app-bottom button:hover { background: #f1eff8; color: #1f1c34; }
+.app-bottom a.on, .app-bottom button.on { background: #1f1c34; color: #fff; }
+.app-bottom a.on .i, .app-bottom button.on .i { color: #e2d5fb; }
+.app-bottom a.going { opacity: .85; }
+html.signed-in body, body.has-bottom { padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important; }
+html.signed-in .toast, body.has-bottom .toast { bottom: calc(100px + env(safe-area-inset-bottom)); }
+html.signed-in .wp-bar { top: 62px !important; }
+@media (max-width: 600px) { .app-help { display: none; } }
+
+/* "More": a simple sheet with the rest of the app and Sign out */
+.app-sheet { position: fixed; inset: 0; z-index: 90; display: grid; align-items: end; justify-items: center; background: rgba(20, 18, 34, 0); transition: background-color .18s; padding: 10px 10px calc(100px + env(safe-area-inset-bottom)); }
+.app-sheet.open { background: rgba(20, 18, 34, .32); }
+.sheet-card { width: min(560px, 100%); background: #fff; border-radius: 22px; padding: 14px; box-shadow: 0 20px 60px rgba(20, 18, 34, .3); transform: translateY(16px); opacity: 0; transition: transform .18s, opacity .18s; }
+.app-sheet.open .sheet-card { transform: none; opacity: 1; }
+.sheet-me { display: flex; align-items: center; gap: 12px; padding: 4px 4px 12px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.sheet-me .avatar { width: 46px; height: 46px; flex: none; }
+.sheet-me div { display: grid; flex: 1; min-width: 0; } .sheet-me b { font-size: 16px; } .sheet-me div span { font-size: 13.5px; color: var(--text-2); }
+.sheet-x { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: #fff; display: grid; place-items: center; cursor: pointer; }
+.sheet-links { display: grid; gap: 2px; }
+.sheet-links a { display: flex; align-items: center; gap: 14px; padding: 14px 12px; border-radius: 14px; font-size: 16.5px; color: #1f1c34; }
+.sheet-links a .i { width: 22px; height: 22px; color: #6b5aa8; }
+.sheet-links a:hover { background: #f4f2fa; }
+.sheet-links a.on { background: #f1eff8; font-weight: 600; }
+.sheet-out { width: 100%; justify-content: center; margin-top: 10px; min-height: 48px; font-size: 16px; }
+@media (prefers-reduced-motion: reduce) { .sheet-card, .app-sheet { transition: none; } }
+
+/* The admin portal keeps its own bottom actions, so the same four buttons sit at the top there. */
+.portal-tabs.four { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: min(560px, 100%); gap: 4px; padding: 5px; border-radius: 18px; }
+.portal-tabs.four a, .portal-tabs.four button { display: grid; justify-items: center; gap: 3px; padding: 8px 4px; border: 0; background: none; font: inherit; font-size: 13px; color: var(--text-2); border-radius: 13px; cursor: pointer; }
+.portal-tabs.four .i { width: 21px; height: 21px; }
+.portal-tabs.four a.on, .portal-tabs.four button.on { background: #111016; color: #fff; }
+html.signed-in .ask-thread { height: clamp(260px, calc(100dvh - 520px), 640px); }
