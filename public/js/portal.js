@@ -115,7 +115,7 @@ function renderBottom(me) {
   let el = document.querySelector("[data-app-bottom]");
   if (!el) { el = document.createElement("nav"); el.className = "app-bottom"; el.dataset.appBottom = ""; el.setAttribute("aria-label", "Your portal"); document.body.append(el); }
   const html = barHtml(me);
-  if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }
+  if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; for (const [h, n] of Object.entries(badges)) setBadge(h, n); }
   document.body.classList.add("has-bottom");
 }
 
@@ -127,7 +127,7 @@ function openSheet() {
   el.className = "app-sheet"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "More");
   el.innerHTML = `<div class="sheet-card"><header class="sheet-me"><span class="avatar">${faceInner(u)}</span><div><b>${esc(u.name || u.email)}</b><span>${esc(role)}</span></div>
       <button type="button" class="sheet-x" data-sheet-close aria-label="Close">${icon("x")}</button></header>
-    ${toolsFor(me).length ? `<p class="sheet-group">Your tools</p><nav class="sheet-links tools">${toolsFor(me).map(([h, i, l]) => link(h, i, l)).join("")}</nav><p class="sheet-group">More</p>` : ""}
+    ${toolsFor(me).length ? `<p class="sheet-group">Your tools</p><nav class="sheet-links tools">${toolsFor(me).map(([h, i, l]) => link(h, i, l)).join("")}<button type="button" class="sheet-ask" data-ask-access>${icon("plus")}<span>Ask for more access</span></button></nav><p class="sheet-group">More</p>` : ""}
     <nav class="sheet-links">${moreTabs(me).map(([h, i, l]) => link(h, i, l)).join("")}</nav>
     <button type="button" class="btn sheet-out" data-app-signout>${icon("logOut")} Sign out</button></div>`;
   document.body.append(el);
@@ -146,24 +146,71 @@ document.addEventListener("click", (e) => {
   // The admin portal signs out with its own button.
   if (t.closest?.(".app-sheet [data-app-signout]") && document.getElementById("logout")) { e.preventDefault(); closeSheet(); document.getElementById("logout").click(); }
 });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeSheet(); document.querySelector(".ask-dialog")?.remove(); } });
+
+// ---- Ask the main admin for more access: one small form, right where you are.
+document.addEventListener("click", (e) => { if (e.target.closest?.("[data-ask-access]")) { e.preventDefault(); closeSheet(); openAccessDialog(); } });
+export async function openAccessDialog() {
+  document.querySelector(".ask-dialog")?.remove();
+  const el = document.createElement("div");
+  el.className = "app-sheet ask-dialog open"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "Ask for more access");
+  el.innerHTML = `<form class="sheet-card"><header class="sheet-me"><span class="ask-ico">${icon("shield")}</span><div><b>Ask for more access</b><span>The main admin gets it straight away</span></div>
+    <button type="button" class="sheet-x" data-x aria-label="Close">${icon("x")}</button></header><div class="ask-body"><p class="muted-text">Loading…</p></div></form>`;
+  document.body.append(el);
+  const close = () => el.remove();
+  el.addEventListener("click", (e) => { if (e.target === el || e.target.closest("[data-x]")) close(); });
+  const body = el.querySelector(".ask-body");
+  let r, who;
+  try { [r, who] = await Promise.all([fetch("/api/admin/access-requests").then((x) => x.json()), fetch("/api/admin/whoami").then((x) => x.json())]); }
+  catch { body.innerHTML = `<p class="muted-text">Couldn't load right now. Please try again.</p>`; return; }
+  const have = new Set(who?.perms || []), pending = (r.requests || []).find((x) => x.status === "pending");
+  const opts = (r.options || []).filter((o) => !have.has(o.key));
+  if (pending) { body.innerHTML = `<p class="ask-wait">${icon("hourglass")} Your request is with the main admin. You'll get an email when it's answered.</p>`; return; }
+  if (!opts.length) { body.innerHTML = `<p class="muted-text">You already have everything. 🙌</p>`; return; }
+  body.innerHTML = `<p class="muted-text">Tap what you'd like to help with:</p><div class="ask-chips">${opts.map((o) => `<label class="ask-chip"><input type="checkbox" name="wants" value="${esc(o.key)}"><span>${esc(o.label)}</span></label>`).join("")}</div>
+    <textarea class="input" name="note" rows="2" maxlength="600" placeholder="Why? (optional)"></textarea><button class="btn btn-gold sheet-out" type="submit">${icon("send")} Send request</button>`;
+  el.querySelector("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target, wants = [...f.querySelectorAll("[name=wants]:checked")].map((x) => x.value);
+    if (!wants.length) { f.querySelector(".ask-chips").classList.add("shake"); setTimeout(() => f.querySelector(".ask-chips")?.classList.remove("shake"), 500); return; }
+    const btn = f.querySelector("[type=submit]"); btn.disabled = true; btn.textContent = "Sending…";
+    const res = await fetch("/api/admin/access-requests", { method: "POST", headers: { "content-type": "application/json", "x-scc-admin": "1" }, body: JSON.stringify({ wants, note: f.note.value }) }).then((x) => x.json()).catch(() => ({}));
+    body.innerHTML = res.ok ? `<p class="ask-wait done">${icon("check")} Sent! The main admin has it now, and you'll get an email with the answer.</p>` : `<p class="muted-text">${esc(res.error || "Couldn't send. Please try again.")}</p>`;
+    if (res.ok) setTimeout(close, 2200);
+  });
+}
+
+/** A small count on a bottom-bar button (e.g. access requests waiting for the main admin). */
+export function setBadge(href, n) {
+  badges[href] = n;
+  document.querySelectorAll(`.app-bottom a[href="${href}"]`).forEach((a) => { a.querySelector(".nb")?.remove(); if (n > 0) a.insertAdjacentHTML("beforeend", `<i class="nb">${n > 9 ? "9+" : n}</i>`); });
+}
+const badges = {};
 addEventListener("pageshow", closeSheet);
 addEventListener("hashchange", () => { closeSheet(); if (sheetMe) renderBottom(sheetMe); });
 
-// Blazing-fast tabs: fetch the portal pages in the background so each tap opens instantly.
+// Blazing-fast tabs: the bottom-bar pages are opened ahead of time in the background, the rest are fetched,
+// and anything you press (or hover) starts loading before you let go.
 let prefetched = false;
 function prefetchTabs(me) {
   if (prefetched) return; prefetched = true;
-  const urls = tabsFor(me).map(([h]) => h).filter((h) => !isOn(h) && h !== "/admin/");
+  const main = mainTabs(me).map(([h]) => h).filter((h) => !isOn(h));
+  const rest = [...moreTabs(me), ...toolsFor(me)].map(([h]) => h.split("#")[0]).filter((h, i, a) => !isOn(h) && a.indexOf(h) === i && !main.includes(h));
   if (HTMLScriptElement.supports?.("speculationrules")) {
     const s = document.createElement("script"); s.type = "speculationrules";
-    s.textContent = JSON.stringify({ prefetch: [{ urls, eagerness: "eager" }], prerender: [{ urls: urls.slice(0, 3), eagerness: "moderate" }] });
+    s.textContent = JSON.stringify({ prerender: [{ urls: main, eagerness: "immediate" }, { urls: rest, eagerness: "moderate" }], prefetch: [{ urls: rest, eagerness: "eager" }] });
     document.head.append(s);
   } else {
-    const go = () => urls.forEach((u) => { const l = document.createElement("link"); l.rel = "prefetch"; l.href = u; document.head.append(l); });
-    (window.requestIdleCallback || ((f) => setTimeout(f, 800)))(go);
+    const go = () => [...main, ...rest].forEach((u) => { const l = document.createElement("link"); l.rel = "prefetch"; l.href = u; document.head.append(l); });
+    (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(go);
   }
 }
+const warmed = new Set();
+document.addEventListener("pointerdown", (e) => {
+  const a = e.target.closest?.(".app-bottom a, .sheet-links a, .tool-tile");
+  if (!a || warmed.has(a.href)) return; warmed.add(a.href);
+  const l = document.createElement("link"); l.rel = "prefetch"; l.href = a.href; document.head.append(l);
+}, { passive: true });
 
 // A tapped tab (or any portal link) shows as chosen straight away, while the next page loads.
 document.addEventListener("click", (e) => {

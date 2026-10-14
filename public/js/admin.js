@@ -5,7 +5,7 @@ import { icon } from "./icons.js";
 import { initInsights } from "./admin-insights.js";
 import { initMore } from "./admin-more.js";
 import { arrivedBySwitch, switchReady } from "./switcher.js";
-import { cacheMe, helloOnce, renderTabs } from "./portal.js";
+import { cacheMe, helloOnce, renderTabs, setBadge } from "./portal.js";
 import { faceInner } from "./faces.js";
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -234,7 +234,12 @@ const EMAIL_SETUP = `<b>Emails to members aren't being delivered yet.</b> Cloudf
   <li>Choose <b>Onboard domain</b> → <b>aogsccyouth.com</b> and accept the DNS records it adds (they're added automatically).</li>
   <li>Wait until the domain shows <b>Verified</b> (usually a few minutes), then come back to <a href="#emails">Email log</a> and press <b>Resend failed emails</b>.</li></ol>`;
 loaders.overview = async () => {
-  const { stats, interests, next_letter, email_enabled, google_enabled, email_health, attention = [] } = await api("/api/admin/stats");
+  const { stats, interests, next_letter, email_enabled, google_enabled, email_health, attention = [], access = [] } = await api("/api/admin/stats");
+  $("#access-card").hidden = !access.length;
+  $("#access-list").innerHTML = access.map((x) => `<div class="item team-row" data-req="${esc(x.id)}"><div><b>${esc(x.name || x.email)}</b> <span class="pill">${x.current_role === "youth_leader" ? "Youth leader" : "Admin"}</span>
+      <div class="meta">Asks for: <b>${esc(x.wants.join(", "))}</b> · ${fmtDate(x.created_at)}</div>${x.note ? `<div class="meta">“${esc(x.note)}”</div>` : ""}</div>
+      <div class="team-actions"><button class="btn btn-sm btn-gold" data-req-yes>${icon("check")} Approve</button><button class="btn btn-sm" data-req-no>Decline</button></div></div>`).join("");
+  setBadge("/admin/", access.length);
   const KIND = { complaint: ["Complaint", "complaints", "new"], prayer: ["Prayer request", "prayers", "pending"], wall: ["Prayer Wall: approve", "prayers", "pending"], message: ["Message", "messages", ""] };
   $("#attention").innerHTML = attention.length ? attention.map((a) => `<a class="att" href="#${KIND[a.kind][1]}"><span class="pill ${KIND[a.kind][2]}">${KIND[a.kind][0]}</span>
       <span class="att-body"><b>${esc(a.title || "")}</b><span class="meta">${esc(a.who || "")} · ${fmtDate(a.created_at)}${a.flag ? " · pastors only" : ""}</span></span><span aria-hidden="true">→</span></a>`).join("")
@@ -894,6 +899,13 @@ $("[data-view=team]").addEventListener("change", safe(async (e) => {
     await api(`/api/admin/team/${user}`, { method: "PATCH", body: { perms: list } });
     toast("Saved. It applies straight away.");
   }
+}));
+$("#access-list").addEventListener("click", safe(async (e) => {
+  const rq = e.target.closest("[data-req]"); if (!rq || !(e.target.closest("[data-req-yes]") || e.target.closest("[data-req-no]"))) return;
+  const yes = !!e.target.closest("[data-req-yes]");
+  rq.style.opacity = ".5"; rq.querySelectorAll("button").forEach((b) => b.disabled = true);
+  try { await api(`/api/admin/access-requests/${rq.dataset.req}`, { method: "PATCH", body: { decision: yes ? "approve" : "decline" } }); toast(yes ? "Approved. It works for them straight away, and they're emailed." : "Declined. They're emailed."); }
+  finally { loaders.overview(); refreshBadges(); }
 }));
 $("[data-view=team]").addEventListener("click", safe(async (e) => {
   const rq = e.target.closest("[data-req]");

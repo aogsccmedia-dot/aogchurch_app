@@ -96,9 +96,14 @@ export function adminRoutes(router: Router, env: Env): void {
         UNION ALL SELECT 'wall', id, substr(request, 1, 140), COALESCE(display_name, 'Someone'), created_at, 0 FROM prayer_wall WHERE status = 'pending'
         UNION ALL SELECT 'message', id, COALESCE(subject, substr(message, 1, 100)), name, created_at, 0 FROM contact_messages WHERE status = 'new'
       ) ORDER BY created_at DESC LIMIT 12`).all();
-    return json({ ok: true, stats: {
+    // The main admin sees access requests first, with Approve / Decline right there.
+    const access = sess.role === "super"
+      ? (await env.DB.prepare("SELECT id, email, name, current_role, wants, note, created_at FROM access_requests WHERE status = 'pending' ORDER BY created_at").all<Record<string, unknown>>()).results
+          .map((r) => ({ ...r, wants: (JSON.parse(String(r.wants || "[]")) as string[]).map((k) => k === "admin" ? "Admin role" : permLabels([k])[0]) }))
+      : [];
+    return json({ ok: true, access, stats: {
       members: n(0), new_members: n(1), this_week: n(2), new_prayers: n(3), new_messages: n(4), upcoming_events: n(5),
-      subscribers: n(6), registrations_week: n(7), accounts: n(8), pending_payments: n(9), open_complaints: n(10), wall_pending: n(11),
+      subscribers: n(6), registrations_week: n(7), accounts: n(8), pending_payments: n(9), open_complaints: n(10), wall_pending: n(11), access_requests: access.length,
     }, interests: interests.results, next_letter: next,
       // The team only sees items they can act on (complaints and messages stay with the main admin).
       attention: sess.role === "super" ? attention : (attention as { kind: string }[]).filter((x) => (x.kind === "prayer" || x.kind === "wall") && (sess.perms || []).includes("prayer")),

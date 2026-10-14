@@ -61,7 +61,7 @@ $("st-ask-form").addEventListener("submit", async (e) => {
   const wants = [...e.target.querySelectorAll("[name=wants]:checked")].map((x) => x.value);
   if (!wants.length) return toast("Tick what you'd like access to.");
   const btn = e.target.querySelector("[type=submit]"); btn.disabled = true;
-  try { await api("/api/admin/access-requests", { method: "POST", body: { wants, note: e.target.note.value } }); toast("Sent. The main admin will reply by email."); e.target.reset(); render(); }
+  try { await api("/api/admin/access-requests", { method: "POST", body: { wants, note: e.target.note.value }, headers: { "x-scc-admin": "1" } }); toast("Sent. The main admin will reply by email."); e.target.reset(); render(); }
   catch (err) { toast(err.message); } finally { btn.disabled = false; }
 });
 

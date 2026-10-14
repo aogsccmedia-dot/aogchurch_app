@@ -54,7 +54,8 @@ function paint(me, d, fromCache) {
   if (tb) {
     tb.hidden = !tools.length;
     $("me-tools-role").textContent = role || "";
-    $("me-tools-grid").innerHTML = tools.map(([h, i, l]) => `<a class="tool-tile" href="${h}">${icon(i)}<span>${esc(l)}</span></a>`).join("");
+    $("me-tools-grid").innerHTML = tools.map(([h, i, l]) => `<a class="tool-tile" href="${h}">${icon(i)}<span>${esc(l)}</span></a>`).join("")
+      + `<button type="button" class="tool-tile ask" data-ask-access>${icon("plus")}<span>Ask for more access</span></button>`;
   }
   switchReady();
   if (!fromCache) { helloOnce(me, { skip: maybeWelcome(d.member, u) }); if (d.member?.status === "member") voteBanner(); }
@@ -132,7 +133,9 @@ async function loadUpcoming(fromCache) {
 async function loadKnow(fromCache) {
   const p = (fromCache ? cachedGet("/api/programme?limit=1") : null) || await freshGet("/api/programme?limit=1").catch(() => null);
   const w = p?.weekly || [];
-  $("know-services").querySelector("small").innerHTML = w.length ? w.map((x) => `${esc(x.day.slice(0, 3))} · ${esc(x.title)} ${esc(x.time || "")}`).join("<br>") : "Sundays 08:45–11:00";
+  const list = w.length ? w : [{ day: "Sunday", day_num: 0, title: "Sunday service", time: "08:45–11:00" }];
+  $("svc-list").innerHTML = `${list.map((x) => `<span class="svc d${Number(x.day_num) % 7}">
+      <span class="svc-day">${esc(String(x.day).slice(0, 3))}</span><span class="svc-what"><b>${esc(x.title)}</b>${x.group_label ? `<em>${esc(x.group_label)}</em>` : ""}</span><span class="svc-time">${esc(x.time || "")}</span></span>`).join("")}`;
   const v = (fromCache ? cachedGet("/api/votes") : null) || await freshGet("/api/votes").catch(() => null);
   const s = $("know-vote").querySelector("small");
   const open = (v?.polls || []).find((x) => x.state === "open"), next = (v?.polls || []).find((x) => x.state === "upcoming");

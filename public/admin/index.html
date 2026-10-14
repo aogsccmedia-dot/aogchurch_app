@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css?v=943ae3a0d8">
-  <link rel="stylesheet" href="/css/pages.css?v=fbf3edf96b">
+  <link rel="stylesheet" href="/css/pages.css?v=d1566e10d8">
   <link rel="stylesheet" href="/css/admin.css?v=de54c5d3e8">
   <script src="/js/switch-boot.js?v=b2ff32ecc5"></script>
 </head>
@@ -78,7 +78,7 @@
         <button data-tab="emails" data-tone="peri">Email log</button>
         <p class="nav-group">Settings</p>
         <button data-tab="settings" data-tone="slate">Site settings</button>
-        <button data-tab="team" data-tone="slate" data-super>Team &amp; roles</button>
+        <button data-tab="team" data-tone="slate" data-super>Team &amp; roles <span class="badge" data-count="access_requests"></span></button>
         <button data-tab="assistant" data-tone="slate" data-super>Ask SCC</button>
         <button data-tab="code" data-tone="slate" data-super>Code changes <span class="badge" id="code-badge"></span></button>
       </nav>
@@ -90,6 +90,7 @@
       <section data-view="overview">
         <header class="vh"><div><p class="eyebrow gold">Dashboard</p><h1 id="greeting">Overview</h1></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm btn-gold" data-go="events-new">+ New event</button><button class="btn btn-sm" data-go="letters-new">Write this week's letter</button></div></header>
+        <div class="card access-card" id="access-card" hidden><div class="vh" style="align-items:center"><h3>Access requests</h3><span class="muted" style="font-size:13px">From your team, waiting for you</span></div><div id="access-list" class="list"></div></div>
         <div id="setup-notes"></div>
         <div class="stats" id="stats"></div>
         <div class="card attention"><div class="vh" style="align-items:center"><h3>Needs attention</h3><span class="muted" style="font-size:13px">Complaints, prayer requests and messages</span></div><div id="attention" class="att-list"></div></div>
@@ -457,6 +458,6 @@
   <dialog class="drawer" id="rsvp-drawer"><div class="drawer-body" id="rsvp-body"></div></dialog>
   <dialog class="drawer" id="services-drawer"><div class="drawer-body" id="services-body"></div></dialog>
   <dialog class="drawer" id="member-drawer"><div class="drawer-body" id="member-body"></div></dialog>
-  <script type="module" src="/js/admin.js?v=83407b66bd"></script>
+  <script type="module" src="/js/admin.js?v=1396dd1d9c"></script>
 </body>
 </html>
