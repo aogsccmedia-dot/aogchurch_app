@@ -1631,3 +1631,29 @@ html.signed-in .wp-bar { top: 62px !important; }
 .portal-tabs.four .i { width: 21px; height: 21px; }
 .portal-tabs.four a.on, .portal-tabs.four button.on { background: #111016; color: #fff; }
 html.signed-in .ask-thread { height: clamp(260px, calc(100dvh - 520px), 640px); }
+
+/* Pages softly fade into the bottom bar as you scroll (the bar itself always stays put) */
+html.signed-in .app-fade {
+  display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 65; pointer-events: none;
+  height: calc(170px + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--bg) 0%, transparent) 0%, color-mix(in srgb, var(--bg) 40%, transparent) 25%, color-mix(in srgb, var(--bg) 85%, transparent) 52%, var(--bg) 72%);
+}
+html.signed-in .app-bottom { background: rgba(255, 255, 255, .9); }
+.app-fade { display: none; }
+
+/* Things you type into stay crisp above the fade */
+html.signed-in .ask-form { position: relative; z-index: 66; }
+html.signed-in .ask-thread { height: clamp(240px, calc(100dvh - 560px), 640px); }
+@media (min-width: 861px) { html.signed-in .ask-thread { height: clamp(220px, calc(100dvh - 630px), 640px); } }
+
+/* Your tools (for people with a role): on Home and in More */
+.tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.tool-tile { display: flex; align-items: center; gap: 10px; padding: 14px; min-height: 58px; border-radius: 14px; background: #fff; border: 1px solid var(--line); font-size: 15.5px; font-weight: 500; color: #1f1c34; transition: background-color .12s, border-color .12s; }
+.tool-tile .i { width: 22px; height: 22px; color: #6b5aa8; flex: none; }
+.tool-tile:hover { background: #f7f5fc; border-color: #d9d2f0; }
+.sheet-group { margin: 6px 12px 2px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); }
+.sheet-card { max-height: calc(100dvh - 120px); overflow-y: auto; }
+/* The tools pages use the same bottom bar as the rest of the portal */
+body.has-bottom .m-bar, body.has-bottom .admin-portal-tabs { display: none !important; }
+body.admin.has-bottom .main { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
+body.has-bottom .side { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }

@@ -162,7 +162,12 @@ async function boot() {
     $(".m-bar").innerHTML = quick.map(([t, ico, l]) => `<button data-go-tab="${t}" class="${t === "scan" ? "m-scan" : ""}">${icon(ico)}<span>${l}</span></button>`).join("");
     $$(".m-bar [data-go-tab]").forEach((b) => b.addEventListener("click", () => { location.hash = b.dataset.goTab; }));
   }
-  $("#to-profile").hidden = true; $("#m-switch").hidden = true;   // one portal now: the tabs at the top replace switching
+  $("#to-profile").hidden = true; $("#m-switch").hidden = true;   // one portal: no switching
+  // People with a role are in their own portal here, just looking at their tools: same bar, logo goes Home.
+  if (perms) {
+    $$(".brand").forEach((b) => { b.href = "/me"; b.removeAttribute("target"); const t = b.querySelector("span"); if (t) t.textContent = "SCC · Your tools"; });
+    $("#m-menu").textContent = "Tools";
+  }
   renderTabs($("#portal-tabs"), r, "/admin/"); cacheMe(r);
   // Shortcuts only for what this person can open.
   $$('[data-go="events-new"]').forEach((b) => { b.hidden = !!perms && !perms.includes("events"); });

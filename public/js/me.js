@@ -2,7 +2,7 @@ import { icon } from "./icons.js";
 import { api, cachedGet, esc, freshGet, toast } from "./site.js";
 import { getMe, googleButton, whenSignedIn } from "./auth.js";
 import { switchReady } from "./switcher.js";
-import { cachedMe, helloOnce, renderTabs, roleName } from "./portal.js";
+import { cachedMe, helloOnce, renderTabs, roleName, toolsFor } from "./portal.js";
 import { faceInner } from "./faces.js";
 
 const $ = (id) => document.getElementById(id);
@@ -49,6 +49,13 @@ function paint(me, d, fromCache) {
   const role = roleName(me);
   $("me-status").textContent = [d.member?.status === "member" ? `Member · ${d.member.ref_code}` : d.member ? "Membership being confirmed" : "Not a member yet", role].filter(Boolean).join(" · ");
   $("me-member").innerHTML = memberCard(d.member);
+  // People with a role simply see their extra tools here (no separate admin area to switch to).
+  const tools = toolsFor(me), tb = $("me-tools");
+  if (tb) {
+    tb.hidden = !tools.length;
+    $("me-tools-role").textContent = role || "";
+    $("me-tools-grid").innerHTML = tools.map(([h, i, l]) => `<a class="tool-tile" href="${h}">${icon(i)}<span>${esc(l)}</span></a>`).join("");
+  }
   switchReady();
   if (!fromCache) { helloOnce(me, { skip: maybeWelcome(d.member, u) }); if (d.member?.status === "member") voteBanner(); }
   const upcoming = d.registrations.filter((r) => new Date(r.ends_at || r.starts_at) > new Date(Date.now() - 6 * 3600_000) && r.status !== "rejected");

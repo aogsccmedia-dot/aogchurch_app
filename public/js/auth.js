@@ -148,7 +148,7 @@ export function renderHeaderUser(me) {
       <a href="/devotions">Devotions</a>
       <a href="/assistant">Ask SCC</a>
       <a href="/vote">Vote</a>
-      ${me.admin_account || me.is_admin ? `<a href="/admin/">${me.admin_role === "youth" ? "Youth leader portal" : "Admin"}</a>` : ""}
+      ${me.admin_account ? `<a href="/admin/">Admin</a>` : ""}
       <a href="/settings">Settings</a>
       ${!me.member && !me.admin_account ? `<a href="/join">Complete joining</a>` : ""}
       <button type="button" data-signout>Sign out</button></div></details>`;

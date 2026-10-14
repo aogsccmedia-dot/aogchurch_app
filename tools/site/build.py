@@ -121,6 +121,7 @@ def header():
       <div class="app-me"><a class="btn btn-sm btn-ghost app-help" href="/help" aria-label="How to use the app">Help</a><span class="avatar sm" data-app-avatar></span><button class="btn btn-sm" type="button" data-app-signout>Sign out</button></div>
     </div>
   </header>
+  <div class="app-fade" aria-hidden="true"></div>
   <nav class="app-bottom" aria-label="Your portal" data-app-bottom></nav>
   <header class="site-header">
     <div class="wrap bar">
