@@ -120,7 +120,6 @@ def header():
       <div class="app-me"><span class="avatar sm" data-app-avatar></span><button class="btn btn-sm" type="button" data-app-signout>Sign out</button></div>
     </div>
   </header>
-  <div class="ticker" id="ticker" hidden></div>
   <header class="site-header">
     <div class="wrap bar">
       <div class="header-left">

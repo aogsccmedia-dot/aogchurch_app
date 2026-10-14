@@ -15,15 +15,6 @@
     setTimeout(function () { var x = document.getElementById("switch-veil"); if (x) x.remove(); sessionStorage.removeItem("scc-switch"); }, 8000);
   } catch (e) { /* storage blocked: just load normally */ }
 })();
-// Keep the page from jumping when the event ticker appears: if we already know there are events to show
-// (cached by site.js on an earlier page), reserve the ticker's space before the first paint.
-(function () {
-  try {
-    if (/^\/(admin|me|join|ticket|membership)/.test(location.pathname) || sessionStorage.getItem("ticker-off") === "1") return;
-    var c = JSON.parse(sessionStorage.getItem("ticker") || "null");
-    if (c && Date.now() - c.at < 120000 && (c.events || []).some(function (e) { return e.registration_open; })) document.documentElement.classList.add("has-ticker");
-  } catch (e) { /* ignore */ }
-})();
 
 // Signed in? You're in the app: the portal bar replaces the website menus from the very first paint, and the
 // website's own pages send you to your Home. The way back to the website is signing out.

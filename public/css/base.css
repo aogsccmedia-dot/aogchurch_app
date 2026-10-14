@@ -363,3 +363,4 @@ body.portal .portal-tabs { position: sticky; top: 78px; z-index: 20; box-shadow:
   .portal-tabs a .i { width: 20px; height: 20px; }
   body.portal .portal-tabs { top: 66px; }
 }
+.ticker { display: none !important; }

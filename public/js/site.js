@@ -66,26 +66,6 @@ export function getSettings() {
 }
 
 // A slim, gently scrolling strip of upcoming events with tickets open. Tap one to go straight to its ticket page.
-function initTicker() {
-  const el = document.getElementById("ticker");
-  if (!el || /^\/(admin|me|join|ticket|membership)/.test(location.pathname)) return;
-  try { if (sessionStorage.getItem("ticker-off") === "1") return; } catch { /* private mode */ }
-  const fmt = (iso) => new Intl.DateTimeFormat("en-ZA", { weekday: "short", day: "numeric", month: "short", timeZone: "Africa/Johannesburg" }).format(new Date(iso));
-  const here = new URLSearchParams(location.search).get("e");
-  const draw = (events) => {
-    const list = (events || []).filter((e) => e.registration_open && e.slug !== here).slice(0, 6);
-    if (!list.length) { document.documentElement.classList.remove("has-ticker"); return; }
-    const item = (e) => `<a class="tk-item" href="/event?e=${encodeURIComponent(e.slug)}"><span class="tk-dot" aria-hidden="true"></span><b>${esc(e.title)}</b><span>${fmt(e.starts_at)}${e.price_label ? ` · ${esc(e.price_label)}` : ""}</span><span class="tk-cta">Get Ticket →</span></a>`;
-    const run = list.map(item).join("");
-    el.innerHTML = `<div class="tk-track" style="--n:${list.length}"><div class="tk-run">${run}</div><div class="tk-run" aria-hidden="true">${run}</div></div><button class="tk-x" type="button" aria-label="Hide">×</button>`;
-    el.hidden = false;
-    el.querySelector(".tk-x").addEventListener("click", () => { el.hidden = true; document.documentElement.classList.remove("has-ticker"); try { sessionStorage.setItem("ticker-off", "1"); } catch { /* ignore */ } });
-  };
-  let cached = null;
-  try { cached = JSON.parse(sessionStorage.getItem("ticker") || "null"); } catch { /* ignore */ }
-  if (cached && Date.now() - cached.at < 120000) { draw(cached.events); return; }
-  api("/api/events").then((d) => { try { sessionStorage.setItem("ticker", JSON.stringify({ at: Date.now(), events: d.events })); } catch { /* ignore */ } draw(d.events); }).catch(() => {});
-}
 
 function initHeader() {
   const header = document.querySelector(".site-header");
@@ -180,7 +160,8 @@ function initCurrentNav() {
 }
 initCurrentNav();
 initHeader();
-initTicker();
+// iOS only shows the pressed look on taps when a touch listener exists.
+document.addEventListener("touchstart", () => {}, { passive: true });
 document.querySelector("[data-reload]")?.addEventListener("click", () => location.reload());
 document.querySelectorAll("[data-to-top]").forEach((b) => b.addEventListener("click", () => scrollTo({ top: 0, behavior: "smooth" })));
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
