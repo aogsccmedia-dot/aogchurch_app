@@ -4,6 +4,7 @@ import { api, esc, toast } from "./site.js";
 import { getMe, googleButton, signOut, whenSignedIn } from "./auth.js";
 import { revokeFlow } from "./offboard.js";
 import { helloOnce, renderTabs, roleName } from "./portal.js";
+import { faceInner } from "./faces.js";
 
 const $ = (id) => document.getElementById(id);
 const day = (iso) => new Date(iso).toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" });
@@ -29,7 +30,7 @@ async function render() {
   helloOnce(me);
   const u = d.user;
   firstName = d.member?.preferred_name || d.member?.first_name || (u.name || "").split(" ")[0] || "friend";
-  $("st-avatar").innerHTML = u.picture ? `<img src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : esc((u.given_name || u.email)[0].toUpperCase());
+  $("st-avatar").innerHTML = faceInner(u);
   $("st-name").textContent = u.name || u.email; $("st-email").textContent = u.email;
   $("st-letter").checked = !!d.subscribed; $("st-reminders").checked = d.service_reminders !== false; $("st-prayer").checked = d.prayer_weekly !== false;
   $("st-membership").hidden = !!me.admin_account;

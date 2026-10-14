@@ -3,6 +3,7 @@ import { api, cachedGet, esc, freshGet, toast } from "./site.js";
 import { getMe, googleButton, whenSignedIn } from "./auth.js";
 import { switchReady } from "./switcher.js";
 import { cachedMe, helloOnce, renderTabs, roleName } from "./portal.js";
+import { faceInner } from "./faces.js";
 
 const $ = (id) => document.getElementById(id);
 const TZ = "Africa/Johannesburg";
@@ -40,7 +41,7 @@ async function render() {
 function paint(me, d, fromCache) {
   renderTabs($("portal-tabs"), me, "/me");
   const u = d.user;
-  $("me-avatar").innerHTML = u.picture ? `<img src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : esc((u.given_name || u.email)[0].toUpperCase());
+  $("me-avatar").innerHTML = faceInner(u);
   firstName = d.member?.preferred_name || d.member?.first_name || (d.user?.name || "").split(" ")[0] || "friend";
   const hour = Number(new Intl.DateTimeFormat("en-ZA", { hour: "numeric", hour12: false, timeZone: TZ }).format(new Date()));
   $("me-greet").textContent = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";

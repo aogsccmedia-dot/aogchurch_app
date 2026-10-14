@@ -2,6 +2,7 @@
 // given a role also see their Admin (or Youth leader) tab, on the same sign-in, with no switching and no codes.
 // After signing in, a short black welcome greets them by name and role.
 import { icon } from "./icons.js";
+import { faceInner } from "./faces.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 export const roleName = (me) => me?.admin_role === "super" ? "Main admin" : me?.admin_role === "youth" ? "Youth leader" : me?.admin_role ? "Admin" : null;
@@ -62,7 +63,8 @@ export function renderPortalNav(me) {
     const role = roleName(me), r = document.querySelector("[data-app-role]");
     if (r) { r.textContent = role || "Member"; r.dataset.kind = me.admin_role || "member"; }
     const av = document.querySelector("[data-app-avatar]"), u = me.user;
-    if (av) av.innerHTML = u.picture ? `<img src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : esc((u.given_name || u.name || u.email || "?")[0].toUpperCase());
+    if (av) av.innerHTML = faceInner(u);
+    wireTabScroll(tabsEl);
     const brand = document.querySelector(".app-brand"); if (brand) brand.href = me.admin_account ? "/admin/" : "/me";
   }
   // The logo takes you Home inside the app (signing out is the way back to the website).
@@ -75,6 +77,23 @@ export function renderPortalNav(me) {
     el.innerHTML = tabs; el.classList.add("portal-nav");
     el.style.setProperty("--n", String(tabsFor(me).length));
   }
+}
+
+// The tab row can be swiped sideways on small screens: soft edges and arrows show there's more.
+function wireTabScroll(el) {
+  if (el.dataset.wired) return update(); el.dataset.wired = "1";
+  function update() {
+    const w = el.parentElement, max = el.scrollWidth - el.clientWidth;
+    w.classList.toggle("more-left", el.scrollLeft > 4);
+    w.classList.toggle("more-right", el.scrollLeft < max - 4);
+  }
+  const wrap = document.createElement("div"); wrap.className = "app-tabs-wrap";
+  el.parentNode.insertBefore(wrap, el); wrap.append(el);
+  const mk = (dir) => { const b = document.createElement("button"); b.type = "button"; b.className = `tabs-arrow ${dir}`; b.setAttribute("aria-label", dir === "left" ? "More tabs on the left" : "More tabs on the right");
+    b.innerHTML = icon(dir === "left" ? "arrowLeft" : "arrowRight"); b.addEventListener("click", () => el.scrollBy({ left: (dir === "left" ? -1 : 1) * el.clientWidth * .7, behavior: "smooth" })); return b; };
+  wrap.prepend(mk("left")); wrap.append(mk("right"));
+  el.addEventListener("scroll", update, { passive: true }); addEventListener("resize", update);
+  update();
 }
 
 // Blazing-fast tabs: fetch the portal pages in the background so each tap opens instantly.

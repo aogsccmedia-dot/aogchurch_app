@@ -6,6 +6,7 @@ import { initInsights } from "./admin-insights.js";
 import { initMore } from "./admin-more.js";
 import { arrivedBySwitch, switchReady } from "./switcher.js";
 import { cacheMe, helloOnce, renderTabs } from "./portal.js";
+import { faceInner } from "./faces.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -862,13 +863,13 @@ async function loadTeam() {
       <div class="meta">Asks for: ${esc(x.wants.map(lab).join(", "))} · ${fmtDate(x.created_at)}</div>${x.note ? `<div class="meta">“${esc(x.note)}”</div>` : ""}</div>
       <div class="team-actions"><button class="btn btn-sm btn-gold" data-req-yes>${icon("check")} Approve</button><button class="btn btn-sm" data-req-no>Decline</button></div></div>`).join("");
   $("#team-admins").innerHTML = admins.length ? admins.map((a) => `<div class="item team-row" data-user="${esc(a.user_id)}">
-      <span class="avatar sm">${a.picture ? `<img src="${esc(a.picture)}" alt="" referrerpolicy="no-referrer">` : esc((a.name || a.email)[0].toUpperCase())}</span>
+      <span class="avatar sm">${faceInner({ id: a.user_id, ...a })}</span>
       <div><b>${esc(a.name || a.email)}</b><div class="meta">${esc(a.email)}${a.ref_code ? ` · ${esc(a.ref_code)}` : ""} · since ${fmtDate(a.created_at)}</div>
         <div class="perm-row" aria-label="What they can open">${all.filter(([k]) => a.role !== "youth_leader" || k !== "people").map(([k, l]) => `<label class="perm"><input type="checkbox" data-perm="${k}" ${(a.perms || []).includes(k) ? "checked" : ""}>${esc(l)}</label>`).join("")}</div></div>
       <div class="team-actions"><select class="input" data-role aria-label="Role"><option value="admin" ${a.role !== "youth_leader" ? "selected" : ""}>Admin</option><option value="youth_leader" ${a.role === "youth_leader" ? "selected" : ""}>Youth leader</option></select>
         <button class="btn btn-sm" data-revoke="${esc(a.user_id)}">Remove</button></div></div>`).join("") : `<div class="empty">Only you for now.</div>`;
   $("#team-people").innerHTML = people.length ? people.map((p) => `<div class="item team-row">
-      <span class="avatar sm">${p.picture ? `<img src="${esc(p.picture)}" alt="" referrerpolicy="no-referrer">` : esc((p.name || p.email)[0].toUpperCase())}</span>
+      <span class="avatar sm">${faceInner({ id: p.user_id, ...p })}</span>
       <div><b>${esc(p.first_name ? `${p.first_name} ${p.last_name}` : p.name || p.email)}</b><div class="meta">${esc(p.email)} · ${p.ref_code ? `Member ${esc(p.ref_code)} (${esc(p.status)})` : "Not a registered member yet"}</div></div>
       ${p.is_admin ? `<span class="pill member">On the team</span>` : p.ref_code ? `<div class="team-actions"><button class="btn btn-sm btn-gold" data-grant="${esc(p.user_id)}" data-role="admin">Make admin</button><button class="btn btn-sm" data-grant="${esc(p.user_id)}" data-role="youth_leader">Make youth leader</button></div>` : `<span class="pill">Needs to join</span>`}</div>`).join("") : `<div class="empty">No one found.</div>`;
 }

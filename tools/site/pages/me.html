@@ -8,9 +8,12 @@
       <div id="me-google" class="google-slot"></div>
     </div>
     <div class="me-home" id="me-view" hidden>
-      <header class="me-hero">
-        <span class="avatar" id="me-avatar"></span>
-        <div><p class="eyebrow gold" id="me-greet">Welcome home</p><h1 id="me-name"></h1><p class="muted-text" id="me-status"></p></div>
+      <header class="me-explore">
+        <span class="avatar face-big" id="me-avatar"></span>
+        <div><p class="eyebrow" id="me-greet">Welcome home</p><h1 id="me-name"></h1><p id="me-status"></p></div>
+        <form class="explore-box" action="/assistant" role="search"><span aria-hidden="true">{{i:sparkles}}</span>
+          <input name="q" placeholder="Ask anything: service times, events, my tickets…" aria-label="Ask SCC" autocomplete="off"><button class="btn btn-gold btn-sm" type="submit">Ask</button></form>
+        <nav class="explore-chips" aria-label="Quick links"><a href="/assistant?q=What%27s%20happening%20this%20week%3F">This week</a><a href="#upcoming">Get a ticket</a><a href="/devotions">Today's verse</a><a href="/vote">Vote</a><a href="/welcome-pack">Welcome pack</a></nav>
       </header>
       <div id="me-member"></div>
       <section class="me-section">

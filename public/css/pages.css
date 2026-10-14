@@ -1531,3 +1531,55 @@ html.signed-in .wp-bar { top: 62px; }
 .help-end h2 { font-size: 32px; }
 @media (max-width: 760px) { .help-step { grid-template-columns: 1fr; } .help-pics { max-width: 300px; margin: 0 auto; } .help-text li { font-size: 18px; } }
 @media (max-width: 860px) { .app-help { display: none; } }
+
+/* ---------------------------------------------------------------- Faces: clear photos, or a friendly blank face */
+.avatar, .vface, .face, .face-av { overflow: hidden; border-radius: 50%; display: inline-grid; place-items: center; flex: none; background: var(--surface-2); }
+.avatar img, .vface img, .face img, .face-av img, .avatar svg, .vface svg, .face svg, .face-av svg { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; display: block; }
+.vface { box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(31, 28, 52, .1); }
+.pick-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.pick-person { padding: 18px 10px 14px; gap: 10px; border-radius: 14px; background: #fff; font-size: 15px; font-weight: 500; }
+.pick-person .vface { width: 76px; height: 76px; box-shadow: 0 0 0 3px #fff, 0 0 0 4px rgba(31, 28, 52, .12); }
+.pick-person.on .vface { box-shadow: 0 0 0 3px #fff, 0 0 0 5px #8b6fe0; }
+.appointed .vface { width: 34px; height: 34px; }
+
+/* ---------------------------------------------------------------- The app, signed in: calm, readable, light (inspired by modern work apps) */
+html.signed-in body:not(.admin) { font-size: 16.5px; }
+html.signed-in body:not(.admin) :is(h1, h2, h3) { font-family: var(--font-sans); font-weight: 600; letter-spacing: -.015em; }
+html.signed-in body:not(.admin) h1 { font-size: clamp(26px, 3.4vw, 34px) !important; line-height: 1.15; }
+html.signed-in body:not(.admin) h2 { font-size: clamp(19px, 2.2vw, 22px); }
+html.signed-in body:not(.admin) h3 { font-size: 17px; }
+html.signed-in .eyebrow { font-size: 12px; letter-spacing: .14em; color: var(--muted); font-weight: 600; }
+html.signed-in .serif, html.signed-in em.serif { font-family: var(--font-sans); font-style: normal; color: inherit; }
+html.signed-in :is(.slide, .know, .st-card, .vote-card, .vote-role, .ask-thread, .ask-ev, .ask-info, .pick-person, .ask-tiles button, .store-empty) {
+  border-radius: 14px !important; border: 1px solid rgba(31, 28, 52, .09) !important; box-shadow: none !important; }
+html.signed-in :is(a.know, .slide, .ask-tiles button, .pick-person):hover { border-color: rgba(31, 28, 52, .2) !important; background: #fff; }
+html.signed-in .know span, html.signed-in .ask-tiles .i { border-radius: 10px; }
+html.signed-in #know-pack { background: #fff; color: var(--text); }
+html.signed-in #know-pack small { color: var(--muted); }
+html.signed-in .muted-text, html.signed-in .know small, html.signed-in .slide .meta { color: #5d5a6b; }
+
+/* Home: a calm "explore" header with one big box to ask anything */
+.me-explore { display: grid; justify-items: center; text-align: center; gap: 14px; padding: clamp(10px, 3vw, 26px) 0 6px; }
+.me-explore .face-big { width: 64px; height: 64px; }
+.me-explore h1 { margin: 0; }
+.me-explore p { margin: 0; color: var(--muted); }
+.explore-box { width: min(680px, 100%); display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 18px; border-radius: 14px; background: #fff; border: 1px solid rgba(31, 28, 52, .12); box-shadow: 0 6px 20px rgba(31, 28, 52, .06); }
+.explore-box .i { width: 20px; height: 20px; color: var(--muted); flex: none; }
+.explore-box input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 17px; padding: 12px 0; color: var(--text); }
+.explore-box button { border-radius: 10px; }
+.explore-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.explore-chips a { padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(31, 28, 52, .12); background: #fff; font-size: 14.5px; color: var(--text-2); }
+.explore-chips a:hover { border-color: rgba(31, 28, 52, .25); color: var(--text); }
+.me-head h2 { font-size: 19px !important; }
+
+/* Tab row: soft edges and arrows show it can slide sideways */
+.app-tabs-wrap { position: relative; display: flex; align-items: center; min-width: 0; justify-self: center; max-width: 100%; }
+.tabs-arrow { position: absolute; top: 50%; transform: translateY(-50%) !important; z-index: 2; width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(31, 28, 52, .15); background: #fff; display: none; place-items: center; cursor: pointer; box-shadow: 0 2px 8px rgba(31, 28, 52, .12); }
+.tabs-arrow .i { width: 15px; height: 15px; }
+.tabs-arrow.left { left: -4px; } .tabs-arrow.right { right: -4px; }
+.app-tabs-wrap.more-left .tabs-arrow.left, .app-tabs-wrap.more-right .tabs-arrow.right { display: grid; }
+.app-tabs-wrap.more-right .app-tabs { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.app-tabs-wrap.more-left .app-tabs { -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%); mask-image: linear-gradient(90deg, transparent, #000 15%); }
+.app-tabs-wrap.more-left.more-right .app-tabs { -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); }
+.app-tabs a { font-size: 15px; padding: 9px 14px; }
+@media (max-width: 860px) { .app-tabs-wrap { grid-area: tabs; justify-self: stretch; } .app-tabs { width: 100%; } .app-tabs a { font-size: 15px; padding: 10px 13px; } }

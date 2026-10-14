@@ -4,6 +4,7 @@ import { api, esc, toast } from "./site.js";
 import { getMe, googleButton, whenSignedIn } from "./auth.js";
 import { icon } from "./icons.js";
 import { renderTabs } from "./portal.js";
+import { faceInner } from "./faces.js";
 
 const root = document.getElementById("vote-root");
 const TZ = "Africa/Johannesburg";
@@ -11,8 +12,7 @@ const params = new URLSearchParams(location.search);
 let current = params.get("p"), timer = null, data = null;
 const picked = {};
 
-const face = (p, cls = "") => p.picture ? `<img class="vface ${cls}" src="${esc(p.picture)}" alt="" referrerpolicy="no-referrer" loading="lazy">`
-  : `<span class="vface ${cls}" style="--h:${[...(p.name || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % 360}">${esc((p.name || "?").split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase())}</span>`;
+const face = (p, cls = "") => `<span class="vface ${cls}">${faceInner(p)}</span>`;
 const when = (iso) => new Intl.DateTimeFormat("en-ZA", { weekday: "short", day: "numeric", month: "long", timeZone: TZ }).format(new Date(iso));
 const left = (iso) => { const ms = Date.parse(iso) - Date.now(); if (ms <= 0) return "closing"; const h = Math.floor(ms / 3600000); return h >= 48 ? `${Math.floor(h / 24)} days left` : h >= 1 ? `${h} h left` : `${Math.max(1, Math.round(ms / 60000))} min left`; };
 const STATE = { open: "Voting now", upcoming: "Coming up", between: "Between rounds", complete: "Finished", cancelled: "Cancelled" };

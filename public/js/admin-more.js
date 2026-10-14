@@ -1,3 +1,4 @@
+import { faceInner } from "./faces.js";
 // Admin: Approvals (every payment waiting, one tap each), Friday services and member Voting.
 export function initMore(ctx) {
   const { api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, icon } = ctx;
@@ -123,8 +124,7 @@ export function initMore(ctx) {
 
   // ------------------------------------------------------------ Voting (elections: roles, rounds, appointments)
   let vtTimer = null;
-  const face = (p, size = 34) => p.picture ? `<img class="face" src="${esc(p.picture)}" alt="" width="${size}" height="${size}" referrerpolicy="no-referrer" loading="lazy">`
-    : `<span class="face" style="--h:${[...(p.name || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % 360}">${esc((p.name || "?").split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase())}</span>`;
+  const face = (p, size = 34) => `<span class="face" style="width:${size}px;height:${size}px">${faceInner(p)}</span>`;
   const STATE = { open: ["Voting now", "member"], upcoming: ["Starts soon", "pending"], between: ["Between rounds", "pending"], complete: ["Finished", ""], cancelled: ["Cancelled", ""], draft: ["Draft", ""] };
   const sad = (iso) => dayLabel(new Date(Date.parse(iso) + 2 * 3600_000).toISOString().slice(0, 10));
   async function loadVotes() {

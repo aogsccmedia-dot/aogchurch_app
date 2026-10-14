@@ -31,7 +31,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css?v=943ae3a0d8">
-  <link rel="stylesheet" href="/css/pages.css?v=67ef1be752">
+  <link rel="stylesheet" href="/css/pages.css?v=5615396e3d">
   <script src="/js/switch-boot.js?v=b2ff32ecc5"></script>
   <script type="speculationrules">{"prerender": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/admin/*"}}, {"not": {"href_matches": "/api/*"}}]}, "eagerness": "moderate"}]}</script>
 </head>
@@ -80,9 +80,12 @@
       <div id="me-google" class="google-slot"></div>
     </div>
     <div class="me-home" id="me-view" hidden>
-      <header class="me-hero">
-        <span class="avatar" id="me-avatar"></span>
-        <div><p class="eyebrow gold" id="me-greet">Welcome home</p><h1 id="me-name"></h1><p class="muted-text" id="me-status"></p></div>
+      <header class="me-explore">
+        <span class="avatar face-big" id="me-avatar"></span>
+        <div><p class="eyebrow" id="me-greet">Welcome home</p><h1 id="me-name"></h1><p id="me-status"></p></div>
+        <form class="explore-box" action="/assistant" role="search"><span aria-hidden="true"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg></span>
+          <input name="q" placeholder="Ask anything: service times, events, my tickets…" aria-label="Ask SCC" autocomplete="off"><button class="btn btn-gold btn-sm" type="submit">Ask</button></form>
+        <nav class="explore-chips" aria-label="Quick links"><a href="/assistant?q=What%27s%20happening%20this%20week%3F">This week</a><a href="#upcoming">Get a ticket</a><a href="/devotions">Today's verse</a><a href="/vote">Vote</a><a href="/welcome-pack">Welcome pack</a></nav>
       </header>
       <div id="me-member"></div>
       <section class="me-section">
@@ -147,7 +150,7 @@
   <link rel="modulepreload" href="/js/otp.js">
   <script type="module" src="/js/site.js?v=17a8bd2aba"></script>
   <script type="module" src="/js/auth.js?v=652e1f6888"></script>
-  <script type="module" src="/js/me.js?v=76ef9c905a"></script>
+  <script type="module" src="/js/me.js?v=1b36840e50"></script>
   <script type="module" src="/js/programme.js?v=ae3e73b8c1"></script>
 </body>
 </html>
