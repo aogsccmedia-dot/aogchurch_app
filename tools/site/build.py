@@ -26,18 +26,15 @@ NAV = [
     ("/", "Home"),
     ("/about", "About"),
     ("/events", "Services &amp; events"),
+    ("/go-ye", "Go Ye"),
     ("/get-involved", "Get involved"),
-    ("/prayer", "Prayer"),
-    ("/visit", "Visit &amp; contact"),
-    ("/evangelism", "Evangelism"),
-    ("/discipleship", "Discipleship"),
-    ("/help", "Help"),
+    ("/visit", "Visit"),
 ]
 # Full menu (phone menu): includes the About sub-pages.
-MENU = [NAV[0], NAV[1], ("/our-story", "Our story"), ("/beliefs", "What we believe")] + NAV[2:]
+MENU = [NAV[0], NAV[1], ("/our-story", "Our story"), ("/beliefs", "What we believe")] + NAV[2:] + [("/prayer", "Prayer"), ("/discipleship", "Discipleship"), ("/help", "Help")]
 # Reading order for the "Previous / Next page" buttons at the bottom of content pages.
 ORDER = [("/", "Home"), ("/about", "About us"), ("/our-story", "Our story"), ("/beliefs", "What we believe"), ("/events", "Services &amp; events"),
-         ("/get-involved", "Get involved"), ("/prayer", "Prayer"), ("/visit", "Visit &amp; contact"), ("/join", "Join the church")]
+         ("/go-ye", "Go Ye"), ("/get-involved", "Get involved"), ("/prayer", "Prayer"), ("/visit", "Visit &amp; contact"), ("/join", "Join the church")]
 LEGAL = [
     ("/privacy", "Privacy policy (POPIA)"),
     ("/data-protection", "Data protection &amp; PAIA"),
@@ -98,15 +95,15 @@ def head(title, desc, canonical=None, noindex=False, extra=""):
 
 
 MENU_GROUPS = [
-    ("Explore", [("/", "Home"), ("/about", "About us"), ("/our-story", "Our story"), ("/beliefs", "What we believe")]),
-    ("Church life", [("/events", "Services &amp; events"), ("/get-involved", "Get involved"), ("/prayer", "Prayer"), ("/visit", "Visit &amp; contact"), ("/evangelism", "Evangelism"), ("/discipleship", "Discipleship classes")]),
-    ("For you", [("/me", "Home"), ("/devotions", "Devotions"), ("/assistant", "Ask SCC"), ("/vote", "Vote"), ("/go", "Go Ye"), ("/discipleship", "Discipleship classes"), ("/store", "Store"), ("/settings", "Settings"), ("/settings#complaints", "Raise a concern"), ("/#letter", "Weekly letter"), ("/app", "Get the app"), ("/help", "How to use the app")]),
-    ("Tools", [("/tools", "All tools")]),
+    ("Go Ye", [("/go-ye", "Go Ye: share the good news"), ("/pamphlet", "Good News pamphlet"), ("/go-ye#respond", "I prayed: next steps")]),
+    ("Who we are", [("/about", "About us"), ("/our-story", "Our story"), ("/beliefs", "What we believe")]),
+    ("Church life", [("/events", "Services &amp; events"), ("/discipleship", "Discipleship classes"), ("/get-involved", "Get involved"), ("/prayer", "Prayer")]),
+    ("Find us", [("/visit", "Visit &amp; contact"), ("/me", "Sign in"), ("/help", "Help")]),
 ]
 
 
 def header():
-    primary = "".join(f'<a href="{h}">{t}</a>' for h, t in NAV[1:])
+    primary = "".join(f'<a href="{h}" class="nav-go">{{{{i:globe}}}} {t}</a>' if h == "/go-ye" else f'<a href="{h}">{t}</a>' for h, t in NAV[1:])
     groups = "".join(
         f'<div class="menu-group" style="--g:{gi}"><p class="menu-label">{label}</p>'
         + "".join(f'<a href="{h}" style="--i:{ii}">{t}</a>' for ii, (h, t) in enumerate(items))
@@ -233,7 +230,7 @@ TABBAR = """
     <a href="/">{{i:home}}<span>Home</span></a>
     <a href="/events">{{i:calendar}}<span>Events</span></a>
     <a href="/join" class="tab-join" data-join-cta data-tab-me>{{i:user}}<span>Join</span></a>
-    <a href="/prayer">{{i:handHeart}}<span>Prayer</span></a>
+    <a href="/go-ye" class="tab-go">{{i:globe}}<span>Go Ye</span></a>
     <button type="button" data-menu-open-tab aria-controls="menu">{{i:menu}}<span>More</span></button>
   </nav>
 """
@@ -266,7 +263,7 @@ PAGES = {
     "assistant": dict(title="Ask SCC" + T, body="portal ask", desc="Ask SCC: the members' chat for AOG Sandton City Church. Events, service times, your tickets and the church calendar.", noindex=True, scripts=["site.js", "auth.js", "assistant.js"]),
     "help": dict(title="How to use the app" + T, crumb="Help", canonical="/help", desc="Simple, step-by-step help with pictures: signing in, tickets, devotions, Ask SCC, prayer, voting and putting the app on your phone.", scripts=["site.js", "auth.js"]),
     "welcome-pack": dict(title="Welcome pack" + T, body="portal wp", canonical="/welcome-pack", desc="Who we are: from Azusa Street to Nicholas Bhengu and the birth of AOG Sandton City Church. Read or share our welcome pack.", scripts=["site.js", "auth.js", "welcome-pack.js"]),
-    "evangelism": dict(title="Evangelism: good news, made simple" + T, crumb="Evangelism", canonical="/evangelism", desc="The gospel in four simple steps, a prayer to receive Jesus, a printable Good News pamphlet, and how our evangelism team goes from Sandton to all of South Africa.", scripts=["site.js", "auth.js", "evangelism.js"]),
+    "go-ye": dict(title="Go Ye: good news, made simple" + T, crumb="Go Ye", canonical="/go-ye", desc="The gospel in four simple steps, a prayer to receive Jesus, a printable Good News pamphlet, and how our evangelism team goes from Sandton to all of South Africa.", scripts=["site.js", "auth.js", "evangelism.js"]),
     "pamphlet": dict(title="Good News pamphlet" + T, body="portal wp", crumb="Pamphlet", canonical="/pamphlet", desc="Good news for you: the gospel in four simple steps. Read, share on WhatsApp, or print the pamphlet from AOG Sandton City Church.", scripts=["site.js", "auth.js", "welcome-pack.js"]),
     "discipleship": dict(title="Discipleship classes" + T, crumb="Discipleship", canonical="/discipleship", desc="Short, friendly discipleship classes at AOG Sandton City Church: Foundations, Baptism, Growing and Serving. Sign up for the next class.", scripts=["site.js", "auth.js", "evangelism.js"]),
     "go": dict(title="Go Ye" + T, body="portal", desc="The evangelism team in the app: log the people you meet, see the map and tips.", noindex=True, scripts=["site.js", "auth.js", "go.js"]),

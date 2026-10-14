@@ -15,7 +15,7 @@ function wire(id, path) {
     try {
       const r = await api(path, { method: "POST", body: data });
       f.innerHTML = `<div class="ev-done"><span>🎉</span><h3>${data.decision === "prayed" ? "Welcome to God's family!" : "Thank you!"}</h3><p>${esc(r.message)}</p>
-        ${id === "ev-form" ? `<a class="btn" href="/discipleship">See discipleship classes</a>` : `<a class="btn" href="/evangelism">Read the good news</a>`}</div>`;
+        ${id === "ev-form" ? `<a class="btn" href="/discipleship">See discipleship classes</a>` : `<a class="btn" href="/go-ye">Read the good news</a>`}</div>`;
     } catch (err) { toast(err.message); btn.disabled = false; }
   });
 }

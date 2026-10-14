@@ -1843,3 +1843,16 @@ a.pam-page { display: block; }
 .pam-share h2 { font-size: 22px; font-weight: 600; margin: 14px 0 0; }
 .pam-share-btns { display: flex; flex-wrap: wrap; gap: 8px; }
 .pam-share p { margin: 0; }
+/* Go Ye stands out in the website menu: it's our main calling */
+.main-nav a.nav-go { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; color: #1f1c34; font-weight: 600;
+  background: linear-gradient(#fff, #fff) padding-box, linear-gradient(90deg, #f3c76e, #f2a9c9, #b9a7f5) border-box; border: 2px solid transparent; }
+.main-nav a.nav-go .i { width: 16px; height: 16px; color: #6b5aa8; }
+.main-nav a.nav-go:hover { background: linear-gradient(#fbf9ff, #fbf9ff) padding-box, linear-gradient(90deg, #f3c76e, #f2a9c9, #b9a7f5) border-box; }
+.tabbar a.tab-go .i { color: #6b5aa8; } .tabbar a.tab-go span { font-weight: 600; }
+.goye-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; margin: 4px 0 18px; padding: 16px 18px; border-radius: 20px; color: #1f1c34;
+  background: linear-gradient(120deg, #fff6e3, #fff0f4 50%, #f4f0ff); border: 1px solid rgba(200, 150, 62, .3); }
+.goye-ico { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: #1f1c34; color: #f3c76e; }
+.goye-ico .i { width: 24px; height: 24px; }
+.goye-txt { display: grid; gap: 2px; } .goye-txt small { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #8a5a12; font-weight: 600; }
+.goye-txt b { font-size: 17px; } .goye-txt em { font-style: normal; font-size: 14px; color: var(--text-2); }
+.goye-go .i { width: 22px; height: 22px; }
