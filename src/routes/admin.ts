@@ -477,7 +477,8 @@ export function adminRoutes(router: Router, env: Env): void {
 
   // ---------- settings ----------
   router.get("/api/admin/settings", guard(async () => {
-    const { results } = await env.DB.prepare("SELECT key, value FROM settings").all<{ key: string; value: string }>();
+    // Server-only secrets (push signing keys, webhook secret) never leave the server.
+    const { results } = await env.DB.prepare("SELECT key, value FROM settings WHERE key NOT IN ('vapid_keys', 'github_webhook_secret')").all<{ key: string; value: string }>();
     return json({ ok: true, settings: Object.fromEntries(results.map((r) => [r.key, r.value])) });
   }));
   router.put("/api/admin/settings", guard(async (req, _p, s) => {

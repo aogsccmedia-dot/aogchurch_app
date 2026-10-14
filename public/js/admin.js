@@ -4,6 +4,7 @@ import { FIELD_TYPES, renderField } from "./forms.js";
 import { icon } from "./icons.js";
 import { initInsights } from "./admin-insights.js";
 import { initMore } from "./admin-more.js";
+import { initExtra } from "./admin-extra.js";
 import { arrivedBySwitch, switchReady } from "./switcher.js";
 import { cacheMe, helloOnce, renderTabs, setBadge } from "./portal.js";
 import { faceInner } from "./faces.js";
@@ -1037,4 +1038,5 @@ $$("[data-go-tab]").forEach((b) => { if (b.dataset.ico) b.insertAdjacentHTML("af
 // Insights, weekly services and the board report live in their own module.
 const insights = initInsights({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate });
 const more = initMore({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate, icon });
+initExtra({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate, icon });
 boot();

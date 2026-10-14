@@ -18,6 +18,8 @@ export function mainTabs(me) {
 export function moreTabs(me) {
   const role = roleName(me);
   return [
+    ["/go", "globe", "Go Ye (evangelism)"],
+    ["/discipleship", "bookOpen", "Discipleship classes"],
     ["/vote", "vote", "Vote"],
     ["/store", "landmark", "Store"],
     ["/settings", "settings", "Settings"],
@@ -36,6 +38,7 @@ const TOOLS = [
   ["members", "users", "Members", "members"],
   ["people", "userCheck", "My people", "members|people"],
   ["prayers", "handHeart", "Prayer requests", "prayer"],
+  ["calls", "smartphone", "Call Office", "calls"],
   ["report", "layoutDashboard", "Reports", "reports"],
 ];
 export function toolsFor(me) {
@@ -51,6 +54,8 @@ export function renderTabs(el, me, active) {
   sheetMe = me;
   if (el) el.hidden = true;
   renderBottom(me);
+  // Once, a friendly offer of the daily verse on their phone (after the welcome has gone).
+  if (!window.__pushOffer) { window.__pushOffer = 1; setTimeout(() => import("./push.js").then((m) => m.offerOnce()).catch(() => {}), 4500); }
 }
 
 // ---- Signed in: the portal navigation replaces the website's own (header on computers, bottom bar on phones).

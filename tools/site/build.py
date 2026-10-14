@@ -29,6 +29,8 @@ NAV = [
     ("/get-involved", "Get involved"),
     ("/prayer", "Prayer"),
     ("/visit", "Visit &amp; contact"),
+    ("/evangelism", "Evangelism"),
+    ("/discipleship", "Discipleship"),
     ("/help", "Help"),
 ]
 # Full menu (phone menu): includes the About sub-pages.
@@ -97,8 +99,8 @@ def head(title, desc, canonical=None, noindex=False, extra=""):
 
 MENU_GROUPS = [
     ("Explore", [("/", "Home"), ("/about", "About us"), ("/our-story", "Our story"), ("/beliefs", "What we believe")]),
-    ("Church life", [("/events", "Services &amp; events"), ("/get-involved", "Get involved"), ("/prayer", "Prayer"), ("/visit", "Visit &amp; contact")]),
-    ("For you", [("/me", "Home"), ("/devotions", "Devotions"), ("/assistant", "Ask SCC"), ("/vote", "Vote"), ("/store", "Store"), ("/settings", "Settings"), ("/settings#complaints", "Raise a concern"), ("/#letter", "Weekly letter"), ("/app", "Get the app"), ("/help", "How to use the app")]),
+    ("Church life", [("/events", "Services &amp; events"), ("/get-involved", "Get involved"), ("/prayer", "Prayer"), ("/visit", "Visit &amp; contact"), ("/evangelism", "Evangelism"), ("/discipleship", "Discipleship classes")]),
+    ("For you", [("/me", "Home"), ("/devotions", "Devotions"), ("/assistant", "Ask SCC"), ("/vote", "Vote"), ("/go", "Go Ye"), ("/discipleship", "Discipleship classes"), ("/store", "Store"), ("/settings", "Settings"), ("/settings#complaints", "Raise a concern"), ("/#letter", "Weekly letter"), ("/app", "Get the app"), ("/help", "How to use the app")]),
     ("Tools", [("/tools", "All tools")]),
 ]
 
@@ -264,6 +266,9 @@ PAGES = {
     "assistant": dict(title="Ask SCC" + T, body="portal ask", desc="Ask SCC: the members' chat for AOG Sandton City Church. Events, service times, your tickets and the church calendar.", noindex=True, scripts=["site.js", "auth.js", "assistant.js"]),
     "help": dict(title="How to use the app" + T, crumb="Help", canonical="/help", desc="Simple, step-by-step help with pictures: signing in, tickets, devotions, Ask SCC, prayer, voting and putting the app on your phone.", scripts=["site.js", "auth.js"]),
     "welcome-pack": dict(title="Welcome pack" + T, body="portal wp", canonical="/welcome-pack", desc="Who we are: from Azusa Street to Nicholas Bhengu and the birth of AOG Sandton City Church. Read or share our welcome pack.", scripts=["site.js", "auth.js", "welcome-pack.js"]),
+    "evangelism": dict(title="Evangelism: good news, made simple" + T, crumb="Evangelism", canonical="/evangelism", desc="The gospel in four simple steps, a prayer to receive Jesus, a printable Good News pamphlet, and how our evangelism team goes from Sandton to all of South Africa.", scripts=["site.js", "auth.js", "evangelism.js"]),
+    "discipleship": dict(title="Discipleship classes" + T, crumb="Discipleship", canonical="/discipleship", desc="Short, friendly discipleship classes at AOG Sandton City Church: Foundations, Baptism, Growing and Serving. Sign up for the next class.", scripts=["site.js", "auth.js", "evangelism.js"]),
+    "go": dict(title="Go Ye" + T, body="portal", desc="The evangelism team in the app: log the people you meet, see the map and tips.", noindex=True, scripts=["site.js", "auth.js", "go.js"]),
     "store": dict(title="Store" + T, crumb="Store", desc="AOG Store: books written by members of AOG Sandton City Church. Coming soon.", canonical="/store", scripts=["site.js", "auth.js", "store.js"]),
     "vote": dict(title="Vote" + T, body="portal", desc="Members' voting at AOG Sandton City Church.", noindex=True, scripts=["site.js", "auth.js", "vote.js"]),
     "tools": dict(title="Tools" + T, crumb="Tools", desc="Free tools from AOG Sandton City Church: FreeCreator for Windows and Mac, and the church app.", canonical="/tools", scripts=["site.js", "auth.js"]),
@@ -299,6 +304,8 @@ def legal_page(body):
 def main():
     for name, o in PAGES.items():
         body = legal_page((HERE / "pages" / f"{name}.html").read_text())
+        # {{inc:name}} pulls in a shared snippet from tools/site/partials (e.g. the evangelism map).
+        body = re.sub(r"\{\{inc:([\w-]+)\}\}", lambda m: (HERE / "partials" / f"{m.group(1)}.html").read_text(), body)
         scripts = "\n".join(f'  <script type="module" src="/js/{s}?v={ver("js/" + s)}"></script>' for s in o["scripts"])
         # Fetch auth.js's own imports in parallel instead of one after the other.
         if "auth.js" in o["scripts"]:

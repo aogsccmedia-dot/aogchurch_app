@@ -10,6 +10,7 @@ export const MINISTRIES = [
   { slug: "prayer", label: "Prayer team", desc: "Intercede for our church, families and city.", icon: I("flame") },
   { slug: "ushering", label: "Ushering & protocol", desc: "Welcome people, keep order and serve on Sundays.", icon: I("userCheck") },
   { slug: "welcome", label: "Welcome & follow-up", desc: "Be the first friendly face for new people.", icon: I("smile") },
+  { slug: "call_office", label: "Call Office", desc: "Phone brethren to check how they're doing, and follow up the people our evangelism teams meet.", icon: I("smartphone") },
   { slug: "evangelism", label: "Outreach & evangelism", desc: "Take the gospel to campuses, streets and communities.", icon: I("globe") },
   { slug: "creative", label: "Creative arts", desc: "Drama, dance, spoken word and visual art.", icon: I("palette") },
   { slug: "hospitality", label: "Hospitality & events", desc: "Food, coffee, setup and camps — make everyone feel at home.", icon: I("coffee") },

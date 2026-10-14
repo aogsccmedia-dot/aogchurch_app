@@ -1,0 +1,55 @@
+  <main id="main" class="wrap">
+    <section class="go-head">
+      <p class="eyebrow gold">Go ye</p>
+      <h1>Go Ye</h1>
+      <p class="muted-text">“Go ye into all the world, and preach the gospel to every creature.” Mark 16:15</p>
+      <div class="go-stats" id="go-stats"></div>
+    </section>
+
+    <section class="me-section">
+      <div class="me-head"><h2>Met someone today?</h2></div>
+      <form class="panel go-form" id="go-form" novalidate>
+        <p class="muted-text">Only with their OK. The Call Office will phone them within 48 hours.</p>
+        <div class="ev-choices">
+          <label><input type="radio" name="decision" value="prayed" checked><span>Prayed to receive Jesus</span></label>
+          <label><input type="radio" name="decision" value="interested"><span>Interested</span></label>
+          <label><input type="radio" name="decision" value="visit"><span>Wants to visit</span></label>
+          <label><input type="radio" name="decision" value="prayer"><span>Asked for prayer</span></label>
+        </div>
+        <div class="go-row">
+          <label class="field"><span>Their name</span><input class="input" name="name" autocomplete="off" maxlength="120" required></label>
+          <label class="field"><span>Their phone</span><input class="input" name="phone" type="tel" inputmode="tel" autocomplete="off" maxlength="30"></label>
+        </div>
+        <label class="field"><span>Where did you meet? (area)</span><input class="input" name="area" maxlength="120" placeholder="e.g. Sandton City, Alexandra taxi rank"></label>
+        <label class="field"><span>Notes (optional)</span><textarea class="input" name="note" rows="2" maxlength="1000" placeholder="What did you talk about? How can we pray?"></textarea></label>
+        <button class="btn btn-gold btn-lg" type="submit">Send to the Call Office {{arrow}}</button>
+      </form>
+    </section>
+
+    <section class="me-section">
+      <div class="me-head"><h2>People you've met</h2></div>
+      <div id="go-mine" class="go-mine"><p class="muted-text">Loading…</p></div>
+    </section>
+
+    <section class="me-section">
+      <div class="me-head"><h2>Where we go</h2><a class="me-more" href="/evangelism#go">Tips {{arrow}}</a></div>
+      {{inc:samap}}
+    </section>
+
+    <section class="me-section">
+      <div class="me-head"><h2>Quick tips</h2></div>
+      <div class="go-tips">
+        <div><b>🙏 Pray first</b><span>Ask God to lead you to the right people.</span></div>
+        <div><b>👣 Go in twos</b><span>Never alone. Busy, public places in daylight.</span></div>
+        <div><b>👂 Listen</b><span>“How can I pray for you today?” opens hearts.</span></div>
+        <div><b>4️⃣ Four steps</b><span>God loves you · we've all sinned · Jesus paid · receive Him.</span></div>
+        <div><b>📄 Leave a pamphlet</b><span><a href="/assets/evangelism/good-news-pamphlet.pdf" download>Download the print-ready PDF</a></span></div>
+        <div><b>🙌 Hand over</b><span>Log them here the same day.</span></div>
+      </div>
+    </section>
+
+    <section class="me-section" id="go-leaders-sec" hidden>
+      <div class="me-head"><h2>Leaders to call</h2></div>
+      <div class="ev-leaders" id="go-leaders"></div>
+    </section>
+  </main>

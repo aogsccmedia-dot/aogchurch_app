@@ -23,6 +23,7 @@ export const YOUTH_PERMS = [
   ["votes", "Voting"],
   ["prayer", "Prayer requests"],
   ["youth_tickets", "Approve tickets for youth events"],
+  ["calls", "Call Office (check-ups & evangelism follow-up)"],
 ] as const;
 export const YOUTH_DEFAULT = ["fridays", "scan", "reports", "youth_tickets"];
 /** New admins start with reports and weekly services only; the main admin ticks anything else. */
@@ -47,6 +48,7 @@ export function permFor(method: string, path: string): string | null {
   if (/^\/api\/admin\/members(\/|$)/.test(p)) return "members";
   if (/^\/api\/admin\/votes(\/|$)/.test(p)) return "votes";
   if (/^\/api\/admin\/(prayers|wall)(\/|$)/.test(p)) return "prayer";
+  if (/^\/api\/admin\/calls(\/|$)/.test(p)) return "calls";
   return null;
 }
 export function youthMay(perms: string[] | undefined, need: string | null): boolean {

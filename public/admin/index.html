@@ -8,8 +8,8 @@
   <meta name="theme-color" content="#f7f7fb">
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="stylesheet" href="/css/base.css?v=eae68f236b">
-  <link rel="stylesheet" href="/css/pages.css?v=d9f3c57184">
-  <link rel="stylesheet" href="/css/admin.css?v=de54c5d3e8">
+  <link rel="stylesheet" href="/css/pages.css?v=8dc86a954b">
+  <link rel="stylesheet" href="/css/admin.css?v=a472163a88">
   <script src="/js/switch-boot.js?v=4afbe33104"></script>
 </head>
 <body class="admin">
@@ -62,10 +62,12 @@
         <p class="nav-group">People</p>
         <button data-tab="members" data-tone="mint" data-perm="members">Members <span class="badge" data-count="new_members"></span></button>
         <button data-tab="people" data-tone="mint" data-perm="members|people">My people</button>
+        <button data-tab="calls" data-tone="mint" data-perm="calls">Call Office</button>
         <button data-tab="prayers" data-tone="rose" data-perm="prayer">Prayer <span class="badge" data-count="prayer_total"></span></button>
         <button data-tab="messages" data-tone="rose">Messages <span class="badge" data-count="new_messages"></span></button>
         <button data-tab="complaints" data-tone="rose">Complaints <span class="badge" data-count="open_complaints"></span></button>
         <p class="nav-group">Insights</p>
+        <button data-tab="analytics" data-tone="sky" data-super>Analytics</button>
         <button data-tab="insights" data-tone="sky" data-perm="events">Insights</button>
         <button data-tab="report" data-tone="sage" data-perm="reports">Reports <span class="admin-only-dot" title="Admins only"></span></button>
         <p class="nav-group">Letters &amp; email</p>
@@ -390,6 +392,20 @@
         <div id="fr-list" class="fr-list"><p class="muted">Loading…</p></div>
       </section>
 
+      <section data-view="calls" hidden>
+        <header class="vh"><div><p class="eyebrow gold">People</p><h1>Call Office</h1><p class="muted">Follow up the people our evangelism teams meet, check up on brethren, and place people in discipleship classes.</p></div></header>
+        <div class="co-sum" id="co-sum"></div>
+        <nav class="co-tabs" id="co-tabs" aria-label="Call Office lists"></nav>
+        <div id="co-list" class="co-list"></div>
+      </section>
+
+      <section data-view="analytics" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Insights</p><h1>Analytics</h1><p class="muted">How people use the website and app: visits, where they come from, devices, taps and who comes back. Counted by our own server; no third parties.</p></div>
+          <div class="an-tools"><nav class="an-range" id="an-range" aria-label="Date range"><button type="button" data-days="7">7 days</button><button type="button" data-days="30" class="on">30 days</button><button type="button" data-days="90">90 days</button><button type="button" data-days="365">1 year</button></nav>
+          <button type="button" class="btn btn-sm" id="an-push">Send a test notification</button></div></header>
+        <div id="an-body"><p class="muted">Loading…</p></div>
+      </section>
+
       <section data-view="votes" hidden>
         <header class="vh"><div><p class="eyebrow gold">Members</p><h1>Voting</h1><p class="muted">Fill church roles by vote. Only confirmed members vote, once per role per round. Only members who have been saved for at least five years (from their join form) can be chosen. Results are live; ballots are secret. When the last round closes, the winners are appointed and emailed. Members get a reminder to pray every two weeks before voting starts.</p></div>
           <button class="btn btn-gold" type="button" id="vt-new">Set up a vote</button></header>
@@ -455,6 +471,6 @@
   <dialog class="drawer" id="rsvp-drawer"><div class="drawer-body" id="rsvp-body"></div></dialog>
   <dialog class="drawer" id="services-drawer"><div class="drawer-body" id="services-body"></div></dialog>
   <dialog class="drawer" id="member-drawer"><div class="drawer-body" id="member-body"></div></dialog>
-  <script type="module" src="/js/admin.js?v=1396dd1d9c"></script>
+  <script type="module" src="/js/admin.js?v=aeb9f860d6"></script>
 </body>
 </html>

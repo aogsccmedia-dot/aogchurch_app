@@ -24,7 +24,7 @@ self.addEventListener("fetch", (e) => {
   if (url.origin !== location.origin || url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin")) return;
 
   // App pages open instantly from the last copy, and refresh in the background for next time.
-  const APP = /^\/(me|devotions|assistant|vote|store|settings|welcome-pack)(\.html)?\/?$/;
+  const APP = /^\/(me|devotions|assistant|vote|store|settings|welcome-pack|go)(\.html)?\/?$/;
   if (req.mode === "navigate" && APP.test(url.pathname)) {
     e.respondWith(caches.match(req, { ignoreSearch: true }).then((hit) => {
       const net = fetch(req).then((res) => put(req, res)).catch(() => null);
@@ -48,4 +48,22 @@ self.addEventListener("fetch", (e) => {
     // Everything else: network first, but don't keep people waiting on a slow connection.
     e.respondWith(timedFetch(req, 2500).then((res) => put(req, res)).catch(async () => (await caches.match(req)) || fetch(req)));
   }
+});
+
+// ---- Phone notifications: pushes carry no data; ask the server what to show (e.g. today's verse).
+self.addEventListener("push", (e) => {
+  e.waitUntil((async () => {
+    let m = { title: "AOG Sandton City Church", body: "Something new for you in the church app.", url: "/me", tag: "scc" };
+    try { const r = await fetch("/api/push/today", { credentials: "include" }); if (r.ok) m = { ...m, ...(await r.json()) }; } catch { /* offline: show the default */ }
+    await self.registration.showNotification(m.title, { body: m.body, icon: "/assets/logo-192.png", badge: "/assets/logo-64.png", tag: m.tag, renotify: false, data: { url: m.url } });
+  })());
+});
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = new URL(e.notification.data?.url || "/me", self.location.origin).href;
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const w of wins) if (new URL(w.url).origin === self.location.origin) { await w.focus(); return w.navigate(url).catch(() => {}); }
+    return self.clients.openWindow(url);
+  })());
 });

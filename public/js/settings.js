@@ -74,6 +74,19 @@ toggle("st-letter", (v) => api("/api/me/letter", { method: "POST", body: { subsc
 toggle("st-reminders", (v) => api("/api/me/reminders", { method: "PATCH", body: { on: v } }), "Service reminders on", "Service reminders off");
 toggle("st-prayer", (v) => api("/api/me/prayer-weekly", { method: "PATCH", body: { on: v } }), "Weekly prayer list on 🙏", "Weekly prayer list off");
 
+// ---------- daily verse notification (this device)
+import("./push.js").then(async (P) => {
+  const box = $("st-push"), note = $("st-push-note");
+  if (!P.pushSupported()) { box.disabled = !P.needsInstall(); note.textContent = P.needsInstall() ? "On iPhone: add the app to your Home Screen first, then turn this on" : "This browser can't show notifications"; if (!P.needsInstall()) return; }
+  const sub = await P.currentSub().catch(() => null);
+  box.checked = !!sub && Notification.permission === "granted";
+  box.addEventListener("change", async () => {
+    const on = box.checked;
+    try { if (on) { await P.enablePush({ verse: true }); toast("Daily verse on 📖 See you at 6am"); } else { await P.disablePush(); toast("Daily verse notifications off"); } }
+    catch (err) { box.checked = !on; toast(err.message); }
+  });
+});
+
 // ---------- membership
 $("me-member").addEventListener("click", async (e) => {
   if (e.target.closest("[data-ms-confirm]")) { try { await api("/api/me/membership/confirm", { method: "POST" }); toast("Thank you! Your membership is confirmed 💛"); render(); } catch (err) { toast(err.message); } }

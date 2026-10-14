@@ -168,3 +168,40 @@ if ("serviceWorker" in navigator && (location.protocol === "https:" || location.
 import("./consent.js").then(() => import("./install.js")).catch(() => {});
 initReveal();
 fillSettings();
+
+// ---------- visit counting for the church's own dashboard (first-party only: no ads, no third parties) ----------
+// Everyone is counted anonymously. A visitor id (to see who comes back) is only kept if they allowed "remember on this device".
+(function track() {
+  if (location.pathname.startsWith("/admin")) return;
+  const allowIds = /(?:^|;\s*)scc_consent=[^;]*%7C1/.test(document.cookie) || /(?:^|;\s*)scc_consent=[^;]*\|1/.test(document.cookie);
+  let vid = null, sid = null;
+  if (allowIds) {
+    try {
+      vid = localStorage.getItem("scc-vid") || (localStorage.setItem("scc-vid", crypto.randomUUID()), localStorage.getItem("scc-vid"));
+      sid = sessionStorage.getItem("scc-sid") || (sessionStorage.setItem("scc-sid", crypto.randomUUID()), sessionStorage.getItem("scc-sid"));
+    } catch { /* storage blocked */ }
+  }
+  const app = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const base = { v: vid, s: sid, a: app ? 1 : 0 };
+  const q = [];
+  const flush = () => {
+    if (!q.length) return;
+    const body = JSON.stringify({ e: q.splice(0) });
+    if (!(navigator.sendBeacon && navigator.sendBeacon("/api/a", new Blob([body], { type: "application/json" })))) fetch("/api/a", { method: "POST", body, keepalive: true, headers: { "Content-Type": "application/json" } }).catch(() => {});
+  };
+  const view = () => {
+    const nav = performance.getEntriesByType?.("navigation")?.[0];
+    q.push({ ...base, k: "view", p: location.pathname, r: document.referrer || "", u: new URLSearchParams(location.search).get("utm_source") || "", ms: nav ? Math.round(nav.responseEnd || nav.duration) : undefined });
+    setTimeout(flush, 1200);
+  };
+  if (document.prerendering) document.addEventListener("prerenderingchange", view, { once: true }); else view();
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest?.("a, button, [role=button], summary");
+    if (!el) return;
+    const label = (el.getAttribute("aria-label") || el.textContent || el.getAttribute("href") || "").replace(/\s+/g, " ").trim().slice(0, 60);
+    if (label) q.push({ ...base, k: "click", p: location.pathname, l: label });
+    if (q.length >= 10) flush();
+  }, { capture: true, passive: true });
+  addEventListener("pagehide", flush);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
+})();

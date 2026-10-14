@@ -9,7 +9,7 @@ export const HEARD_ABOUT = ["friend", "family", "social_media", "walk_in", "even
 
 export const MINISTRIES = [
   "youth", "worship", "media", "ushering", "prayer", "evangelism", "creative",
-  "hospitality", "kids", "social_media", "sports", "welcome", "events",
+  "hospitality", "kids", "social_media", "sports", "welcome", "events", "call_office",
 ] as const;
 
 export const AVAILABILITY = ["sunday_morning", "sunday_evening", "weekday_evening", "saturday", "school_holidays"] as const;
