@@ -11,7 +11,7 @@ import type { Env } from "../env.ts";
 import { siteUrl } from "../env.ts";
 import { calendarUrl, outlookUrl, TZ } from "./time.ts";
 
-export const PROMPT_VERSION = "ask-scc-2026-10-13";
+export const PROMPT_VERSION = "ask-scc-2026-10-15-rag";
 const ADDRESS = "17 Humber Street, Woodmead, Sandton";
 const MAPS = "https://maps.google.com/?q=17+Humber+Street+Woodmead+Sandton";
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];

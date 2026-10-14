@@ -66,7 +66,7 @@ function setAgent(id) {
   agent = id || null;
   root.querySelectorAll(".ask-agents button").forEach((b) => b.classList.toggle("on", (b.dataset.agent || null) === agent));
   const a = info.agents.find((x) => x.id === agent);
-  document.getElementById("ask-in").placeholder = a ? `Ask the ${a.label} helper…` : "Ask anything about church…";
+  document.getElementById("ask-in").placeholder = a ? `Ask the ${a.label} helper…` : "Ask me anything…";
 }
 
 async function start() {
@@ -84,7 +84,7 @@ async function start() {
     <div class="ask-tiles">${TILES.map(([q, i, l]) => `<button data-ask="${esc(q)}">${icon(i)}<span>${esc(l)}</span></button>`).join("")}</div>
     <nav class="ask-agents" aria-label="Talk to a helper"><span>Talk to</span><button class="on" data-agent="">${icon("sparkles")} Concierge</button>${info.agents.map((a) => `<button data-agent="${esc(a.id)}" title="${esc(a.blurb)}">${esc(a.label)}</button>`).join("")}</nav>
     <div class="ask-thread" id="ask-thread"></div>
-    <form class="ask-form" id="ask-form" autocomplete="off"><input id="ask-in" class="input" maxlength="600" placeholder="Ask anything about church…" aria-label="Your question"><button class="btn btn-gold" type="submit" aria-label="Send">${icon("send")}</button></form>
+    <form class="ask-form" id="ask-form" autocomplete="off"><input id="ask-in" class="input" maxlength="2000" placeholder="Ask me anything…" aria-label="Your question"><button class="btn btn-gold" type="submit" aria-label="Send">${icon("send")}</button></form>
     <p class="fine ask-fine">Answers come from the church's own calendar and your account. Check important details on the event page.</p>`;
   root.addEventListener("click", async (e) => {
     const q = e.target.closest("[data-ask]"); if (q) { e.preventDefault(); return send(q.dataset.ask); }
@@ -98,8 +98,8 @@ async function start() {
   });
   document.getElementById("ask-form").addEventListener("submit", (e) => { e.preventDefault(); const i = document.getElementById("ask-in"); const v = i.value; i.value = ""; send(v); });
   // The helper speaks first, with a few ready-made questions to tap.
-  bubble("bot", `<span class="ask-who">${icon("bot")} Concierge</span><p>Hi${first ? ` ${esc(first)}` : ""}! I can tell you what's happening at church, add dates to your calendar, find your tickets and more. Tap one or just ask.</p>
-    <div class="ask-sugg">${["What's happening this week?", "What's on this month?", "When is the youth service?", "Do I have a ticket?"].map((s) => `<button data-ask="${esc(s)}">${esc(s)}</button>`).join("")}</div>`);
+  bubble("bot", `<span class="ask-who">${icon("bot")} Concierge</span><p>Hi${first ? ` ${esc(first)}` : ""}! Ask me anything: what's on at church, a Bible verse explained, a prayer for your week, help with homework or a tricky question. Tap one or just ask.</p>
+    <div class="ask-sugg">${["What's happening this week?", "Explain John 3:16 simply", "Pray with me for exams", "When is the youth service?"].map((s) => `<button data-ask="${esc(s)}">${esc(s)}</button>`).join("")}</div>`);
   const q = new URLSearchParams(location.search).get("q");
   if (q) send(q);
 }

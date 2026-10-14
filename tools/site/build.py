@@ -323,6 +323,8 @@ def main():
     (ROOT / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         + "".join(f"  <url><loc>{SITE}{u}</loc><changefreq>weekly</changefreq><priority>{pri.get(u, '0.5')}</priority></url>\n" for u in urls) + "</urlset>\n")
     print("wrote sitemap.xml")
+    # Ask SCC's knowledge base follows the website's own words.
+    import runpy; runpy.run_path(str(HERE / "kb.py"), run_name="__main__")
 
 
 if __name__ == "__main__":
