@@ -2,6 +2,10 @@ import { veilCarry, veilHide, veilShow } from "./switcher.js";   // also wires d
 // Sign in with Google (Google Identity Services) + the admin's emailed verification code.
 import { api, esc, toast } from "./site.js";
 import { busy, otpField } from "./otp.js";
+import { cacheMe, cachedMe, renderPortalNav } from "./portal.js";
+
+// Draw the portal bar from the last known sign-in straight away (no jump), then confirm with the server.
+renderPortalNav(cachedMe());
 
 let mePromise;
 export function getMe(force = false) {
@@ -37,6 +41,7 @@ async function handleCredential(resp) {
     const r = await api("/api/auth/google", { method: "POST", body: { credential: resp.credential } });
     if (r.needs_code) { veilHide(); await adminCodeDialog(r.challenge, r.sent_to); return; }
     const me = await getMe(true);
+    cacheMe(me); renderPortalNav(me);
     renderHeaderUser(me);
     if (!onMe && !midTask) {
       // Members (and the team) land on their Home: tickets, what's coming up and what to know. New people go to the join form.
@@ -119,6 +124,7 @@ export function adminCodeDialog(challenge, sentTo) {
 }
 
 export async function signOut() {
+  cacheMe(null);
   await api("/api/auth/logout", { method: "POST" }).catch(() => {});
   try { google?.accounts?.id?.disableAutoSelect(); } catch { /* not loaded */ }
   location.href = "/";
@@ -144,6 +150,7 @@ export function renderHeaderUser(me) {
       <a href="/vote">Vote</a>
       ${me.admin_account || me.is_admin ? `<a href="/admin/">${me.admin_role === "youth" ? "Youth leader portal" : "Admin"}</a>` : ""}
       <a href="/settings">Settings</a>
+      <a href="/about">About the church</a>
       ${!me.member && !me.admin_account ? `<a href="/join">Complete joining</a>` : ""}
       <button type="button" data-signout>Sign out</button></div></details>`;
   slot.querySelector("[data-signout]").addEventListener("click", signOut);
@@ -175,6 +182,7 @@ export async function openSignIn() {
 }
 
 getMe().then((me) => {
+  cacheMe(me); renderPortalNav(me);
   renderHeaderUser(me);
   // Warm up Google sign-in in the background for signed-out visitors, so the button appears instantly.
   if (!me.user && me.google_client_id) (window.requestIdleCallback || ((f) => setTimeout(f, 1200)))(() => loadGsi().then(() => {

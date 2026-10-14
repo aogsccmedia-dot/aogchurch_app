@@ -138,7 +138,7 @@ export function joinWelcome(b: Brand, name: string, ref: string) {
         p("Our team will look over your details and confirm your membership. Once you're confirmed, we'll introduce you to a leader who will walk with you, answer your questions and help you find your place. You don't have to have it all figured out. Just come as you are.") +
         scripture("So then you are no longer strangers and aliens, but you are fellow citizens with the saints and members of the household of God.", "Ephesians 2:19") +
         p(`Your reference is <strong style="color:${C.ink};letter-spacing:.08em">${esc(ref)}</strong> — keep it handy in case you need it.`) +
-        p(`New to the Assemblies of God? Our <a href="${esc(b.site)}/assets/welcome-pack.pdf" style="color:${C.goldText};font-weight:600">welcome pack</a> tells the story from Azusa Street to Nicholas Bhengu and the birth of our church.`) + button(b.site + "/me", "Open my church home"),
+        p(`New to the Assemblies of God? Our <a href="${esc(b.site)}/welcome-pack" style="color:${C.goldText};font-weight:600">welcome pack</a> tells the story from Azusa Street to Nicholas Bhengu and the birth of our church.`) + button(b.site + "/me", "Open my church home"),
     }),
     text: `Welcome to the family, ${name}!\n\nThank you for joining AOG Sandton City Church. Our team will confirm your membership; once you're confirmed, we'll introduce you to a leader who will walk with you.\n\nYour reference: ${ref}\n\n"You are no longer strangers... but members of the household of God." — Ephesians 2:19` + textFooter(b),
   };

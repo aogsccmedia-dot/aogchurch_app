@@ -11,3 +11,13 @@ async def main():
         await b.close()
     print("wrote", OUT, OUT.stat().st_size // 1024, "KB")
 asyncio.run(main())
+
+# The in-app viewer (/welcome-pack) shows each page as an image, so it opens instantly on any phone or the installed app.
+import subprocess, tempfile, glob
+from PIL import Image
+pages = OUT.parent / "welcome-pack"; pages.mkdir(exist_ok=True)
+with tempfile.TemporaryDirectory() as t:
+    subprocess.run(["pdftoppm", "-r", "150", "-png", str(OUT), f"{t}/p"], check=True)
+    for i, f in enumerate(sorted(glob.glob(f"{t}/p-*.png")), 1):
+        im = Image.open(f).convert("RGB"); im.thumbnail((1600, 1600)); im.save(pages / f"page-{i}.webp", "WEBP", quality=82)
+print("wrote page images to", pages)

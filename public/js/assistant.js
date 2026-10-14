@@ -27,7 +27,9 @@ function bubble(role, html, extra = "") {
   el.className = `ask-msg ${role}`;
   el.innerHTML = html + extra;
   thread.append(el);
-  el.scrollIntoView({ behavior: "smooth", block: "end" });
+  // The conversation scrolls inside its own box, so the page (and the buttons around it) never jump.
+  const top = role === "bot" && !role.includes("typing") ? el.offsetTop - 8 : thread.scrollHeight;
+  thread.scrollTo({ top, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   return el;
 }
 
@@ -57,7 +59,7 @@ async function send(text) {
   } catch (e) {
     typing.remove();
     bubble("bot", `<p>${esc(e.message || "Something went wrong. Please try again.")}</p>`);
-  } finally { busy = false; form.classList.remove("sending"); document.getElementById("ask-in").focus(); }
+  } finally { busy = false; form.classList.remove("sending"); document.getElementById("ask-in").focus({ preventScroll: true }); }
 }
 
 function setAgent(id) {

@@ -1274,7 +1274,7 @@ dialog.ob-sheet { width: min(520px, calc(100% - 24px)); max-height: calc(100dvh 
 .ask-agents button { flex: none; display: inline-flex; gap: 6px; align-items: center; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, .7); cursor: pointer; font-size: 14px; }
 .ask-agents button .i { width: 15px; height: 15px; }
 .ask-agents button.on { background: var(--text); color: #fff; border-color: var(--text); }
-.ask-thread { display: flex; flex-direction: column; gap: 12px; margin: 18px 0; min-height: 40px; }
+.ask-thread { display: flex; flex-direction: column; gap: 12px; margin: 14px 0 12px; height: clamp(300px, calc(100dvh - 430px), 640px); overflow-y: auto; overscroll-behavior: contain; padding: 14px; border-radius: 22px; background: rgba(255, 255, 255, .45); border: 1px solid var(--line); scroll-padding: 8px; position: relative; }
 .ask-msg { max-width: 92%; padding: 12px 16px; border-radius: 18px; animation: ask-in .25s ease-out; }
 .ask-msg p { margin: 0; line-height: 1.55; }
 .ask-msg.me { align-self: flex-end; background: var(--text); color: #fff; border-bottom-right-radius: 6px; }
@@ -1301,7 +1301,7 @@ dialog.ob-sheet { width: min(520px, calc(100% - 24px)); max-height: calc(100dvh 
 .cal-menu > div { position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; display: grid; min-width: 170px; padding: 6px; border-radius: 12px; background: #fff; border: 1px solid var(--line); box-shadow: 0 12px 30px rgba(40, 30, 80, .14); }
 .cal-menu > div a { padding: 9px 12px; border-radius: 8px; font-size: 14px; }
 .cal-menu > div a:hover { background: var(--hover); }
-.ask-form { position: sticky; bottom: calc(76px + env(safe-area-inset-bottom)); display: flex; gap: 8px; padding: 8px; border-radius: 999px; background: rgba(255, 255, 255, .92); backdrop-filter: blur(10px); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(60, 50, 110, .12); }
+.ask-form { position: relative; display: flex; gap: 8px; padding: 8px; border-radius: 999px; background: rgba(255, 255, 255, .92); backdrop-filter: blur(10px); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(60, 50, 110, .12); }
 .ask-form .input { border: 0; background: transparent; border-radius: 999px; flex: 1; min-width: 0; }
 .ask-form .btn { border-radius: 999px; width: 48px; padding: 0; display: grid; place-items: center; }
 .ask-form.sending .btn { opacity: .55; }
@@ -1311,7 +1311,7 @@ dialog.ob-sheet { width: min(520px, calc(100% - 24px)); max-height: calc(100dvh 
 .dots i:nth-child(2) { animation-delay: .15s; } .dots i:nth-child(3) { animation-delay: .3s; }
 @keyframes dot { 50% { transform: translateY(-4px); opacity: .5; } }
 @keyframes ask-in { from { opacity: 0; transform: translateY(6px); } }
-@media (min-width: 900px) { .ask-form { bottom: 18px; } }
+
 @media (max-width: 560px) { .ask-tiles { grid-template-columns: repeat(3, 1fr); gap: 8px; } .ask-tiles button { padding: 11px 10px; font-size: 13.5px; } .ask-msg { max-width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .ask-msg, .dots i { animation: none; } }
 
@@ -1419,3 +1419,44 @@ a.know:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(60, 50,
 .appointed .i { width: 18px; height: 18px; }
 .ev-slide img { object-position: top; aspect-ratio: 4 / 3; }
 @media (max-width: 700px) { .portal-tabs a span { white-space: nowrap; font-size: 10.5px; } .portal-tabs { overflow-x: auto; } }
+
+/* ---------------------------------------------------------------- Signed in: one portal bar, website menus step aside */
+.signed-in [data-menu-open], .signed-in [data-join-cta], .signed-in .header-actions .btn-gold { display: none !important; }
+.signed-in .main-nav:not(.portal-nav), .signed-in .tabbar:not(.portal-nav) { visibility: hidden; }
+.signed-in body.portal .site-footer { display: none; }
+.main-nav.portal-nav { display: flex; gap: 2px; justify-content: center; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, .7); border: 1px solid var(--line); justify-self: center; }
+.main-nav.portal-nav a { display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 999px; font-size: 14px; color: var(--text-2); white-space: nowrap; transition: background-color .15s, color .15s; }
+.main-nav.portal-nav a::after { display: none !important; }
+.main-nav.portal-nav a .i { width: 16px; height: 16px; }
+.main-nav.portal-nav a:hover { background: var(--hover); color: var(--text); }
+.main-nav.portal-nav a.on { background: #111016; color: #fff; }
+.main-nav.portal-nav a.on .i { color: #e2d5fb; }
+@media (max-width: 1180px) { .main-nav.portal-nav a { padding: 8px 10px; font-size: 13.5px; } .main-nav.portal-nav a .i { display: none; } }
+@media (max-width: 960px) {
+  .tabbar.portal-nav { grid-template-columns: repeat(var(--n, 7), 1fr); padding-left: 4px; padding-right: 4px; }
+  .tabbar.portal-nav a { gap: 2px; font-size: 10.5px; white-space: nowrap; }
+  .tabbar.portal-nav a .i { width: 21px; height: 21px; }
+  .tabbar.portal-nav a.on { color: var(--text); }
+  .tabbar.portal-nav a.on .i { color: #6b5aa8; }
+  .tabbar.portal-nav a.on span { text-decoration: underline; text-decoration-color: var(--gold); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+}
+.portal-nav a.going { opacity: .75; }
+
+/* ---------------------------------------------------------------- Buttons stay put: feedback by colour and shade, never by moving */
+a:hover, a:active, button:hover, button:active, .btn:hover, .btn:active, summary:active, [role="button"]:active,
+.event-card:hover, .ministry:hover, .explore-card:hover, .pager-link:hover, .presenter-teaser:hover, .tool-card:hover, .pick-person:hover,
+.soon-card:hover, .ask-tiles button:hover, .me-quick a:hover, .dev-link:hover, a.know:hover { transform: none !important; }
+.btn:active, button:active, .ask-tiles button:active, a.know:active, .slide:active, .pick-person:active { filter: brightness(.95); }
+.btn { transition: background-color .15s, color .15s, opacity .15s, box-shadow .15s, filter .1s; }
+.main-nav.portal-nav a:hover, .main-nav.portal-nav a[aria-current] { text-decoration: none; }
+
+/* Welcome pack viewer */
+.wp-view { padding-bottom: 90px; }
+.wp-bar { position: sticky; top: 72px; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; margin: 0 auto 16px; max-width: 1100px; border-radius: 0 0 18px 18px; background: rgba(255, 255, 255, .9); backdrop-filter: blur(12px); border: 1px solid var(--line); border-top: 0; }
+.wp-title { font-family: var(--font-serif, "Playfair Display", serif); font-weight: 400; font-size: 18px; }
+.wp-actions { display: flex; gap: 8px; }
+.wp-pages { display: grid; gap: 16px; max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+.wp-pages img { width: 100%; height: auto; border-radius: 14px; box-shadow: 0 14px 40px rgba(40, 30, 80, .12); background: #fff; }
+body.wp .site-footer { display: none; }
+@media (max-width: 600px) { .wp-bar { top: 60px; border-radius: 0; margin: 0 0 12px; } .wp-actions .btn span { display: none; } .wp-title { font-size: 16px; } }
+@media (max-width: 960px) { .main-nav.portal-nav { display: none; } }

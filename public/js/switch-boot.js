@@ -24,3 +24,6 @@
     if (c && Date.now() - c.at < 120000 && (c.events || []).some(function (e) { return e.registration_open; })) document.documentElement.classList.add("has-ticker");
   } catch (e) { /* ignore */ }
 })();
+
+// Signed in? Show the portal bar (not the website menus) from the very first paint.
+(function () { try { if (localStorage.getItem("scc-me")) document.documentElement.classList.add("signed-in"); } catch (e) { /* ignore */ } })();

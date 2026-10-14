@@ -26,6 +26,50 @@ export function renderTabs(el, me, active) {
   el.hidden = false;
 }
 
+// ---- Signed in: the portal navigation replaces the website's own (header on computers, bottom bar on phones).
+// A small summary of who's signed in is cached so the portal bar is drawn instantly on the next page, without a jump.
+const KEY = "scc-me";
+export function cacheMe(me) {
+  try {
+    if (!me?.user) { localStorage.removeItem(KEY); return; }
+    const u = me.user;
+    localStorage.setItem(KEY, JSON.stringify({ user: { id: u.id, email: u.email, given_name: u.given_name, name: u.name, picture: u.picture }, admin_role: me.admin_role || null,
+      admin_account: !!me.admin_account, is_admin: !!me.is_admin, member: !!me.member }));
+  } catch { /* storage blocked */ }
+}
+export function cachedMe() { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } }
+
+const here = () => location.pathname.replace(/\.html$/, "").replace(/\/$/, "") || "/";
+const isOn = (href) => { const h = href.replace(/\/$/, ""); const p = here(); return h === p || (h === "/admin" && p.startsWith("/admin")); };
+const link = (href, ico, label) => `<a href="${href}"${isOn(href) ? ' class="on" aria-current="page"' : ""}>${icon(ico)}<span>${esc(label)}</span></a>`;
+
+/** Swap the website menus for the portal: header nav (computers) and bottom bar (phones). Safe to call again. */
+export function renderPortalNav(me) {
+  const root = document.documentElement;
+  const nav = document.querySelector(".site-header .main-nav"), bar = document.querySelector(".tabbar");
+  if (!me?.user) {
+    root.classList.remove("signed-in");
+    for (const el of [nav, bar]) if (el?.dataset.site) { el.innerHTML = el.dataset.site; delete el.dataset.site; el.classList.remove("portal-nav"); }
+    return;
+  }
+  root.classList.add("signed-in");
+  const tabs = tabsFor(me).map(([h, i, l]) => link(h, i, l)).join("");
+  for (const el of [nav, bar]) {
+    if (!el) continue;
+    if (!el.dataset.site) el.dataset.site = el.innerHTML;
+    el.innerHTML = tabs; el.classList.add("portal-nav");
+    el.style.setProperty("--n", String(tabsFor(me).length));
+  }
+}
+
+// A tapped tab (or any portal link) shows as chosen straight away, while the next page loads.
+document.addEventListener("click", (e) => {
+  const a = e.target.closest?.(".portal-nav a, .portal-tabs a");
+  if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
+  a.parentElement.querySelectorAll("a").forEach((x) => x.classList.toggle("on", x === a));
+  a.classList.add("going");
+});
+
 /** The black welcome, once per sign-in session: "Welcome back, Thandi · Youth leader portal". Tap to skip. */
 export function helloOnce(me) {
   if (!me?.user) return;

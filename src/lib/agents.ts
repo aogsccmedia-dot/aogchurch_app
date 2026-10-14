@@ -16,11 +16,12 @@ const ADDRESS = "17 Humber Street, Woodmead, Sandton";
 const MAPS = "https://maps.google.com/?q=17+Humber+Street+Woodmead+Sandton";
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export type AgentId = "concierge" | "whatson" | "store" | "events" | "services" | "programme" | "visit" | "tickets" | "prayer" | "votes" | "join" | "calendar";
+export type AgentId = "concierge" | "whatson" | "store" | "about" | "events" | "services" | "programme" | "visit" | "tickets" | "prayer" | "votes" | "join" | "calendar";
 export const AGENTS: Record<AgentId, { label: string; blurb: string }> = {
   concierge: { label: "Concierge", blurb: "Finds the right helper for you" },
   whatson: { label: "What's on", blurb: "This week or this month at church" },
   store: { label: "Store", blurb: "Books by our brethren" },
+  about: { label: "Our story", blurb: "Who we are and the welcome pack" },
   events: { label: "Events", blurb: "What's coming up and tickets" },
   services: { label: "Services", blurb: "Weekly service times" },
   programme: { label: "Programme", blurb: "The church year, month by month" },
@@ -42,6 +43,7 @@ export type Who = { userId: string; email: string; name: string | null; member: 
 
 const RULES: [AgentId, RegExp][] = [
   ["whatson", /\b((this|next) (week|weekend|month)|what'?s (on|happening)|happening (at church|this|next)|today at church|tonight at church|in (january|february|march|april|may|june|july|august|september|october|november|december))\b/],
+  ["about", /\b(welcome pack|history|our story|who are (you|we)|azusa|bhengu|back to god|assemblies of god|what is aog|aog is not|founder|founded)\b/],
   ["store", /\b(store|shop|books|bookshop|bookstore|buy (a |the )?book|purchase)\b/],
   ["calendar", /\b(calendar|calender|remind|subscribe|sync|ical|ics|outlook|google cal|add (it|this|them|that) to)\b/],
   ["tickets", /\b(my (ticket|tickets|booking|bookings|registration|registrations|ref)|(do|did) i (have|get|register|book)( a| my| any)? ?(ticket|tickets|booking|place|seat)?|have i got (a |my |any )?(ticket|tickets)|am i (registered|booked)|qr)\b/],
@@ -276,7 +278,13 @@ const whatson: Run = async (env, t) => {
     suggestions: label === "this week" ? ["What's on this month?", "When is the youth service?"] : ["What's happening this week?", "Do I have a ticket?"] };
 };
 
-const RUN: Record<AgentId, Run> = { concierge, whatson, store, events, services: servicesAgent, programme, calendar, tickets, visit, prayer, votes, join };
+const about: Run = async () => ({
+  agent: "about", text: "We're part of the Assemblies of God family. Our story runs from the Azusa Street revival in 1906 to Nicholas Bhengu and the Back to God crusades, and on to the birth of AOG Sandton City Church. It's all in the welcome pack.",
+  facts: "1906 Azusa Street revival (William J. Seymour). 1908 AOG missionaries reach South Africa. 1914 AOG formed in Hot Springs, USA. Nicholas Bhengu (1909–1985): Back to God crusades from the 1940s, Back to God Crusade 1950. AOG Sandton City Church: born from a vision for a city church in Sandton.",
+  cards: [], actions: [{ label: "Open the welcome pack", href: "/welcome-pack", primary: true }], suggestions: ["When is the Sunday service?", "How do I join?"],
+});
+
+const RUN: Record<AgentId, Run> = { concierge, whatson, store, about, events, services: servicesAgent, programme, calendar, tickets, visit, prayer, votes, join };
 export const runAgent = (id: AgentId, env: Env, text: string, who: Who) => RUN[id](env, text, who);
 
 // ---------------------------------------------------------------- the church calendar feed (subscribe once)

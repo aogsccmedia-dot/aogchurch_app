@@ -5,7 +5,7 @@ import { icon } from "./icons.js";
 import { initInsights } from "./admin-insights.js";
 import { initMore } from "./admin-more.js";
 import { arrivedBySwitch, switchReady } from "./switcher.js";
-import { helloOnce, renderTabs } from "./portal.js";
+import { cacheMe, helloOnce, renderTabs } from "./portal.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -141,7 +141,7 @@ $("#code-verify").addEventListener("submit", async (e) => {
   catch (err) { loginErr(err.message); e.target.code.value = ""; e.target.code.dispatchEvent(new Event("input")); e.target.code.focus(); }
   finally { done(); }
 });
-$("#logout").addEventListener("click", async () => { await api("/api/auth/logout", { method: "POST" }).catch(() => {}); location.href = "/"; });
+$("#logout").addEventListener("click", async () => { cacheMe(null); await api("/api/auth/logout", { method: "POST" }).catch(() => {}); location.href = "/"; });
 
 async function boot() {
   const r = await fetch("/api/auth/me").then((x) => x.json()).catch(() => ({}));
@@ -162,7 +162,7 @@ async function boot() {
     $$(".m-bar [data-go-tab]").forEach((b) => b.addEventListener("click", () => { location.hash = b.dataset.goTab; }));
   }
   $("#to-profile").hidden = true; $("#m-switch").hidden = true;   // one portal now: the tabs at the top replace switching
-  renderTabs($("#portal-tabs"), r, "/admin/");
+  renderTabs($("#portal-tabs"), r, "/admin/"); cacheMe(r);
   // Shortcuts only for what this person can open.
   $$('[data-go="events-new"]').forEach((b) => { b.hidden = !!perms && !perms.includes("events"); });
   $$('[data-go="letters-new"]').forEach((b) => { b.hidden = !!perms; });

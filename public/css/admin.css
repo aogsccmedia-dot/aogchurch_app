@@ -717,3 +717,8 @@ dialog.drawer { background: #fff; }
 .vt-elig { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .vt-role-res { padding: 12px 0; border-top: 1px solid var(--line, #eee); }
 .vt-appointed { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 6px 0; color: #1f6b3d; font-weight: 500; }
+
+/* Buttons stay put: feedback by colour and shade, never by moving */
+.btn:hover, .btn:active, button:hover, button:active, a:active { transform: none !important; }
+.btn:active, button:active { filter: brightness(.95); }
+#nav button { transition: background-color .15s, color .15s; }
