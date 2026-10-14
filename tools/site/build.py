@@ -63,7 +63,8 @@ def head(title, desc, canonical=None, noindex=False, extra=""):
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="preload" href="/fonts/Jost.woff" as="font" type="font/woff" crossorigin>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <title>{title}</title>
   <meta name="description" content="{desc}">
   <meta name="theme-color" content="#fdfdff">{robots}{canon}
@@ -87,9 +88,6 @@ def head(title, desc, canonical=None, noindex=False, extra=""):
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preconnect" href="https://accounts.google.com">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css?v={ver('css/base.css')}">
   <link rel="stylesheet" href="/css/pages.css?v={ver('css/pages.css')}">
   <script src="/js/switch-boot.js?v={ver('js/switch-boot.js')}"></script>

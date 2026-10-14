@@ -1453,7 +1453,7 @@ a:hover, a:active, button:hover, button:active, .btn:hover, .btn:active, summary
 /* Welcome pack viewer */
 .wp-view { padding-bottom: 90px; }
 .wp-bar { position: sticky; top: 72px; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; margin: 0 auto 16px; max-width: 1100px; border-radius: 0 0 18px 18px; background: rgba(255, 255, 255, .9); backdrop-filter: blur(12px); border: 1px solid var(--line); border-top: 0; }
-.wp-title { font-family: var(--font-serif, "Playfair Display", serif); font-weight: 400; font-size: 18px; }
+.wp-title { font-family: var(--font-sans); font-weight: 400; font-size: 18px; }
 .wp-actions { display: flex; gap: 8px; }
 .wp-pages { display: grid; gap: 16px; max-width: 1100px; margin: 0 auto; padding: 0 16px; }
 .wp-pages img { width: 100%; height: auto; border-radius: 14px; box-shadow: 0 14px 40px rgba(40, 30, 80, .12); background: #fff; }
@@ -1731,3 +1731,7 @@ body.has-bottom .side { padding-bottom: calc(100px + env(safe-area-inset-bottom)
 .app-bottom { view-transition-name: app-bottom; }
 .app-bar { view-transition-name: app-bar; }
 @media (min-width: 900px) { .svc-list { grid-template-columns: 1fr 1fr; } }
+.me-explore { grid-template-columns: minmax(0, 1fr); width: 100%; }
+.explore-box { min-width: 0; max-width: 100%; }
+.explore-box input { width: 0; }
+.explore-chips { max-width: 100%; }

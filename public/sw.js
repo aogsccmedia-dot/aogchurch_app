@@ -3,7 +3,7 @@
 // - CSS/JS: network first (so a new release is picked up straight away), cached copy when offline.
 // - Photos/logos: cache first.
 // - /api and /admin are never cached.
-const VERSION = "scc-v5";
+const VERSION = "scc-v6";
 const SHELL = ["/", "/offline", "/css/base.css", "/css/pages.css", "/js/site.js", "/js/auth.js", "/js/icons.js", "/js/install.js",
   "/assets/logo-64.png", "/assets/logo-192.png", "/manifest.webmanifest"];
 
@@ -38,7 +38,7 @@ self.addEventListener("fetch", (e) => {
       (await caches.match(req, { ignoreSearch: true })) || (await caches.match("/offline")) || Response.error()));
     return;
   }
-  if (url.pathname.startsWith("/assets/")) {
+  if (url.pathname.startsWith("/assets/") || url.pathname.startsWith("/fonts/")) {
     e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => put(req, res))));
     return;
   }

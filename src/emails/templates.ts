@@ -14,11 +14,9 @@ const C = {
   blue: "#dceafb", lilac: "#e9e0fb", pink: "#fbe3ee", foot: "#faf9fd",
 };
 const PASTEL = `linear-gradient(90deg, ${"#cfe2fb"} 0%, ${"#e2d5fb"} 50%, ${"#f9d5e5"} 100%)`;
-// Same fonts as the website: Jost for text, Playfair Display for headings (falls back gracefully where web fonts are blocked).
+// Same font as the website: Jost everywhere (falls back to Helvetica where web fonts are blocked).
 const SANS = "'Jost', 'Helvetica Neue', Helvetica, Arial, sans-serif";
-// Playfair Display: open-source high-contrast display serif, closest to Magilio.
-// Clients that block web fonts (e.g. Gmail) gracefully fall back to Georgia.
-const SERIF = "'Playfair Display', Georgia, 'Times New Roman', serif";
+const SERIF = "'Jost', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 
 export function button(href: string, label: string): string {
   return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:28px 0 8px"><tr><td style="border-radius:999px;background:${C.gold};box-shadow:0 6px 18px rgba(200,150,62,.35)">
@@ -43,8 +41,8 @@ export function layout(b: Brand, o: { preheader: string; eyebrow?: string; headi
     ? `<tr><td align="center" style="padding:26px 24px 0;background:${C.card}"><img src="${esc(b.site)}/assets/email/welcome.gif" width="480" alt="Welcome" style="display:block;width:100%;max-width:480px;height:auto;border:0"></td></tr>`
     : o.heroImage ? `<tr><td style="padding:0"><img src="${esc(o.heroImage)}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>` : "";
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>${esc(o.heading)}</title>
-<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-<style>@import url('https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap');</style></head>
+<link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>@import url('https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,400;0,500;0,600;1,400&display=swap');</style></head>
 <body style="margin:0;padding:0;background:${C.page}">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${esc(o.preheader)}&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${C.page}" style="background:${C.page};background-image:linear-gradient(160deg, ${C.blue} 0%, ${C.lilac} 45%, ${C.pink} 100%)"><tr><td align="center" style="padding:32px 12px">

@@ -32,3 +32,11 @@
     }
   } catch (e) { /* storage blocked: the site works as normal */ }
 })();
+
+// Keep the screen still under fingers: no pinch-zoom or double-tap zoom wobble (iPhone ignores CSS for this).
+(function () {
+  var stop = function (e) { e.preventDefault(); };
+  document.addEventListener("gesturestart", stop, { passive: false });
+  document.addEventListener("gesturechange", stop, { passive: false });
+  document.addEventListener("touchmove", function (e) { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+})();
