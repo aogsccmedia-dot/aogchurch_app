@@ -1836,3 +1836,10 @@ body.has-bottom .side { padding-bottom: calc(100px + env(safe-area-inset-bottom)
 @media (max-width: 520px) { .push-offer { grid-template-columns: auto minmax(0, 1fr); } .push-offer .po-btns, .push-offer > .btn { grid-column: 1 / -1; justify-content: flex-end; } }
 .sa-map text { font-size: 14px; } .sa-local text { font-size: 16px; }
 .sa-legend li { display: block; } .sa-legend i { display: inline-block; margin-right: 8px; }
+/* Pamphlet viewer: portrait pages, share and print options */
+.wp-pages.pam-view { max-width: 720px; }
+a.pam-page { display: block; }
+.pam-share { max-width: 720px; margin: 8px auto 30px; padding: 0 16px; display: grid; gap: 10px; }
+.pam-share h2 { font-size: 22px; font-weight: 600; margin: 14px 0 0; }
+.pam-share-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.pam-share p { margin: 0; }
