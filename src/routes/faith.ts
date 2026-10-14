@@ -4,7 +4,7 @@
  * Prayer Wall posts only appear after a leader approves them (safeguarding for young people).
  */
 import type { Env } from "../env.ts";
-import { HttpError, Router, clientIp, json, readJson } from "../lib/http.ts";
+import { HttpError, Router, clientIp, json, readJson, trustedWrite } from "../lib/http.ts";
 import { getSession, requireAdmin } from "../lib/auth.ts";
 import { rateLimit } from "../lib/ratelimit.ts";
 import { uuid } from "../lib/crypto.ts";
@@ -105,7 +105,7 @@ export function faithRoutes(router: Router, env: Env): void {
   });
   router.patch("/api/admin/wall/:id", async (req, { id }) => {
     await requireAdmin(env, req);
-    if (req.headers.get("x-scc-admin") !== "1") throw new HttpError(403, "Missing admin header.");
+    if (!trustedWrite(req)) throw new HttpError(403, "Missing admin header.");
     const { status } = await readJson<{ status?: string }>(req);
     if (!["approved", "hidden", "pending"].includes(String(status))) throw new HttpError(422, "Invalid status.");
     const r = await env.DB.prepare("UPDATE prayer_wall SET status = ?, approved_at = CASE WHEN ? = 'approved' THEN COALESCE(approved_at, ?) ELSE approved_at END WHERE id = ?")

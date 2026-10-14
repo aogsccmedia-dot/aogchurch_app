@@ -14,7 +14,7 @@
  */
 import type { Env } from "../env.ts";
 import { adminEmail, siteUrl } from "../env.ts";
-import { HttpError, Router, json, readJson } from "../lib/http.ts";
+import { HttpError, Router, json, readJson, trustedWrite } from "../lib/http.ts";
 import { getSession, requireAdmin } from "../lib/auth.ts";
 import { rateLimit } from "../lib/ratelimit.ts";
 import { uuid } from "../lib/crypto.ts";
@@ -148,7 +148,7 @@ export function assistantRoutes(router: Router, env: Env): void {
 
   router.patch("/api/admin/assistant", async (req) => {
     const s = await requireAdmin(env, req);
-    if (req.headers.get("x-scc-admin") !== "1") throw new HttpError(403, "Missing request header.");
+    if (!trustedWrite(req)) throw new HttpError(403, "Missing request header.");
     if (s.role !== "super") throw new HttpError(403, "Only the main admin can change the assistant.");
     const b = await readJson<{ enabled?: boolean; ai_pct?: number; auto?: boolean }>(req);
     if (b.enabled != null) await putSetting(env, "assistant_enabled", b.enabled ? "1" : "0");

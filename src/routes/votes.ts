@@ -9,7 +9,7 @@
 // Before voting starts, members get a reminder every two weeks to pray; and an email when each round opens.
 import type { Env } from "../env.ts";
 import { adminEmail, siteUrl } from "../env.ts";
-import { HttpError, Router, clientIp, json, readJson } from "../lib/http.ts";
+import { HttpError, Router, clientIp, json, readJson, trustedWrite } from "../lib/http.ts";
 import { getSession, requireAdmin } from "../lib/auth.ts";
 import { rateLimit } from "../lib/ratelimit.ts";
 import { uuid } from "../lib/crypto.ts";
@@ -195,7 +195,7 @@ export function voteRoutes(router: Router, env: Env): void {
   });
 
   // ---------------- admin: the main admin, or anyone given the "Voting" permission
-  const guardWrite = (req: Request) => { if (req.headers.get("x-scc-admin") !== "1") throw new HttpError(403, "Missing request header."); };
+  const guardWrite = (req: Request) => { if (!trustedWrite(req)) throw new HttpError(403, "Missing request header."); };
 
   router.get("/api/admin/votes", async (req) => {
     await requireAdmin(env, req);

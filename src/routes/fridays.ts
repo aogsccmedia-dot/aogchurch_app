@@ -1,7 +1,7 @@
 // Friday youth services: capture each Friday's attendance and the money that came in, from 16 October 2026.
 // Records live in service_sessions (the Friday youth service), so they also appear in Weekly services and Reports.
 import type { Env } from "../env.ts";
-import { HttpError, Router, json, readJson } from "../lib/http.ts";
+import { HttpError, Router, json, readJson, trustedWrite } from "../lib/http.ts";
 import { requireAdmin } from "../lib/auth.ts";
 import { saToday } from "../lib/groups.ts";
 import { sendMail } from "../lib/email.ts";
@@ -56,7 +56,7 @@ export function fridayRoutes(router: Router, env: Env): void {
 
   router.put("/api/admin/fridays/:date", async (req, { date }) => {
     const s = await requireAdmin(env, req);
-    if (req.headers.get("x-scc-admin") !== "1") throw new HttpError(403, "Missing request header.");
+    if (!trustedWrite(req)) throw new HttpError(403, "Missing request header.");
     if (!DATE.test(date) || !isFriday(date)) throw new HttpError(400, "That isn't a Friday.");
     if (date < FRIDAYS_FROM) throw new HttpError(400, "Friday records start on 16 October 2026.");
     if (date > saToday()) throw new HttpError(400, "You can capture a Friday on the night or afterwards.");

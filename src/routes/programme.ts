@@ -3,7 +3,7 @@
  * leaders-only items (board meetings), plus admin CRUD. Weekly services come from Admin → Weekly services.
  */
 import type { Env } from "../env.ts";
-import { HttpError, Router, json, readJson } from "../lib/http.ts";
+import { HttpError, Router, json, readJson, trustedWrite } from "../lib/http.ts";
 import { getSession, requireAdmin } from "../lib/auth.ts";
 import { Validator } from "../lib/validate.ts";
 import { programmeWhen, type ProgrammeRow } from "../lib/programme.ts";
@@ -34,7 +34,7 @@ export function programmeRoutes(router: Router, env: Env): void {
   // ---------- admin ----------
   const admin = async (req: Request) => {
     const s = await requireAdmin(env, req);
-    if (req.method !== "GET" && req.headers.get("x-scc-admin") !== "1") throw new HttpError(403, "Missing request header.");
+    if (req.method !== "GET" && !trustedWrite(req)) throw new HttpError(403, "Missing request header.");
     return s;
   };
   const read = (body: Record<string, unknown>) => {

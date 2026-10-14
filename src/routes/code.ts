@@ -2,7 +2,7 @@
 // Anyone can fork and propose a change; checks run automatically; ONLY the main admin approves what reaches main.
 import type { Env } from "../env.ts";
 import { adminEmail, siteUrl } from "../env.ts";
-import { HttpError, Router, json, readJson } from "../lib/http.ts";
+import { HttpError, Router, json, readJson, trustedWrite } from "../lib/http.ts";
 import { requireSuper } from "../lib/auth.ts";
 import { sendMail } from "../lib/email.ts";
 import { hex, randomToken } from "../lib/crypto.ts";
@@ -129,7 +129,7 @@ export function codeRoutes(router: Router, env: Env): void {
   /** Approve and merge into main. Only the main admin; only when every check has passed. */
   router.post("/api/admin/code/:owner/:repo/:number/approve", async (req, { owner, repo, number }) => {
     const s = await requireSuper(env, req);
-    if (req.headers.get("x-scc-admin") !== "1") throw new HttpError(403, "Missing request header.");
+    if (!trustedWrite(req)) throw new HttpError(403, "Missing request header.");
     const full = `${owner}/${repo}`, n = Number(number);
     if (!repoOk(full)) throw new HttpError(404, "Unknown repository");
     if (!env.GITHUB_TOKEN) throw new HttpError(409, "Add a GITHUB_TOKEN secret to the Worker first (see the steps on this page), or approve on GitHub.");
@@ -149,7 +149,7 @@ export function codeRoutes(router: Router, env: Env): void {
 
   router.post("/api/admin/code/:owner/:repo/:number/decline", async (req, { owner, repo, number }) => {
     const s = await requireSuper(env, req);
-    if (req.headers.get("x-scc-admin") !== "1") throw new HttpError(403, "Missing request header.");
+    if (!trustedWrite(req)) throw new HttpError(403, "Missing request header.");
     const full = `${owner}/${repo}`, n = Number(number);
     if (!repoOk(full)) throw new HttpError(404, "Unknown repository");
     if (!env.GITHUB_TOKEN) throw new HttpError(409, "Add a GITHUB_TOKEN secret to the Worker first, or decline on GitHub.");

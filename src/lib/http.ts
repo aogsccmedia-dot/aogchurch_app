@@ -91,3 +91,12 @@ export class Router {
     return null;
   }
 }
+
+/** Writes must come from our own pages: the app's header, or the browser saying it's same-origin (covers older cached pages). */
+export function trustedWrite(req: Request): boolean {
+  if (req.headers.get("x-scc-admin") === "1") return true;
+  const site = req.headers.get("sec-fetch-site");
+  if (site) return site === "same-origin";
+  const origin = req.headers.get("origin");
+  try { return !!origin && new URL(origin).host === new URL(req.url).host; } catch { return false; }
+}

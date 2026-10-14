@@ -3,7 +3,7 @@
  * and the admin door check-in (scan once; copies show as "already used").
  */
 import type { Env } from "../env.ts";
-import { HttpError, Router, clientIp, json, readJson } from "../lib/http.ts";
+import { HttpError, Router, clientIp, json, readJson, trustedWrite } from "../lib/http.ts";
 import { getSession, requireAdmin } from "../lib/auth.ts";
 import { rateLimit } from "../lib/ratelimit.ts";
 import { qrSvg } from "../lib/qr.ts";
@@ -95,7 +95,7 @@ export function ticketRoutes(router: Router, env: Env): void {
   // ---------- admin: door check-in ----------
   const admin = async (req: Request) => {
     const s = await requireAdmin(env, req);
-    if (req.method !== "GET" && req.headers.get("x-scc-admin") !== "1") throw new HttpError(403, "Missing request header.");
+    if (req.method !== "GET" && !trustedWrite(req)) throw new HttpError(403, "Missing request header.");
     return s;
   };
   const adminView = (t: Joined) => ({

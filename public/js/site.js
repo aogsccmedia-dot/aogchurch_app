@@ -26,7 +26,7 @@ export async function api(path, opts = {}) {
   try { return await apiRaw(path, opts); } finally { done(); }
 }
 async function apiRaw(path, { method = "GET", body, form, headers = {} } = {}) {
-  const opts = { method, headers: { ...headers } };
+  const opts = { method, headers: { ...(method !== "GET" ? { "x-scc-admin": "1" } : {}), ...headers } };
   if (form) opts.body = form;
   else if (body !== undefined) { opts.body = JSON.stringify(body); opts.headers["Content-Type"] = "application/json"; }
   let res;

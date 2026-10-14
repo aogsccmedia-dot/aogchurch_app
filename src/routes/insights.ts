@@ -3,7 +3,7 @@
  * manager (topics, posters, offering, attendance and growth), and the church board report.
  */
 import type { Env } from "../env.ts";
-import { HttpError, Router, json, readJson } from "../lib/http.ts";
+import { HttpError, Router, json, readJson, trustedWrite } from "../lib/http.ts";
 import { requireAdmin, type Session } from "../lib/auth.ts";
 import { uuid } from "../lib/crypto.ts";
 import { readUpload, storeFiles, deleteOwnerFiles } from "../lib/uploads.ts";
@@ -258,7 +258,7 @@ const siteUrlOf = (env: Env) => env.SITE_URL || "https://aogsccyouth.com";
 export function insightsRoutes(router: Router, env: Env): void {
   const guard = (h: H) => async (req: Request, p: Record<string, string>, ctx?: Ctx) => {
     const s = await requireAdmin(env, req);
-    if (req.method !== "GET" && req.method !== "HEAD" && req.headers.get("x-scc-admin") !== "1") throw new HttpError(403, "Missing request header.");
+    if (req.method !== "GET" && req.method !== "HEAD" && !trustedWrite(req)) throw new HttpError(403, "Missing request header.");
     return h(req, p, s, ctx);
   };
   const audit = (s: Session, action: string, entity: string, id: string) =>
