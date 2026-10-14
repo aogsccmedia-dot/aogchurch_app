@@ -126,11 +126,11 @@ const events: Run = async (env, t) => {
   if (named.length) evs = named;
   if (/\bthis week(end)?\b/.test(q)) { const end = Date.now() + 7 * 86400_000; evs = evs.filter((e) => Date.parse(e.starts_at) < end); }
   evs = evs.slice(0, 4);
-  if (!evs.length) return { agent: "events", text: "There are no events open right now. New ones appear on the Events page first.", facts: "No upcoming events.", cards: [], actions: [{ label: "See all events", href: "/events" }], suggestions: ["When is the youth service?", "Show the church programme"] };
+  if (!evs.length) return { agent: "events", text: "There are no events open right now. New ones appear on your Home first.", facts: "No upcoming events.", cards: [], actions: [{ label: "Coming up", href: "/me#upcoming" }], suggestions: ["When is the youth service?", "Show the church programme"] };
   const list = evs.map((e) => `${e.title}: ${fmtDate(e.starts_at)}${e.location ? `, ${e.location}` : ""}${e.price_label ? `, ${e.price_label}` : ""}${e.registration_open ? ", tickets open" : ""}`);
   return { agent: "events", text: evs.length === 1 ? `${evs[0].title} is on ${fmtDate(evs[0].starts_at)}. Tap Get Ticket, or add it to your calendar.` : `Here's what's coming up. Tap one to get your ticket, or add it to your calendar.`,
     facts: facts(list), cards: evs.map((e) => eventCard(env, e)),
-    actions: [{ label: "Get Ticket", href: `/event?e=${encodeURIComponent(evs[0].slug)}`, primary: true }, { label: "All events", href: "/events" }],
+    actions: [{ label: "Get Ticket", href: `/event?e=${encodeURIComponent(evs[0].slug)}`, primary: true }, { label: "Everything coming up", href: "/me#upcoming" }],
     suggestions: ["Add these to my calendar", "Do I have a ticket?", "Where is it?"] };
 };
 
@@ -155,7 +155,7 @@ const programme: Run = async (env, _t, who) => {
   const d = (x: string) => new Intl.DateTimeFormat("en-ZA", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(x + "T12:00:00Z"));
   const lines = results.map((r) => `${d(r.start_date)}${r.end_date && r.end_date !== r.start_date ? `–${d(r.end_date)}` : ""}: ${r.title}${r.time_label ? `, ${r.time_label}` : ""}${r.venue ? ` (${r.venue})` : ""}`);
   return { agent: "programme", text: lines.length ? "Next on the church programme:" : "Nothing else is on the programme yet.", facts: facts(lines),
-    cards: lines.length ? [{ kind: "info", title: "Church programme", lines }] : [], actions: [{ label: "Full programme", href: "/programme" }, { label: "Add to my calendar", href: "#calendar", primary: true }],
+    cards: lines.length ? [{ kind: "info", title: "Church programme", lines }] : [], actions: [{ label: "Add to my calendar", href: "#calendar", primary: true }],
     suggestions: ["What's coming up?", "Add church dates to my calendar"] };
 };
 
@@ -184,7 +184,7 @@ const tickets: Run = async (env, _t, who) => {
       WHERE (r.user_id = ? OR lower(r.email) = lower(?)) AND r.status NOT IN ('cancelled','rejected') AND COALESCE(e.ends_at, e.starts_at) >= ?
       ORDER BY e.starts_at LIMIT 5`).bind(who.userId, who.email, new Date().toISOString())
     .all<Ev & { ref_code: string; status: string; ticket_code: string | null }>();
-  if (!results.length) return { agent: "tickets", text: "You don't have tickets for anything coming up yet.", facts: "No upcoming tickets.", cards: [], actions: [{ label: "See events", href: "/events", primary: true }], suggestions: ["What's coming up?"], personal: true };
+  if (!results.length) return { agent: "tickets", text: "You don't have tickets for anything coming up yet.", facts: "No upcoming tickets.", cards: [], actions: [{ label: "See what's coming up", href: "/me#upcoming", primary: true }], suggestions: ["What's coming up?"], personal: true };
   const label = (s: string) => s === "pending_payment" || s === "pending" ? "waiting for payment approval" : s === "waitlist" ? "on the waitlist" : "confirmed";
   return { agent: "tickets", text: results.length === 1 ? `You're ${label(results[0].status)} for ${results[0].title} (${fmtDate(results[0].starts_at)}).` : `You have ${results.length} upcoming registrations:`,
     facts: facts(results.map((r) => `${r.title}, ${fmtDate(r.starts_at)}: ${label(r.status)}, ref ${r.ref_code}`)),
@@ -198,7 +198,7 @@ const visit: Run = async (env) => {
   const addr = s.address || ADDRESS;
   const lines = [`Address: ${addr}`, s.contact_email ? `Email: ${s.contact_email}` : "", s.whatsapp_number ? `WhatsApp: ${s.whatsapp_number}` : ""].filter(Boolean);
   return { agent: "visit", text: `We're at ${addr}. There's parking on site, and someone at the door will help you find a seat.`, facts: facts(lines),
-    cards: [{ kind: "info", title: "Find us", lines }], actions: [{ label: "Directions", href: s.map_url || MAPS, primary: true }, { label: "Plan a visit", href: "/visit" }],
+    cards: [{ kind: "info", title: "Find us", lines }], actions: [{ label: "Directions", href: s.map_url || MAPS, primary: true }],
     suggestions: ["When is the Sunday service?", "What's coming up?"] };
 };
 
@@ -274,7 +274,7 @@ const whatson: Run = async (env, t) => {
   if (progLines.length) cards.push({ kind: "info", title: "On the church programme", lines: progLines });
   if (weekly.length) cards.push({ kind: "info", title: "Weekly services", lines: weekly.map(svcLine) });
   return { agent: "whatson", text, facts: facts([`Period: ${label} (${from} to ${to})`, ...lines]), cards,
-    actions: [{ label: "Add church dates to my calendar", href: "#calendar", primary: true }, { label: "All events", href: "/events" }],
+    actions: [{ label: "Add church dates to my calendar", href: "#calendar", primary: true }, { label: "Everything coming up", href: "/me#upcoming" }],
     suggestions: label === "this week" ? ["What's on this month?", "When is the youth service?"] : ["What's happening this week?", "Do I have a ticket?"] };
 };
 

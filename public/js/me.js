@@ -1,8 +1,8 @@
 import { icon } from "./icons.js";
-import { api, esc, toast } from "./site.js";
+import { api, cachedGet, esc, freshGet, toast } from "./site.js";
 import { getMe, googleButton, whenSignedIn } from "./auth.js";
 import { switchReady } from "./switcher.js";
-import { helloOnce, renderTabs, roleName } from "./portal.js";
+import { cachedMe, helloOnce, renderTabs, roleName } from "./portal.js";
 
 const $ = (id) => document.getElementById(id);
 const TZ = "Africa/Johannesburg";
@@ -18,9 +18,12 @@ function memberCard(m) {
   return due ? `<div class="notice me-due"><span>Time for your yearly check-in.</span><button class="btn btn-sm btn-gold" type="button" data-ms-confirm>I'm still a member</button></div>` : "";
 }
 
+let painted = false;
 async function render() {
-  // Session + profile in parallel so the page fills in quickly after Google sign-in.
-  const [me, d] = await Promise.all([getMe(true), api("/api/me").catch(() => null)]);
+  // Instant: draw from this visit's last answers straight away, then refresh with the latest.
+  const cm = cachedMe(), cd = cachedGet("/api/me");
+  if (!painted && cm?.user && cd && !cm.admin_account) { painted = true; $("me-loading")?.remove(); $("me-signin").hidden = true; $("me-view").hidden = false; paint(cm, cd, true); }
+  const [me, d] = await Promise.all([getMe(true), freshGet("/api/me").catch(() => null)]);
   $("me-loading")?.remove();
   if (!me.user || !d) {
     $("me-signin").hidden = false; $("me-view").hidden = true;
@@ -31,6 +34,10 @@ async function render() {
   }
   if (me.admin_account) { location.href = "/admin/"; return; }   // the main admin isn't a member: their home is the admin portal
   $("me-signin").hidden = true; $("me-view").hidden = false;
+  paint(me, d, false);
+}
+
+function paint(me, d, fromCache) {
   renderTabs($("portal-tabs"), me, "/me");
   const u = d.user;
   $("me-avatar").innerHTML = u.picture ? `<img src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : esc((u.given_name || u.email)[0].toUpperCase());
@@ -42,8 +49,7 @@ async function render() {
   $("me-status").textContent = [d.member?.status === "member" ? `Member · ${d.member.ref_code}` : d.member ? "Membership being confirmed" : "Not a member yet", role].filter(Boolean).join(" · ");
   $("me-member").innerHTML = memberCard(d.member);
   switchReady();
-  if (!maybeWelcome(d.member, u)) helloOnce(me);
-  if (d.member?.status === "member") voteBanner();
+  if (!fromCache) { if (!maybeWelcome(d.member, u)) helloOnce(me); if (d.member?.status === "member") voteBanner(); }
   const upcoming = d.registrations.filter((r) => new Date(r.ends_at || r.starts_at) > new Date(Date.now() - 6 * 3600_000) && r.status !== "rejected");
   $("me-events").innerHTML = upcoming.length ? upcoming.map((r) => `
     <article class="slide tix">
@@ -54,8 +60,8 @@ async function render() {
       <div class="foot">${r.ticket_code ? `<a class="btn btn-sm btn-gold" href="/ticket?c=${esc(r.ticket_code)}">${icon("ticket")} Show ticket</a>` : ""}
         ${new Date(r.starts_at) > new Date() ? `<button class="btn btn-sm btn-ghost" data-cancel="${esc(r.ref_code)}">Can't make it</button>` : ""}</div>
     </article>`).join("")
-    : `<div class="slide empty-slide"><b>No tickets yet</b><p class="muted-text">When you get a ticket, it shows here with its QR code.</p><a class="btn btn-sm btn-gold btn-glow" href="/events">${icon("ticket")} Get Ticket</a></div>`;
-  loadUpcoming(); loadKnow();
+    : `<div class="slide empty-slide"><b>No tickets yet</b><p class="muted-text">When you get a ticket, it shows here with its QR code.</p><a class="btn btn-sm btn-gold btn-glow" href="#upcoming">${icon("ticket")} Get Ticket</a></div>`;
+  loadUpcoming(fromCache); loadKnow(fromCache);
 }
 
 $("me-events").addEventListener("click", async (e) => {
@@ -104,9 +110,9 @@ async function voteBanner() {
 
 
 // Coming up at church: the next events, swipe through.
-async function loadUpcoming() {
-  const r = await api("/api/events").catch(() => ({ events: [] }));
-  const list = (r.events || []).slice(0, 8);
+async function loadUpcoming(fromCache) {
+  const r = (fromCache ? cachedGet("/api/events") : null) || await freshGet("/api/events").catch(() => ({ events: [] }));
+  const list = (r.events || []).slice(0, 12);
   $("me-upcoming").innerHTML = list.length ? list.map((e) => `<a class="slide ev-slide" href="/event?e=${encodeURIComponent(e.slug)}">
       ${e.cover_url ? `<img src="${esc(e.cover_url)}" alt="" loading="lazy">` : `<span class="ev-ph">${icon("calendar")}</span>`}
       <span class="ev-body"><b>${esc(e.title)}</b><small>${esc(fmt(e.starts_at))}${e.price_label ? ` · ${esc(e.price_label)}` : ""}</small>
@@ -115,11 +121,11 @@ async function loadUpcoming() {
 }
 
 // What to know: service times and the next vote.
-async function loadKnow() {
-  const p = await api("/api/programme?limit=1").catch(() => null);
+async function loadKnow(fromCache) {
+  const p = (fromCache ? cachedGet("/api/programme?limit=1") : null) || await freshGet("/api/programme?limit=1").catch(() => null);
   const w = p?.weekly || [];
   $("know-services").querySelector("small").innerHTML = w.length ? w.map((x) => `${esc(x.day.slice(0, 3))} · ${esc(x.title)} ${esc(x.time || "")}`).join("<br>") : "Sundays 08:45–11:00";
-  const v = await api("/api/votes").catch(() => null);
+  const v = (fromCache ? cachedGet("/api/votes") : null) || await freshGet("/api/votes").catch(() => null);
   const s = $("know-vote").querySelector("small");
   const open = (v?.polls || []).find((x) => x.state === "open"), next = (v?.polls || []).find((x) => x.state === "upcoming");
   s.textContent = open ? `Voting is open: ${open.title}` : next ? `Next: ${next.title}, ${new Date(next.opens_at).toLocaleDateString("en-ZA", { day: "numeric", month: "long" })}` : v ? `No votes planned yet in ${new Date().getFullYear()}` : "For confirmed members";

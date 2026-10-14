@@ -3,7 +3,7 @@
 // - CSS/JS: network first (so a new release is picked up straight away), cached copy when offline.
 // - Photos/logos: cache first.
 // - /api and /admin are never cached.
-const VERSION = "scc-v2";
+const VERSION = "scc-v3";
 const SHELL = ["/", "/offline", "/css/base.css", "/css/pages.css", "/js/site.js", "/js/auth.js", "/js/icons.js", "/js/install.js",
   "/assets/logo-64.png", "/assets/logo-192.png", "/manifest.webmanifest"];
 
@@ -23,6 +23,16 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(req.url);
   if (url.origin !== location.origin || url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin")) return;
 
+  // App pages open instantly from the last copy, and refresh in the background for next time.
+  const APP = /^\/(me|devotions|assistant|vote|store|settings|welcome-pack)(\.html)?\/?$/;
+  if (req.mode === "navigate" && APP.test(url.pathname)) {
+    e.respondWith(caches.match(req, { ignoreSearch: true }).then((hit) => {
+      const net = fetch(req).then((res) => put(req, res)).catch(() => null);
+      if (hit) { e.waitUntil(net); return hit; }
+      return net.then((res) => res || caches.match("/offline")).then((res) => res || Response.error());
+    }));
+    return;
+  }
   if (req.mode === "navigate") {
     e.respondWith(timedFetch(req, 4000).then((res) => put(req, res)).catch(async () =>
       (await caches.match(req, { ignoreSearch: true })) || (await caches.match("/offline")) || Response.error()));

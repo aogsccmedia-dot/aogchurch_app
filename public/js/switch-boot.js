@@ -25,5 +25,19 @@
   } catch (e) { /* ignore */ }
 })();
 
-// Signed in? Show the portal bar (not the website menus) from the very first paint.
-(function () { try { if (localStorage.getItem("scc-me")) document.documentElement.classList.add("signed-in"); } catch (e) { /* ignore */ } })();
+// Signed in? You're in the app: the portal bar replaces the website menus from the very first paint, and the
+// website's own pages send you to your Home. The way back to the website is signing out.
+(function () {
+  try {
+    var raw = localStorage.getItem("scc-me");
+    if (!raw) return;
+    document.documentElement.classList.add("signed-in");
+    var me = JSON.parse(raw) || {};
+    var p = location.pathname.replace(/\.html$/, "").replace(/\/+$/, "") || "/";
+    var WEBSITE = ["/", "/index", "/about", "/our-story", "/beliefs", "/events", "/get-involved", "/visit", "/tools", "/presenter", "/app", "/payments"];
+    if (WEBSITE.indexOf(p) !== -1) {
+      document.documentElement.style.visibility = "hidden";
+      location.replace(me.admin_account ? "/admin/" : "/me" + (p === "/events" ? "#upcoming" : ""));
+    }
+  } catch (e) { /* storage blocked: the site works as normal */ }
+})();

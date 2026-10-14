@@ -1460,3 +1460,6 @@ a:hover, a:active, button:hover, button:active, .btn:hover, .btn:active, summary
 body.wp .site-footer { display: none; }
 @media (max-width: 600px) { .wp-bar { top: 60px; border-radius: 0; margin: 0 0 12px; } .wp-actions .btn span { display: none; } .wp-title { font-size: 16px; } }
 @media (max-width: 960px) { .main-nav.portal-nav { display: none; } }
+
+/* Inside the app there's no way back to the website except signing out */
+.signed-in .site-footer, .signed-in .crumbs, .signed-in .pager, .signed-in .menu { display: none !important; }

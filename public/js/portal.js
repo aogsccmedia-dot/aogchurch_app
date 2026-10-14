@@ -53,12 +53,30 @@ export function renderPortalNav(me) {
     return;
   }
   root.classList.add("signed-in");
+  // The logo takes you Home inside the app (signing out is the way back to the website).
+  document.querySelectorAll(".site-header .brand, .menu .brand").forEach((b) => { b.href = me.admin_account ? "/admin/" : "/me"; });
+  prefetchTabs(me);
   const tabs = tabsFor(me).map(([h, i, l]) => link(h, i, l)).join("");
   for (const el of [nav, bar]) {
     if (!el) continue;
     if (!el.dataset.site) el.dataset.site = el.innerHTML;
     el.innerHTML = tabs; el.classList.add("portal-nav");
     el.style.setProperty("--n", String(tabsFor(me).length));
+  }
+}
+
+// Blazing-fast tabs: fetch the portal pages in the background so each tap opens instantly.
+let prefetched = false;
+function prefetchTabs(me) {
+  if (prefetched) return; prefetched = true;
+  const urls = tabsFor(me).map(([h]) => h).filter((h) => !isOn(h) && h !== "/admin/");
+  if (HTMLScriptElement.supports?.("speculationrules")) {
+    const s = document.createElement("script"); s.type = "speculationrules";
+    s.textContent = JSON.stringify({ prefetch: [{ urls, eagerness: "eager" }], prerender: [{ urls: urls.slice(0, 3), eagerness: "moderate" }] });
+    document.head.append(s);
+  } else {
+    const go = () => urls.forEach((u) => { const l = document.createElement("link"); l.rel = "prefetch"; l.href = u; document.head.append(l); });
+    (window.requestIdleCallback || ((f) => setTimeout(f, 800)))(go);
   }
 }
 

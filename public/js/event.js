@@ -4,6 +4,7 @@ import { renderField } from "./forms.js";
 import { icon } from "./icons.js";
 
 const slug = new URLSearchParams(location.search).get("e");
+const MORE = () => (document.documentElement.classList.contains("signed-in") ? "/me#upcoming" : "/events");
 const $ = (id) => document.getElementById(id);
 const TZ = "Africa/Johannesburg";
 const fmtWhen = (s, e) => {
@@ -28,7 +29,7 @@ function done(status, ref, message, already) {
     <span class="tag">Ref ${esc(ref)}${event.price_label ? " · " + esc(event.price_label) : ""}</span>
     ${wait || pendingApproval ? "" : `<p class="eyebrow" style="margin-top:6px">Add it to your calendar</p>
     <div class="cal-buttons"><a class="btn btn-sm" href="${esc(event.calendar_url)}" target="_blank" rel="noopener">${icon("calendarPlus")} Google</a><a class="btn btn-sm" href="${esc(event.ics_url)}">${icon("download")} Apple / iPhone</a><a class="btn btn-sm" href="${esc(event.outlook_url)}" target="_blank" rel="noopener">${icon("calendarPlus")} Outlook</a></div>`}
-    <a class="btn btn-ghost btn-sm" href="/events">${icon("arrowLeft")} More events</a>`;
+    <a class="btn btn-ghost btn-sm" href="${MORE()}">${icon("arrowLeft")} More events</a>`;
 }
 
 function prefill(me) {
@@ -49,7 +50,7 @@ async function load() {
     event = r.event;
   } catch (e) {
     $("ev-title").textContent = "Event not found";
-    $("reg-card").innerHTML = `<p class="muted-text">${esc(e.message)}</p><a class="btn" href="/events">See all events</a>`;
+    $("reg-card").innerHTML = `<p class="muted-text">${esc(e.message)}</p><a class="btn" href="${MORE()}">See all events</a>`;
     return;
   }
   document.title = `${event.title} · Sandton City Church`;

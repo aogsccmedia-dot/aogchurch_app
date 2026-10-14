@@ -313,13 +313,12 @@ a, button, .btn, summary, label, input[type="checkbox"], input[type="radio"], se
 @media (prefers-reduced-motion: reduce) { .sv-mark i { animation: none; } }
 
 /* Get Ticket: a soft, glowing call to action (the glow is a cheap opacity animation on its own layer). */
-.btn-glow { position: relative; isolation: isolate; overflow: visible; font-weight: 500; letter-spacing: .01em; }
-.btn-glow::before { content: ""; position: absolute; inset: -3px; z-index: -1; border-radius: inherit; background: linear-gradient(110deg, #f3c76e, #f7a6c8, #b9a7f5, #9fd3f5, #f3c76e); background-size: 300% 100%; filter: blur(10px); opacity: .55; animation: glow-pulse 2.8s ease-in-out infinite, glow-slide 6s linear infinite; pointer-events: none; }
-.btn-glow:hover::before { opacity: .85; }
+/* "Get Ticket": bold, with a church-colour gradient (no glow) */
+.btn-glow { font-weight: 650 !important; letter-spacing: .01em; color: #111016 !important; border: 0 !important;
+  background: linear-gradient(110deg, #f3c76e 0%, #f2a9c9 52%, #b9a7f5 100%) !important; box-shadow: none !important; }
+.btn-glow:hover { background: linear-gradient(110deg, #efbd5c 0%, #ee9cc0 52%, #ab97f2 100%) !important; }
+.btn-glow:active { filter: brightness(.94); }
 .btn-glow .i { width: 18px; height: 18px; }
-@keyframes glow-pulse { 50% { opacity: .9; } }
-@keyframes glow-slide { to { background-position: 300% 0; } }
-@media (prefers-reduced-motion: reduce) { .btn-glow::before { animation: none; } }
 
 /* Event ticker (top of the site) */
 .ticker { position: relative; height: 38px; display: flex; align-items: center; overflow: hidden; background: linear-gradient(90deg, #f3eefe, #fdeef4 50%, #eaf3fd); border-bottom: 1px solid var(--line); font-size: 13.5px; }

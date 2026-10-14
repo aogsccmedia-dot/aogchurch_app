@@ -40,6 +40,16 @@ async function apiRaw(path, { method = "GET", body, form } = {}) {
   return data;
 }
 
+// Instant pages: the last answer for a GET is kept for this visit, so a page can draw straight away and then
+// refresh with the latest from the server.
+const SWR = "scc-swr:";
+export function cachedGet(path) { try { return JSON.parse(sessionStorage.getItem(SWR + path) || "null"); } catch { return null; } }
+export async function freshGet(path) {
+  const d = await api(path);
+  try { sessionStorage.setItem(SWR + path, JSON.stringify(d)); } catch { /* full or blocked */ }
+  return d;
+}
+
 export function toast(msg, ms = 3200) {
   let t = document.querySelector(".toast");
   if (!t) { t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); document.body.append(t); }

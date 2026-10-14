@@ -150,7 +150,6 @@ export function renderHeaderUser(me) {
       <a href="/vote">Vote</a>
       ${me.admin_account || me.is_admin ? `<a href="/admin/">${me.admin_role === "youth" ? "Youth leader portal" : "Admin"}</a>` : ""}
       <a href="/settings">Settings</a>
-      <a href="/about">About the church</a>
       ${!me.member && !me.admin_account ? `<a href="/join">Complete joining</a>` : ""}
       <button type="button" data-signout>Sign out</button></div></details>`;
   slot.querySelector("[data-signout]").addEventListener("click", signOut);
