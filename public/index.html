@@ -33,7 +33,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css?v=943ae3a0d8">
-  <link rel="stylesheet" href="/css/pages.css?v=cd9bf0f01a">
+  <link rel="stylesheet" href="/css/pages.css?v=242f750945">
   <script src="/js/switch-boot.js?v=b2ff32ecc5"></script>
   <script type="speculationrules">{"prerender": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/admin/*"}}, {"not": {"href_matches": "/api/*"}}]}, "eagerness": "moderate"}]}</script>
   <link rel="preload" as="image" href="/assets/photos/worship-1600.webp" type="image/webp">
@@ -79,38 +79,32 @@
 
   <main id="main">
     <!-- HERO -->
-    <section class="wrap hero">
+    <section class="wrap hero hero-simple">
       <div class="hero-copy">
         <p class="eyebrow gold">AOG Sandton City Church</p>
         <h1>A family <em>bound</em> in fellowship by the Spirit.</h1>
         <p class="lede" data-setting="tagline">A community-centred, Bible-based church in the heart of Sandton.</p>
-        <div class="actions">
-          <a class="btn btn-gold" href="/join" data-join-cta>Join the church <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
-          <a class="btn" href="/events">This week's services</a>
-        </div>
-        <div class="hero-meta"><span>17 Humber Street, Woodmead</span><span>Every Sunday</span><span>All ages welcome</span></div>
+        <div class="actions"><a class="btn btn-gold btn-lg" href="/join" data-join-cta>Join the church <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></div>
       </div>
-      <div class="mosaic">
-        <figure class="photo" tabindex="0">
-          <picture><source type="image/webp" srcset="/assets/photos/worship-800.webp 800w, /assets/photos/worship-1600.webp 1600w" sizes="(max-width: 900px) 100vw, 40vw">
-          <img src="/assets/photos/worship-1200.jpg" alt="The worship team singing on stage in traditional and contemporary African attire" fetchpriority="high"></picture>
-          <figcaption><span>Worship</span><span>Psalm 95:1</span></figcaption>
-        </figure>
-        <figure class="photo" tabindex="0">
-          <picture><source type="image/webp" srcset="/assets/photos/arrival-800.webp"><img src="/assets/photos/arrival-1200.jpg" alt="A smiling member arriving at church with her Bible" loading="lazy"></picture>
-          <figcaption><span>Come as you are</span><span>✦</span></figcaption>
-        </figure>
-        <figure class="photo" tabindex="0">
-          <picture><source type="image/webp" srcset="/assets/photos/hospitality-800.webp"><img src="/assets/photos/hospitality-1200.jpg" alt="Two members of the hospitality team smiling" loading="lazy"></picture>
-          <figcaption><span>Hospitality</span><span>✦</span></figcaption>
-        </figure>
+      <div class="strips" aria-label="Photos from church life">
+        <div class="strip"><img src="/assets/photos/worship-800.webp" alt="The worship team singing on stage" class="on" fetchpriority="high" decoding="async"><img src="/assets/photos/arrival-800.webp" alt="" loading="lazy" decoding="async"><img src="/assets/photos/hospitality-800.webp" alt="" loading="lazy" decoding="async"><img src="/assets/photos/congregation-800.webp" alt="" loading="lazy" decoding="async"><img src="/assets/photos/prayer-800.webp" alt="" loading="lazy" decoding="async"></div>
+        <div class="strip"><img src="/assets/photos/hospitality-800.webp" alt="Two members of the hospitality team smiling" class="on" decoding="async"><img src="/assets/photos/congregation-800.webp" alt="" loading="lazy" decoding="async"><img src="/assets/photos/prayer-800.webp" alt="" loading="lazy" decoding="async"><img src="/assets/photos/worship-800.webp" alt="" loading="lazy" decoding="async"><img src="/assets/photos/arrival-800.webp" alt="" loading="lazy" decoding="async"></div>
+        <div class="strip"><img src="/assets/photos/prayer-800.webp" alt="Members praying together" class="on" decoding="async"><img src="/assets/photos/worship-800.webp" alt="" loading="lazy" decoding="async"><img src="/assets/photos/arrival-800.webp" alt="" loading="lazy" decoding="async"><img src="/assets/photos/hospitality-800.webp" alt="" loading="lazy" decoding="async"><img src="/assets/photos/congregation-800.webp" alt="" loading="lazy" decoding="async"></div>
       </div>
     </section>
 
-    <!-- FEATURED EVENT (filled from the next upcoming event) -->
-    <section class="block featured" id="featured" hidden aria-labelledby="featured-title">
+    <!-- THE SCC PODCAST (coming soon) -->
+    <section class="block pod-block" aria-labelledby="pod-title">
       <div class="wrap">
-        <article class="feature-card" id="feature-card"></article>
+        <article class="pod-feature reveal">
+          <div class="pod-art" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16.85 18.58a9 9 0 1 0-9.7 0"/><path d="M8 14a5 5 0 1 1 8 0"/><circle cx="12" cy="11" r="1"/><path d="M13 17a1 1 0 1 0-2 0l.5 4.5a.5.5 0 1 0 1 0Z"/></svg><span class="eq"><i></i><i></i><i></i><i></i><i></i></span></div>
+          <div class="pod-copy">
+            <p class="eyebrow gold">Coming soon · Spotify</p>
+            <h2 id="pod-title">The SCC Podcast</h2>
+            <p class="lede">Sermons and honest conversations from Sandton City Church, for your commute and your quiet time.</p>
+            <a class="btn btn-gold" href="#letter">Tell me when it's out <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+          </div>
+        </article>
       </div>
     </section>
 
@@ -141,13 +135,9 @@
       </div>
     </section>
 
-    <!-- COMING SOON: podcast + SCC Presenter -->
+    <!-- COMING SOON: SCC Presenter -->
     <section class="block slim">
-      <div class="wrap soon-grid">
-        <a class="soon-card podcast-soon reveal" href="/#letter">
-          <span class="soon-art" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16.85 18.58a9 9 0 1 0-9.7 0"/><path d="M8 14a5 5 0 1 1 8 0"/><circle cx="12" cy="11" r="1"/><path d="M13 17a1 1 0 1 0-2 0l.5 4.5a.5.5 0 1 0 1 0Z"/></svg><span class="eq"><i></i><i></i><i></i><i></i><i></i></span></span>
-          <span class="soon-copy"><span class="eyebrow">Coming soon · Spotify</span><b>The SCC Podcast</b><span>Sermons and honest conversations for your commute and quiet time.</span></span>
-        </a>
+      <div class="wrap soon-grid one">
         <a class="soon-card presenter-soon reveal" href="/presenter">
           <picture><source type="image/webp" srcset="/assets/presenter/main-800.webp"><img src="/assets/presenter/main-1200.jpg" alt="SCC Presenter showing song slides and the live screen" loading="lazy" width="1600" height="1000"></picture>
           <span class="soon-copy"><span class="eyebrow">Coming soon · <span class="beta-pill">Beta 1 Feb 2027</span></span><b>SCC Presenter</b><span>Free presentation software for churches. Beta arrives 1 February 2027.</span></span>
@@ -239,6 +229,6 @@
   <link rel="modulepreload" href="/js/otp.js">
   <script type="module" src="/js/site.js?v=17a8bd2aba"></script>
   <script type="module" src="/js/auth.js?v=083e5d8307"></script>
-  <script type="module" src="/js/pages.js?v=9f9727dfd3"></script>
+  <script type="module" src="/js/pages.js?v=1b7402d835"></script>
 </body>
 </html>

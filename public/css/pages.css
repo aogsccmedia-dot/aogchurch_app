@@ -1657,3 +1657,30 @@ html.signed-in .ask-thread { height: clamp(240px, calc(100dvh - 560px), 640px); 
 body.has-bottom .m-bar, body.has-bottom .admin-portal-tabs { display: none !important; }
 body.admin.has-bottom .main { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
 body.has-bottom .side { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+
+/* ---- Home hero: simple copy, one button, and three photo strips that take turns fading ---- */
+.hero-simple .hero-copy { gap: 20px; }
+.btn-lg { padding: 15px 26px; font-size: 16px; }
+.strips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; height: clamp(420px, 48vw, 600px); }
+.strip { position: relative; overflow: hidden; border-radius: 22px; background: #e9e6f2; box-shadow: 0 18px 40px -26px rgba(40, 30, 80, .45); }
+.strip:nth-child(2) { transform: translateY(28px); }
+.strip img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.06); transition: opacity 1.4s ease, transform 6s ease; }
+.strip img.on { opacity: 1; transform: scale(1); }
+@media (max-width: 900px) {
+  .strips { height: 300px; gap: 8px; }
+  .strip { border-radius: 16px; } .strip:nth-child(2) { transform: translateY(16px); }
+  .hero-simple { padding-bottom: 36px; }
+}
+@media (prefers-reduced-motion: reduce) { .strip img { transition: none; } }
+
+/* ---- The SCC Podcast, right under the hero ---- */
+.pod-block { padding-top: clamp(28px, 4vw, 56px); }
+.pod-feature { display: grid; grid-template-columns: minmax(180px, 280px) minmax(0, 1fr); gap: clamp(22px, 4vw, 52px); align-items: center; padding: clamp(18px, 3vw, 32px); border-radius: 28px; background: rgba(255, 255, 255, .8); border: 1px solid var(--line); backdrop-filter: blur(8px); }
+.pod-art { position: relative; aspect-ratio: 1; border-radius: 22px; display: grid; place-items: center; color: #fff; background: radial-gradient(circle at 30% 25%, #c9bdf5, #8f80d8 60%, #4e3fa6); }
+.pod-art > .i { width: 72px; height: 72px; stroke-width: 1.3; }
+.pod-art .eq { bottom: 22px; }
+.pod-copy { display: grid; gap: 12px; justify-items: start; }
+.pod-copy h2 { font-size: clamp(32px, 4.4vw, 52px); font-weight: 300; line-height: 1.05; }
+@media (max-width: 700px) { .pod-feature { grid-template-columns: 1fr; } .pod-art { max-width: 220px; width: 100%; } }
+.soon-grid.one { grid-template-columns: 1fr; max-width: 720px; }
+.pod-block { padding-bottom: clamp(20px, 3vw, 40px); }

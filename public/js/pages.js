@@ -6,6 +6,19 @@ import { icon } from "./icons.js";
 
 initPhotos();
 
+// Hero: three strips of photos, each fading to its next picture in turn.
+(function strips() {
+  const list = [...document.querySelectorAll(".strips .strip")];
+  if (!list.length || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  let turn = 0;
+  setInterval(() => {
+    if (document.hidden) return;
+    const s = list[turn % list.length], imgs = [...s.querySelectorAll("img")], i = imgs.findIndex((x) => x.classList.contains("on"));
+    imgs[i].classList.remove("on"); imgs[(i + 1) % imgs.length].classList.add("on");
+    turn++;
+  }, 1800);
+})();
+
 // Shared behaviour for the public content pages (home, about, events, get involved, prayer, visit).
 // Every block is optional: it only runs when its section is on the page.
 const $id = (id) => document.getElementById(id);
