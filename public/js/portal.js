@@ -31,7 +31,7 @@ export function renderTabs(el, me, active) {
 const KEY = "scc-me";
 export function cacheMe(me) {
   try {
-    if (!me?.user) { localStorage.removeItem(KEY); return; }
+    if (!me?.user) { localStorage.removeItem(KEY); localStorage.removeItem("scc-hello"); return; }
     const u = me.user;
     localStorage.setItem(KEY, JSON.stringify({ user: { id: u.id, email: u.email, given_name: u.given_name, name: u.name, picture: u.picture }, admin_role: me.admin_role || null,
       admin_account: !!me.admin_account, is_admin: !!me.is_admin, member: !!me.member }));
@@ -101,10 +101,14 @@ document.addEventListener("click", (e) => {
 });
 
 /** The black welcome, once per sign-in session: "Welcome back, Thandi · Youth leader portal". Tap to skip. */
-export function helloOnce(me) {
+export function helloOnce(me, { skip = false } = {}) {
   if (!me?.user) return;
-  const key = `scc-hello-${me.user.id || me.user.email}`;
-  try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, "1"); } catch { return; }
+  // Pages opened ahead of time in the background wait until they're actually shown.
+  if (document.prerendering) { document.addEventListener("prerenderingchange", () => helloOnce(me, { skip }), { once: true }); return; }
+  // Once per sign-in, across every page and tab (cleared when they sign out).
+  const id = String(me.user.id || me.user.email);
+  try { if (localStorage.getItem("scc-hello") === id) return; localStorage.setItem("scc-hello", id); } catch { return; }
+  if (skip) return;
   const first = (me.user.given_name || me.user.name || "").split(" ")[0];
   const role = roleName(me);
   const el = document.createElement("div");

@@ -1506,3 +1506,28 @@ html.signed-in .st-card, html.signed-in .know, html.signed-in .slide, html.signe
 }
 html.signed-in .wp-bar { top: 62px; }
 @media (max-width: 860px) { html.signed-in .wp-bar { top: 108px; } }
+
+/* How to use the app: big, calm, step by step */
+.help-page { padding-bottom: 80px; font-size: 18px; }
+.help-hero { max-width: 760px; padding: clamp(28px, 5vw, 56px) 0 18px; }
+.help-hero h1 { font-size: clamp(34px, 6vw, 56px); margin: 6px 0 12px; }
+.help-hero .lede { font-size: 20px; line-height: 1.6; }
+.help-toc { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin: 18px 0 40px; }
+.help-toc a { display: flex; gap: 12px; align-items: center; padding: 16px 18px; border-radius: 16px; background: #fff; border: 1px solid var(--line); font-size: 17px; min-height: 64px; }
+.help-toc a b { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #111016; color: #fff; font-size: 15px; }
+.help-toc a:hover { background: var(--surface); }
+.help-step { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: clamp(20px, 4vw, 56px); align-items: start; padding: clamp(26px, 4vw, 44px) 0; border-top: 1px solid var(--line); scroll-margin-top: 90px; }
+.help-pics { display: grid; gap: 14px; }
+.help-phone { margin: 0; border-radius: 28px; overflow: hidden; border: 8px solid #111016; background: #111016; box-shadow: 0 20px 50px rgba(40, 30, 80, .18); }
+.help-phone img { display: block; width: 100%; height: auto; }
+.help-phone.short { border-radius: 20px; }
+.help-num { margin: 0; font-size: 14px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold-2); font-weight: 600; }
+.help-text h2 { font-size: clamp(28px, 4vw, 38px); margin: 6px 0 16px; }
+.help-text ol { margin: 0; padding-left: 26px; display: grid; gap: 14px; }
+.help-text li { font-size: 19px; line-height: 1.6; padding-left: 6px; }
+.help-text li::marker { font-weight: 600; color: var(--gold-2); }
+.help-top { display: inline-block; margin-top: 18px; font-size: 16px; color: var(--gold-2); text-decoration: underline; }
+.help-end { padding: 36px 0; border-top: 1px solid var(--line); max-width: 760px; }
+.help-end h2 { font-size: 32px; }
+@media (max-width: 760px) { .help-step { grid-template-columns: 1fr; } .help-pics { max-width: 300px; margin: 0 auto; } .help-text li { font-size: 18px; } }
+@media (max-width: 860px) { .app-help { display: none; } }

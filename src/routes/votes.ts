@@ -126,6 +126,11 @@ export function voteRoutes(router: Router, env: Env): void {
 
   // ---------------- members
   router.get("/api/votes", async (req) => {
+    // Not a confirmed member (yet), or the main admin: an empty list, not an error.
+    const sess = await getSession(env, req);
+    if (!sess) throw new HttpError(401, "Please sign in to vote.");
+    const mm = await memberOf(env, sess.user);
+    if (!mm) return json({ ok: true, polls: [], member: false, year: new Date().getUTCFullYear() }, 200, { "Cache-Control": "no-store" });
     const { m } = await needMember(req);
     const { results } = await env.DB.prepare("SELECT * FROM polls WHERE status IN ('open') ORDER BY opens_at DESC LIMIT 20").all<Poll>();
     const polls = await Promise.all(results.map(async (p) => {

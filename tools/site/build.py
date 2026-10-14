@@ -29,6 +29,7 @@ NAV = [
     ("/get-involved", "Get involved"),
     ("/prayer", "Prayer"),
     ("/visit", "Visit &amp; contact"),
+    ("/help", "Help"),
 ]
 # Full menu (phone menu): includes the About sub-pages.
 MENU = [NAV[0], NAV[1], ("/our-story", "Our story"), ("/beliefs", "What we believe")] + NAV[2:]
@@ -99,7 +100,7 @@ def head(title, desc, canonical=None, noindex=False, extra=""):
 MENU_GROUPS = [
     ("Explore", [("/", "Home"), ("/about", "About us"), ("/our-story", "Our story"), ("/beliefs", "What we believe")]),
     ("Church life", [("/events", "Services &amp; events"), ("/get-involved", "Get involved"), ("/prayer", "Prayer"), ("/visit", "Visit &amp; contact")]),
-    ("For you", [("/me", "Home"), ("/devotions", "Devotions"), ("/assistant", "Ask SCC"), ("/vote", "Vote"), ("/store", "Store"), ("/settings", "Settings"), ("/settings#complaints", "Raise a concern"), ("/#letter", "Weekly letter"), ("/app", "Get the app")]),
+    ("For you", [("/me", "Home"), ("/devotions", "Devotions"), ("/assistant", "Ask SCC"), ("/vote", "Vote"), ("/store", "Store"), ("/settings", "Settings"), ("/settings#complaints", "Raise a concern"), ("/#letter", "Weekly letter"), ("/app", "Get the app"), ("/help", "How to use the app")]),
     ("Tools", [("/tools", "All tools"), ("/presenter", "SCC Presenter · Coming soon")]),
 ]
 
@@ -117,7 +118,7 @@ def header():
     <div class="app-bar-in">
       <a class="app-brand" href="/me"><img src="/assets/logo-64.png" alt="" width="30" height="30"><b>SCC</b><span class="app-role" data-app-role></span></a>
       <nav class="app-tabs" aria-label="Your portal" data-app-tabs></nav>
-      <div class="app-me"><span class="avatar sm" data-app-avatar></span><button class="btn btn-sm" type="button" data-app-signout>Sign out</button></div>
+      <div class="app-me"><a class="btn btn-sm btn-ghost app-help" href="/help" aria-label="How to use the app">Help</a><span class="avatar sm" data-app-avatar></span><button class="btn btn-sm" type="button" data-app-signout>Sign out</button></div>
     </div>
   </header>
   <header class="site-header">
@@ -261,6 +262,7 @@ PAGES = {
     "data-protection": dict(title="Data protection, POPIA & PAIA" + T, crumb="Data protection", desc="Sandton City Church's data protection standards: Information Officer, security, retention, breach notification and your POPIA/PAIA rights.", canonical="/data-protection", scripts=["site.js", "auth.js"]),
     "presenter": dict(title="SCC Presenter (Beta) · Free church presentation software" + T, crumb="SCC Presenter", desc="SCC Presenter: free, open-source presentation software for churches. Songs, scripture, video, stage screen, phone remote and OBS output for Windows and Mac. Beta open to the first 20 testers.", canonical="/presenter", scripts=["site.js", "auth.js", "presenter.js"]),
     "assistant": dict(title="Ask SCC" + T, body="portal ask", desc="Ask SCC: the members' chat for AOG Sandton City Church. Events, service times, your tickets and the church calendar.", noindex=True, scripts=["site.js", "auth.js", "assistant.js"]),
+    "help": dict(title="How to use the app" + T, crumb="Help", canonical="/help", desc="Simple, step-by-step help with pictures: signing in, tickets, devotions, Ask SCC, prayer, voting and putting the app on your phone.", scripts=["site.js", "auth.js"]),
     "welcome-pack": dict(title="Welcome pack" + T, body="portal wp", canonical="/welcome-pack", desc="Who we are: from Azusa Street to Nicholas Bhengu and the birth of AOG Sandton City Church. Read or share our welcome pack.", scripts=["site.js", "auth.js", "welcome-pack.js"]),
     "store": dict(title="Store" + T, crumb="Store", desc="AOG Store: books written by members of AOG Sandton City Church. Coming soon.", canonical="/store", scripts=["site.js", "auth.js", "store.js"]),
     "vote": dict(title="Vote" + T, body="portal", desc="Members' voting at AOG Sandton City Church.", noindex=True, scripts=["site.js", "auth.js", "vote.js"]),

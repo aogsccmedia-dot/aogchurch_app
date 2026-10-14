@@ -49,7 +49,7 @@ function paint(me, d, fromCache) {
   $("me-status").textContent = [d.member?.status === "member" ? `Member · ${d.member.ref_code}` : d.member ? "Membership being confirmed" : "Not a member yet", role].filter(Boolean).join(" · ");
   $("me-member").innerHTML = memberCard(d.member);
   switchReady();
-  if (!fromCache) { if (!maybeWelcome(d.member, u)) helloOnce(me); if (d.member?.status === "member") voteBanner(); }
+  if (!fromCache) { helloOnce(me, { skip: maybeWelcome(d.member, u) }); if (d.member?.status === "member") voteBanner(); }
   const upcoming = d.registrations.filter((r) => new Date(r.ends_at || r.starts_at) > new Date(Date.now() - 6 * 3600_000) && r.status !== "rejected");
   $("me-events").innerHTML = upcoming.length ? upcoming.map((r) => `
     <article class="slide tix">
@@ -128,5 +128,5 @@ async function loadKnow(fromCache) {
   const v = (fromCache ? cachedGet("/api/votes") : null) || await freshGet("/api/votes").catch(() => null);
   const s = $("know-vote").querySelector("small");
   const open = (v?.polls || []).find((x) => x.state === "open"), next = (v?.polls || []).find((x) => x.state === "upcoming");
-  s.textContent = open ? `Voting is open: ${open.title}` : next ? `Next: ${next.title}, ${new Date(next.opens_at).toLocaleDateString("en-ZA", { day: "numeric", month: "long" })}` : v ? `No votes planned yet in ${new Date().getFullYear()}` : "For confirmed members";
+  s.textContent = v?.member === false ? "For confirmed members" : open ? `Voting is open: ${open.title}` : next ? `Next: ${next.title}, ${new Date(next.opens_at).toLocaleDateString("en-ZA", { day: "numeric", month: "long" })}` : v ? `No votes planned yet in ${new Date().getFullYear()}` : "For confirmed members";
 }

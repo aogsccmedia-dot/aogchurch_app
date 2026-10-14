@@ -28,6 +28,7 @@ async function start() {
   let list;
   try { list = await api("/api/votes"); }
   catch (e) { root.innerHTML = `<section class="vote-card center"><h2>Voting is for members</h2><p class="muted-text">${esc(e.message)}</p><a class="btn btn-gold" href="/join">Join the church</a></section>`; return; }
+  if (list.member === false) { root.innerHTML = `<section class="vote-card center"><h2>Voting is for members</h2><p class="muted-text">Once a leader confirms your membership, you can vote here.</p><a class="btn btn-gold" href="/join">Membership</a></section>`; return; }
   const live = list.polls.filter((p) => p.state !== "cancelled");
   if (!live.length) {
     root.innerHTML = `<section class="vote-card center vote-none">${icon("vote")}<h2>No votes planned yet${list.year === 2026 ? " in 2026" : ""}</h2>
