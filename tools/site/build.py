@@ -113,6 +113,13 @@ def header():
     socials = "".join(f'<a href="{u}" target="_blank" rel="noopener" aria-label="{n}">{{{{i:{ic}}}}}</a>' for n, ic, u in SOCIALS)
     return f'''
   <a class="sr-only" href="#main">Skip to content</a>
+  <header class="app-bar" aria-label="Your church app">
+    <div class="app-bar-in">
+      <a class="app-brand" href="/me"><img src="/assets/logo-64.png" alt="" width="30" height="30"><b>SCC</b><span class="app-role" data-app-role></span></a>
+      <nav class="app-tabs" aria-label="Your portal" data-app-tabs></nav>
+      <div class="app-me"><span class="avatar sm" data-app-avatar></span><button class="btn btn-sm" type="button" data-app-signout>Sign out</button></div>
+    </div>
+  </header>
   <div class="ticker" id="ticker" hidden></div>
   <header class="site-header">
     <div class="wrap bar">

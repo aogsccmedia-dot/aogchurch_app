@@ -53,6 +53,18 @@ export function renderPortalNav(me) {
     return;
   }
   root.classList.add("signed-in");
+  // The app bar: one top navigation for everyone who's signed in (no side menu).
+  const tabsEl = document.querySelector("[data-app-tabs]");
+  if (tabsEl) {
+    const html = tabsFor(me).map(([h, i, l]) => link(h, i, l)).join("");
+    if (tabsEl.innerHTML !== html) tabsEl.innerHTML = html;
+    const on = tabsEl.querySelector(".on"); if (on) tabsEl.scrollLeft = on.offsetLeft - (tabsEl.clientWidth - on.offsetWidth) / 2;
+    const role = roleName(me), r = document.querySelector("[data-app-role]");
+    if (r) { r.textContent = role || "Member"; r.dataset.kind = me.admin_role || "member"; }
+    const av = document.querySelector("[data-app-avatar]"), u = me.user;
+    if (av) av.innerHTML = u.picture ? `<img src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : esc((u.given_name || u.name || u.email || "?")[0].toUpperCase());
+    const brand = document.querySelector(".app-brand"); if (brand) brand.href = me.admin_account ? "/admin/" : "/me";
+  }
   // The logo takes you Home inside the app (signing out is the way back to the website).
   document.querySelectorAll(".site-header .brand, .menu .brand").forEach((b) => { b.href = me.admin_account ? "/admin/" : "/me"; });
   prefetchTabs(me);

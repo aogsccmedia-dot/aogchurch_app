@@ -180,6 +180,7 @@ export async function openSignIn() {
   await googleButton(dlg.querySelector(".gbtn"), { text: "signin_with", width: 300 });
 }
 
+document.addEventListener("click", (e) => { if (e.target.closest?.("[data-app-signout]")) { e.preventDefault(); signOut(); } });
 getMe().then((me) => {
   cacheMe(me); renderPortalNav(me);
   renderHeaderUser(me);

@@ -31,12 +31,19 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;350;400;450;500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/base.css?v=507da2469a">
-  <link rel="stylesheet" href="/css/pages.css?v=f686ed6571">
+  <link rel="stylesheet" href="/css/pages.css?v=56c3f2fa62">
   <script src="/js/switch-boot.js?v=0c64404436"></script>
   <script type="speculationrules">{"prerender": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/admin/*"}}, {"not": {"href_matches": "/api/*"}}]}, "eagerness": "moderate"}]}</script>
 </head>
 <body class="portal">
   <a class="sr-only" href="#main">Skip to content</a>
+  <header class="app-bar" aria-label="Your church app">
+    <div class="app-bar-in">
+      <a class="app-brand" href="/me"><img src="/assets/logo-64.png" alt="" width="30" height="30"><b>SCC</b><span class="app-role" data-app-role></span></a>
+      <nav class="app-tabs" aria-label="Your portal" data-app-tabs></nav>
+      <div class="app-me"><span class="avatar sm" data-app-avatar></span><button class="btn btn-sm" type="button" data-app-signout>Sign out</button></div>
+    </div>
+  </header>
   <div class="ticker" id="ticker" hidden></div>
   <header class="site-header">
     <div class="wrap bar">
@@ -140,7 +147,7 @@
   <link rel="modulepreload" href="/js/switcher.js">
   <link rel="modulepreload" href="/js/otp.js">
   <script type="module" src="/js/site.js?v=ad37af5f57"></script>
-  <script type="module" src="/js/auth.js?v=cab0ace83b"></script>
+  <script type="module" src="/js/auth.js?v=652e1f6888"></script>
   <script type="module" src="/js/me.js?v=6a4fab1464"></script>
   <script type="module" src="/js/programme.js?v=ae3e73b8c1"></script>
 </body>

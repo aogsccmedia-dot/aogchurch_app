@@ -1463,3 +1463,46 @@ body.wp .site-footer { display: none; }
 
 /* Inside the app there's no way back to the website except signing out */
 .signed-in .site-footer, .signed-in .crumbs, .signed-in .pager, .signed-in .menu { display: none !important; }
+
+/* ---------------------------------------------------------------- The app (signed in): same clean look as the admin portal, one top bar */
+.app-bar { display: none; }
+html.signed-in body:not(.admin) {
+  --bg: #f6f6fa; --bg-2: #ffffff; --surface: #f1f1f6; --surface-2: #e9e9f1;
+  --line: rgba(31, 28, 52, .08); --line-strong: rgba(31, 28, 52, .15);
+  --text: #1d1b26; --text-2: #4b4858; --muted: #7b7889; --hover: rgba(31, 28, 52, .05);
+  background: #f6f6fa linear-gradient(180deg, #f1edfb 0, #f6f6fa 320px) no-repeat;
+}
+html.signed-in body:not(.admin)::before, html.signed-in body:not(.admin)::after { display: none; }
+html.signed-in .site-header, html.signed-in .ticker, html.signed-in .tabbar, html.signed-in .menu { display: none !important; }
+html.signed-in .app-bar { display: block; position: sticky; top: 0; z-index: 60; background: rgba(255, 255, 255, .92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+.app-bar-in { max-width: 1240px; margin: 0 auto; padding: 10px clamp(14px, 3vw, 28px); display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; min-height: 62px; }
+.app-brand { display: flex; align-items: center; gap: 9px; }
+.app-brand img { border-radius: 50%; }
+.app-brand b { font-size: 13px; letter-spacing: .2em; font-weight: 600; }
+.app-role { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; background: #efe9fd; color: #5b4c96; }
+.app-role[data-kind="super"], .app-role[data-kind="staff"] { background: #fff1d9; color: #8a5c14; }
+.app-role[data-kind="youth"] { background: #e3f5ea; color: #1f6b3d; }
+.app-tabs { display: flex; gap: 2px; justify-self: center; padding: 4px; border-radius: 14px; background: var(--surface); overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+.app-tabs::-webkit-scrollbar { display: none; }
+.app-tabs a { flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 10px; font-size: 14px; color: var(--text-2); white-space: nowrap; transition: background-color .12s, color .12s; }
+.app-tabs a .i { width: 16px; height: 16px; }
+.app-tabs a:hover { background: #fff; color: var(--text); }
+.app-tabs a.on { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(31, 28, 52, .1); font-weight: 500; }
+.app-tabs a.on .i { color: #6b5aa8; }
+.app-me { display: flex; align-items: center; gap: 8px; }
+.app-me .avatar { width: 34px; height: 34px; font-size: 14px; }
+html.signed-in main { padding-top: clamp(18px, 3vw, 30px); }
+html.signed-in .me-hero h1, html.signed-in .ask-head h1, html.signed-in .dev-page h1, html.signed-in .store-hero h1 { font-size: clamp(28px, 4vw, 38px); }
+html.signed-in .st-card, html.signed-in .know, html.signed-in .slide, html.signed-in .vote-card, html.signed-in .vote-role, html.signed-in .ask-thread { background: #fff; }
+@media (max-width: 1100px) { .app-tabs a .i { display: none; } }
+@media (max-width: 860px) {
+  .app-bar-in { grid-template-columns: auto 1fr; grid-template-areas: "brand me" "tabs tabs"; gap: 8px 10px; padding-bottom: 8px; }
+  .app-brand { grid-area: brand; } .app-me { grid-area: me; justify-self: end; }
+  .app-tabs { grid-area: tabs; justify-self: stretch; border-radius: 12px; }
+  .app-tabs a { padding: 8px 11px; font-size: 13.5px; }
+  .app-tabs a .i { display: inline-block; width: 15px; height: 15px; }
+  html.signed-in body { padding-bottom: env(safe-area-inset-bottom); }
+  .wp-bar { top: 112px; }
+}
+html.signed-in .wp-bar { top: 62px; }
+@media (max-width: 860px) { html.signed-in .wp-bar { top: 108px; } }
