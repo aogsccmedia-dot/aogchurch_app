@@ -771,7 +771,7 @@ export function memberLeaderIntro(b: Brand, o: { name: string; leader: string })
   };
 }
 
-// ---------------------------------------------------------------- SCC Presenter beta
+// ---------------------------------------------------------------- FreeCreator beta
 
 export function accountCode(b: Brand, code: string) {
   const spaced = code.split("").join(" ");
@@ -792,32 +792,32 @@ export function accountCode(b: Brand, code: string) {
 export function presenterWelcome(b: Brand, o: { name: string; slot: number; key: string; open?: boolean }) {
   const when = o.open ? "Downloads are open now." : "Downloads open on <strong>1 February 2027</strong>. We'll email you the moment they do.";
   return {
-    subject: `Your SCC Presenter beta place: #${o.slot} of 20`,
+    subject: `Your FreeCreator beta place: #${o.slot} of 20`,
     html: layout(b, {
       preheader: o.open ? `Your beta key is ${o.key}.` : `Place #${o.slot} is yours. The beta arrives on 1 February 2027.`,
-      eyebrow: "SCC Presenter beta",
+      eyebrow: "FreeCreator beta",
       heading: `Your place is saved, ${esc(o.name)}`,
-      content: p(`Thank you for signing up to test SCC Presenter. You're <strong>#${o.slot} of 20</strong>.`) +
+      content: p(`Thank you for signing up to test FreeCreator. You're <strong>#${o.slot} of 20</strong>.`) +
         p(`Your beta key: <strong style="font-size:18px;letter-spacing:.06em">${esc(o.key)}</strong>. You'll type it in the app under Settings → Beta so your feedback reaches us.`) +
-        p(when) + button(b.site + "/presenter", o.open ? "Download SCC Presenter" : "See what's coming"),
+        p(when) + button(b.site + "/presenter", o.open ? "Download FreeCreator" : "See what's coming"),
     }),
-    text: `Thank you, ${o.name}! You're #${o.slot} of 20 for the SCC Presenter beta.\nYour beta key: ${o.key}\n${o.open ? "Downloads are open now" : "Downloads open on 1 February 2027. We'll email you"}: ${b.site}/presenter` + textFooter(b),
+    text: `Thank you, ${o.name}! You're #${o.slot} of 20 for the FreeCreator beta.\nYour beta key: ${o.key}\n${o.open ? "Downloads are open now" : "Downloads open on 1 February 2027. We'll email you"}: ${b.site}/presenter` + textFooter(b),
   };
 }
 
 export function presenterBetaOpen(b: Brand, o: { name: string; slot: number; key: string }) {
   return {
-    subject: "SCC Presenter beta is here 🎉",
+    subject: "FreeCreator beta is here 🎉",
     html: layout(b, {
-      preheader: "Your beta place is ready. Download SCC Presenter for Windows or Mac.",
-      eyebrow: "SCC Presenter beta",
+      preheader: "Your beta place is ready. Download FreeCreator for Windows or Mac.",
+      eyebrow: "FreeCreator beta",
       heading: `It's here, ${esc(o.name)}`,
-      content: p(`The SCC Presenter beta is open, and place <strong>#${o.slot}</strong> is yours.`) +
+      content: p(`The FreeCreator beta is open, and place <strong>#${o.slot}</strong> is yours.`) +
         p(`Your beta key: <strong style="font-size:18px;letter-spacing:.06em">${esc(o.key)}</strong>. Paste it in the app under Settings → Beta.`) +
         p("Please try it at a real service or rehearsal, then tap <strong>Feedback</strong> in the app's top bar.") +
-        button(b.site + "/presenter", "Download SCC Presenter"),
+        button(b.site + "/presenter", "Download FreeCreator"),
     }),
-    text: `The SCC Presenter beta is open, ${o.name}! Place #${o.slot} is yours.\nYour beta key: ${o.key}\nDownload: ${b.site}/presenter` + textFooter(b),
+    text: `The FreeCreator beta is open, ${o.name}! Place #${o.slot} is yours.\nYour beta key: ${o.key}\nDownload: ${b.site}/presenter` + textFooter(b),
   };
 }
 
@@ -825,14 +825,14 @@ export function presenterFeedbackAdmin(b: Brand, o: { tester: string; slot: numb
   const stars = (n: number | null) => (n ? "★".repeat(n) + "☆".repeat(5 - n) : "—");
   const row = (k: string, v: string) => v ? `<tr><td style="padding:6px 10px 6px 0;color:${C.muted};vertical-align:top;white-space:nowrap">${esc(k)}</td><td style="padding:6px 0">${esc(v).replace(/\n/g, "<br>")}</td></tr>` : "";
   return {
-    subject: `Presenter beta feedback from ${o.tester} (${stars(o.overall)})`,
+    subject: `FreeCreator beta feedback from ${o.tester} (${stars(o.overall)})`,
     html: layout(b, {
       preheader: `${o.tester} sent beta feedback.`,
-      eyebrow: "SCC Presenter beta",
+      eyebrow: "FreeCreator beta",
       heading: `New feedback from tester #${o.slot}`,
       content: `<table style="font:15px/1.5 ${SANS};border-collapse:collapse">${row("Tester", o.tester)}${row("From", o.source === "app" ? "The app" : "The website")}${row("Overall", stars(o.overall))}${row("Ease of use", stars(o.ease))}${row("Installed OK", o.install)}${row("Worked well", o.good)}${row("Problems", o.problems)}${row("Missing", o.missing)}${row("Recommend", o.recommend)}</table>` +
         button(b.site + "/admin#report", "See all feedback"),
     }),
-    text: `Presenter beta feedback from ${o.tester} (#${o.slot})\nOverall: ${o.overall ?? "-"}/5  Ease: ${o.ease ?? "-"}/5\nWorked well: ${o.good}\nProblems: ${o.problems}\nMissing: ${o.missing}\nRecommend: ${o.recommend}` + textFooter(b),
+    text: `FreeCreator beta feedback from ${o.tester} (#${o.slot})\nOverall: ${o.overall ?? "-"}/5  Ease: ${o.ease ?? "-"}/5\nWorked well: ${o.good}\nProblems: ${o.problems}\nMissing: ${o.missing}\nRecommend: ${o.recommend}` + textFooter(b),
   };
 }

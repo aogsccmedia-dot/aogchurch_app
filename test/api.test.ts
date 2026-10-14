@@ -992,7 +992,7 @@ describe("presenter beta & code changes", () => {
     assert.equal((await post("/api/presenter/join", {}, { cookie: lateCookie })).status, 409, "no 21st tester");
     assert.equal((await post("/api/presenter/feedback", { key: "SCC-NOPE-NOPE", overall: 5 })).status, 403);
     assert.equal((await post("/api/presenter/feedback", { key: tester.beta_key, overall: 4, good: "Easy", source: "app" })).status, 200);
-    assert.ok(mails("aogsccmedia@gmail.com").some((m) => /Presenter beta feedback/.test(m.subject)));
+    assert.ok(mails("aogsccmedia@gmail.com").some((m) => /FreeCreator beta feedback/.test(m.subject)));
     // Downloads stay off until the beta opens on 1 February 2027: no link to GitHub, just "coming soon".
     const st = await (await call("/api/presenter/status", { headers: { cookie } })).json() as { downloads_open: boolean; opens: string; release: unknown };
     assert.equal(st.downloads_open, false); assert.equal(st.opens, "2027-02-01"); assert.equal(st.release, null);

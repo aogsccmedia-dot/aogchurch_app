@@ -388,7 +388,7 @@ export function initInsights(ctx) {
     };
     $("#code-body").innerHTML = `
       ${d.canMerge ? "" : `<div class="card note"><b>One more step to approve from here.</b> Until then, approve on GitHub. <ol><li>GitHub → Settings → Developer settings → Fine-grained tokens → Generate. Repository access: <i>aogchurch_app</i> and <i>scc-presenter</i>. Permissions: <i>Contents</i>, <i>Pull requests</i> → Read and write.</li><li>Cloudflare → Workers → aogchurch-app → Settings → Variables and Secrets → Add secret <code>GITHUB_TOKEN</code> → paste → Deploy.</li></ol></div>`}
-      ${d.repos.map((r) => `<h2 class="repo-h">${esc(r.repo.split("/")[1] === "aogchurch_app" ? "Website & admin (aogchurch_app)" : "SCC Presenter app (scc-presenter)")}</h2>
+      ${d.repos.map((r) => `<h2 class="repo-h">${esc(r.repo.split("/")[1] === "aogchurch_app" ? "Website & admin (aogchurch_app)" : "FreeCreator app (scc-presenter)")}</h2>
         ${r.error ? `<p class="muted">Couldn't load: ${esc(r.error)}</p>` : r.pulls.length ? r.pulls.map((p) => pr(r.repo, p)).join("") : `<p class="muted">No changes waiting.</p>`}`).join("")}
       <div class="card"><h3>Recent activity</h3>${d.events.length ? `<ul class="events">${d.events.map((e) => `<li><span class="muted">${agoCode(e.created_at)}</span> <b>${esc(e.repo.split("/")[1])}</b> ${esc(e.action)} ${e.number ? `#${e.number}` : ""} ${esc(e.title || "")} <span class="muted">${esc(e.author || "")}</span> ${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">open</a>` : ""}</li>`).join("")}</ul>` : `<p class="muted">No activity yet. Connect GitHub alerts below.</p>`}</div>
       <details class="card"><summary><b>Alerts &amp; collaboration set-up</b> (once per repository)</summary>
@@ -420,7 +420,7 @@ export function initInsights(ctx) {
   };
   $("#code-refresh")?.addEventListener("click", () => safe(loaders.code)());
 
-  // ------------------------------------------------------------ SCC Presenter beta: testers, downloads and feedback
+  // ------------------------------------------------------------ FreeCreator beta: testers, downloads and feedback
   async function presenterBeta() {
     const d = await api("/api/admin/presenter");
     const st = (n) => (n ? "★".repeat(n) + "☆".repeat(5 - n) : "—");

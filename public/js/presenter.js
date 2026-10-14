@@ -1,4 +1,4 @@
-// SCC Presenter beta page: places left, sign in (Google or email + password), reserve a place.
+// FreeCreator beta page: places left, sign in (Google or email + password), reserve a place.
 // Downloads stay off until the beta opens on 1 February 2027; then the download buttons appear.
 import { api, esc, toast } from "./site.js";
 import { getMe, googleButton, whenSignedIn, renderHeaderUser } from "./auth.js";
@@ -32,7 +32,7 @@ function render() {
   if (s.tester) return renderTester(s);
   if (!s.signed_in) return renderSignIn(s);
   if (!s.open) {
-    card.innerHTML = `<p class="eyebrow gold">Coming soon</p><h2>All 20 beta places are reserved</h2><p>Thank you for your interest. SCC Presenter stays free for every church.</p>${soonChip(s)}`;
+    card.innerHTML = `<p class="eyebrow gold">Coming soon</p><h2>All 20 beta places are reserved</h2><p>Thank you for your interest. FreeCreator stays free for every church.</p>${soonChip(s)}`;
     return;
   }
   renderJoin(s);
@@ -107,7 +107,7 @@ function renderJoin(s) {
       <label class="field"><span>Your church or ministry</span><input class="input" name="church" maxlength="120" placeholder="e.g. AOG Sandton City Church"></label>
       <label class="field"><span>What do you do on Sundays?</span><select class="input" name="role"><option value="">Choose…</option><option>Media / projection</option><option>Worship team</option><option>Pastor / leader</option><option>Livestream / sound</option><option>Other</option></select></label>
       <label class="field"><span>Your computer</span><select class="input" name="os"><option value="windows">Windows</option><option value="mac">Mac</option></select></label>
-      <p class="fine">By joining you agree to try SCC Presenter and share honest feedback. We'll email your beta key to ${esc(s.user?.email || "you")}.</p>
+      <p class="fine">By joining you agree to try FreeCreator and share honest feedback. We'll email your beta key to ${esc(s.user?.email || "you")}.</p>
       <button class="btn btn-gold btn-glow" type="submit">Reserve my place</button>
     </form>`;
   const f = card.querySelector("#join-form");
@@ -136,10 +136,10 @@ function renderTester(s) {
     : `<span class="btn dl-btn disabled">${icon("download")}<span><b>${OS[os].name}</b><small>Being prepared — check back soon</small></span></span>`;
   card.innerHTML = `<p class="eyebrow gold">Beta tester #${t.slot} of ${s.slots}</p><h2>You're in. Thank you!</h2>
     <div class="beta-key"><span>Your beta key</span><code id="bkey">${esc(t.beta_key)}</code><button class="btn btn-sm" type="button" id="bcopy">Copy</button></div>
-    ${isPhone ? `<div class="phone-note">${icon("laptop")}<p><b>Open this page on your computer to download.</b> SCC Presenter is for Windows and Mac laptops and desktops.</p></div>` : `<div class="dl-row">${order.map((os, i) => btn(os, i === 0)).join("")}</div>`}
+    ${isPhone ? `<div class="phone-note">${icon("laptop")}<p><b>Open this page on your computer to download.</b> FreeCreator is for Windows and Mac laptops and desktops.</p></div>` : `<div class="dl-row">${order.map((os, i) => btn(os, i === 0)).join("")}</div>`}
     <details class="install-help" ${t.downloads ? "" : "open"}><summary>How to install${icon("plus")}</summary>
       <ol>${(myOs === "mac" ? [
-        "Open <b>SCC-Presenter.dmg</b> and drag SCC Presenter into Applications.",
+        "Open <b>SCC-Presenter.dmg</b> and drag FreeCreator into Applications.",
         "The first time: Control-click the app → <b>Open</b> → Open. (Or System Settings → Privacy &amp; Security → <b>Open Anyway</b>.)",
         "Go to Settings → Beta in the app and paste your beta key.",
       ] : [

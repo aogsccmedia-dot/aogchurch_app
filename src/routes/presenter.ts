@@ -1,4 +1,4 @@
-// SCC Presenter (desktop app) beta: email + password accounts, the first 20 testers reserve a place now,
+// FreeCreator (desktop app) beta: email + password accounts, the first 20 testers reserve a place now,
 // downloads open on 1 February 2027 (no download links before then), and feedback.
 import type { Env } from "../env.ts";
 import { adminEmail, siteUrl } from "../env.ts";
@@ -136,13 +136,13 @@ export function presenterRoutes(router: Router, env: Env): void {
     // and nobody can get a 21st, even if they press Join at the same moment.
     for (let attempt = 0; attempt < 4; attempt++) {
       const n = await taken();
-      if (n >= BETA.slots) throw new HttpError(409, "All 20 beta places have been taken. SCC Presenter beta arrives on 1 February 2027.");
+      if (n >= BETA.slots) throw new HttpError(409, "All 20 beta places have been taken. FreeCreator beta arrives on 1 February 2027.");
       const id = uuid(), key = betaKey();
       try {
         const r = await env.DB.prepare(`INSERT INTO beta_testers (id, user_id, email, name, slot, beta_key, church, role, os)
           SELECT ?,?,?,?, (SELECT COALESCE(MAX(slot), 0) + 1 FROM beta_testers), ?,?,?,? WHERE (SELECT COUNT(*) FROM beta_testers) < ?`)
           .bind(id, s.user.id, s.user.email, name, key, clip(b.church, 120) || null, clip(b.role, 80) || null, clip(b.os, 20) || null, BETA.slots).run();
-        if (!r.meta.changes) throw new HttpError(409, "All 20 beta places have been taken. SCC Presenter beta arrives on 1 February 2027.");
+        if (!r.meta.changes) throw new HttpError(409, "All 20 beta places have been taken. FreeCreator beta arrives on 1 February 2027.");
       } catch (e) {
         if (e instanceof HttpError) throw e;
         const again = await testerFor(s.user.id);
@@ -152,7 +152,7 @@ export function presenterRoutes(router: Router, env: Env): void {
       const t = await testerFor(s.user.id);
       if (!t) throw new HttpError(409, "All 20 beta places have been taken.");
       await sendMail(env, { to: t.email, ...T.presenterWelcome(brand, { name, slot: t.slot, key: t.beta_key, open: downloadsOpen() }), template: "presenter_welcome" });
-      await sendMail(env, { to: adminEmail(env), subject: `New SCC Presenter beta tester #${t.slot}: ${name}`, html: `<p>${T.esc(name)} &lt;${T.esc(t.email)}&gt; reserved SCC Presenter beta place #${t.slot}.</p><p><a href="${brand.site}/admin#report">Open the admin portal</a></p>`, text: `${name} <${t.email}> reserved SCC Presenter beta place #${t.slot}.\nChurch: ${clip(b.church, 120) || "-"}\nRole: ${clip(b.role, 80) || "-"}\n\n${brand.site}/admin#report`, template: "presenter_admin" });
+      await sendMail(env, { to: adminEmail(env), subject: `New FreeCreator beta tester #${t.slot}: ${name}`, html: `<p>${T.esc(name)} &lt;${T.esc(t.email)}&gt; reserved FreeCreator beta place #${t.slot}.</p><p><a href="${brand.site}/admin#report">Open the admin portal</a></p>`, text: `${name} <${t.email}> reserved FreeCreator beta place #${t.slot}.\nChurch: ${clip(b.church, 120) || "-"}\nRole: ${clip(b.role, 80) || "-"}\n\n${brand.site}/admin#report`, template: "presenter_admin" });
       return json({ ok: true, tester: { slot: t.slot, beta_key: t.beta_key, downloads: 0 } });
     }
     throw new HttpError(409, "All 20 beta places have been taken.");
