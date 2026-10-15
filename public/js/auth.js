@@ -92,7 +92,7 @@ export function adminCodeDialog(challenge, sentTo) {
     dlg.innerHTML = `<form method="dialog" class="code-form">
       <p class="eyebrow gold">Admin verification</p>
       <h3>Check your email</h3>
-      <p class="muted-text">We sent a 6-digit code to <b>${esc(sentTo)}</b>. It expires in 10 minutes.</p>
+      <p class="muted-text">We've sent a 6-digit code to <b>${esc(sentTo)}</b>. Type or paste it: it checks itself as soon as all 6 digits are in. If it hasn't arrived in a minute, tap Resend.</p>
       <input class="input" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
       <div class="notice err" data-status hidden></div>
       <div style="display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap">
@@ -110,6 +110,7 @@ export function adminCodeDialog(challenge, sentTo) {
       try {
         await api("/api/auth/admin/verify", { method: "POST", body: { challenge: ch, code: form.code.value } });
         dlg.close(); resolve(true);
+        veilShow("Opening your dashboard…"); veilCarry("Opening your dashboard…");
         location.href = "/admin/";
       } catch (err) { status.textContent = err.message; status.hidden = false; form.code.value = ""; form.code.dispatchEvent(new Event("input")); form.code.focus(); }
       finally { stop(); }
@@ -120,6 +121,8 @@ export function adminCodeDialog(challenge, sentTo) {
     });
     dlg.showModal();
     form.code.focus();
+    // Get the dashboard ready while they fetch the code, so it opens instantly.
+    const l = document.createElement("link"); l.rel = "prefetch"; l.href = "/admin/"; document.head.append(l);
   });
 }
 
@@ -167,10 +170,11 @@ export async function openSignIn() {
   if (!dlg) {
     dlg = document.createElement("dialog");
     dlg.id = "signin-dialog"; dlg.className = "sheet";
-    dlg.innerHTML = `<div class="signin-sheet"><button class="icon-btn close" data-close aria-label="Close">✕</button>
-      <img src="/assets/logo-192.png" alt="" width="64" height="64" style="border-radius:50%">
-      <h3>Welcome home</h3><p class="muted-text">Sign in with Google to join faster, register for events in one tap and manage your weekly letter.</p>
-      <div class="gbtn"></div></div>`;
+    dlg.innerHTML = `<div class="signin-card"><button class="close" type="button" data-close aria-label="Close">✕</button>
+      <img class="si-logo" src="/assets/logo-192.png" alt="" width="72" height="72">
+      <h3>Welcome home</h3><p>Sign in or sign up with your Google account. One tap, no passwords.</p>
+      <div class="gbtn"></div>
+      <p class="si-fine">New here? Signing in with Google creates your account.</p></div>`;
     document.body.append(dlg);
     dlg.querySelector("[data-close]").addEventListener("click", () => dlg.close());
     dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });

@@ -1856,3 +1856,31 @@ a.pam-page { display: block; }
 .goye-txt { display: grid; gap: 2px; } .goye-txt small { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #8a5a12; font-weight: 600; }
 .goye-txt b { font-size: 17px; } .goye-txt em { font-style: normal; font-size: 14px; color: var(--text-2); }
 .goye-go .i { width: 22px; height: 22px; }
+
+/* Touch screens: nothing slides, stretches or drifts under your finger. Sections simply sit still. */
+@media (pointer: coarse), (hover: none) {
+  :is(.section-head, .pillar, .event-card, .explore-card, .belief, .chapter, .howto > div, .faq details, .panel, .letter, .feature-card, .story-copy, .visit-card,
+      .split > *, .ministries, .map-frame, .pager-link, .cta-band > *, .foot-cta, .beliefs-grid > *, .prose > h2, .app-detected, .app-perks, .event-grid > .events-empty,
+      .page-hero-photo, .hero .mosaic, .photo img, .site-footer .cols > *, .reveal) { animation: none !important; transform: none !important; opacity: 1 !important; scale: 1 !important; will-change: auto !important; }
+}
+
+/* ---- Sign in: one calm, steady card ---- */
+.signin-wrap { min-height: calc(100dvh - 180px); display: grid; place-items: center; padding: 24px 0 40px; }
+.signin-card { width: min(440px, 100%); display: grid; justify-items: center; gap: 14px; text-align: center; padding: 32px 24px 26px; border-radius: 28px;
+  background: #fff; border: 1px solid rgba(31, 28, 52, .1); box-shadow: 0 24px 60px -30px rgba(40, 30, 80, .35); animation: none !important; transform: none !important; }
+.signin-card .si-logo { width: 72px; height: 72px; border-radius: 50%; box-shadow: 0 0 0 6px #f4f0ff; }
+.signin-card h1, .signin-card h3 { font-size: 30px; font-weight: 600; margin: 4px 0 0; line-height: 1.15; }
+.signin-card p { margin: 0; color: var(--text-2); line-height: 1.5; }
+.signin-card .google-slot, .signin-card .gbtn { width: 300px; max-width: 100%; height: 44px; min-height: 44px; display: flex; justify-content: center; align-items: center; overflow: hidden; border-radius: 999px; margin-top: 6px; }
+.signin-card .google-slot:empty::before, .signin-card .gbtn:empty::before { content: "Loading Google sign-in…"; font-size: 14px; color: var(--muted); }
+.si-perks { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 8px; width: 100%; text-align: left; }
+.si-perks li { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: #f8f7fc; font-size: 14.5px; color: var(--text-2); }
+.si-perks li span { font-size: 18px; width: 24px; text-align: center; flex: none; }
+.si-fine { font-size: 12.5px !important; color: var(--muted) !important; }
+.si-fine a { color: inherit; text-decoration: underline; }
+#signin-dialog { padding: 0; border: 0; background: transparent; width: min(440px, calc(100% - 24px)); overflow: visible; }
+#signin-dialog::backdrop { background: rgba(20, 18, 34, .45); }
+#signin-dialog .signin-card { position: relative; }
+#signin-dialog .close { position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: #fff; display: grid; place-items: center; cursor: pointer; }
+/* The admin code step */
+#code-dialog .code-form .input[name=code] { font-size: 30px; letter-spacing: .45em; text-align: center; font-variant-numeric: tabular-nums; padding: 14px 10px; }

@@ -15,11 +15,14 @@ import { subscribe } from "../lib/newsletter.ts";
 import * as T from "../emails/templates.ts";
 import { promoteWaitlist } from "../lib/registrations.ts";
 
-async function sendAdminCode(env: Env, userId: string | null, to?: string) {
+type Ctx = { waitUntil(p: Promise<unknown>): void } | undefined;
+/** Create the admin's code and email it. With `ctx`, the email goes out in the background so the code screen opens instantly. */
+async function sendAdminCode(env: Env, userId: string | null, to?: string, ctx?: Ctx) {
   const email = (to || adminEmail(env)).toLowerCase();
   const { id, code } = await createLoginCode(env, email, userId);
-  const sent = await sendMail(env, { to: email, ...T.adminCode({ site: siteUrl(env) }, code), template: "admin_code" });
-  if (!sent && env.ENVIRONMENT !== "development") throw new HttpError(503, "We couldn't send the verification email. Check that Email Sending is enabled for the domain.");
+  const mail = sendMail(env, { to: email, ...T.adminCode({ site: siteUrl(env) }, code), template: "admin_code" });
+  if (typeof ctx?.waitUntil === "function") ctx.waitUntil(mail.then((ok) => { if (!ok) console.error("admin code email failed"); }).catch((e) => console.error("admin code email failed", e)));
+  else if (!(await mail) && env.ENVIRONMENT !== "development") throw new HttpError(503, "We couldn't send the verification email. Check that Email Sending is enabled for the domain.");
   const masked = email.replace(/^(.)(.*)(.@.*)$/, (_m, a, mid, c) => a + "•".repeat(Math.min(6, mid.length)) + c);
   return { challenge: id, sent_to: masked };
 }
@@ -36,7 +39,7 @@ export function authRoutes(router: Router, env: Env): void {
   });
 
   /** Sign in with Google (everyone). The main admin account must additionally pass an emailed code. */
-  router.post("/api/auth/google", async (req) => {
+  router.post("/api/auth/google", async (req, _p, ctx) => {
     await rateLimit(env, "google", clientIp(req), 30, 600);
     const { credential } = await readJson<{ credential?: string }>(req);
     if (!credential) throw new HttpError(400, "Missing Google credential.");
@@ -45,8 +48,8 @@ export function authRoutes(router: Router, env: Env): void {
     // Only the main admin account needs an emailed code on top of Google. Everyone else, including admins and
     // youth leaders, is signed in straight away with exactly the access they've been given.
     if (isAdminEmail(env, user.email)) {
-      const c = await sendAdminCode(env, user.id);
-      return json({ ok: true, needs_code: true, ...c }, 200, { "Set-Cookie": await createSession(env, req, user.id, "user") });
+      const [c, cookie] = await Promise.all([sendAdminCode(env, user.id, undefined, ctx), createSession(env, req, user.id, "user")]);
+      return json({ ok: true, needs_code: true, ...c }, 200, { "Set-Cookie": cookie });
     }
     // Link any earlier join-form record made with the same email.
     await env.DB.prepare("UPDATE members SET user_id = ? WHERE user_id IS NULL AND email = ?").bind(user.id, user.email).run();

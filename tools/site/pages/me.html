@@ -1,11 +1,19 @@
 
   <main id="main" class="wrap">
     <div id="me-loading" class="me-loading" role="status"><span class="spinner" aria-hidden="true"></span><p>Loading your profile…</p></div>
-    <div id="me-signin" class="cta-band" hidden>
-      <p class="eyebrow gold">My profile</p>
-      <h2>Welcome <span class="serif">home.</span></h2>
-      <p class="lede" style="text-align:center">Sign in with Google to see your events, manage the weekly letter and complete joining.</p>
-      <div id="me-google" class="google-slot"></div>
+    <div id="me-signin" class="signin-wrap" hidden>
+      <section class="signin-card" aria-labelledby="si-title">
+        <img class="si-logo" src="/assets/logo-192.png" alt="" width="72" height="72">
+        <h1 id="si-title">Welcome home</h1>
+        <p>Sign in or sign up with your Google account. One tap, no passwords.</p>
+        <div id="me-google" class="google-slot"></div>
+        <ul class="si-perks">
+          <li><span>🎟️</span>Your tickets and church events in one place</li>
+          <li><span>📖</span>Today's verse, Ask SCC and the welcome pack</li>
+          <li><span>🙌</span>Join the church, vote and serve</li>
+        </ul>
+        <p class="si-fine">New here? Signing in with Google creates your account. See our <a href="/privacy">privacy notice</a>.</p>
+      </section>
     </div>
     <div class="me-home" id="me-view" hidden>
       <header class="me-explore">
