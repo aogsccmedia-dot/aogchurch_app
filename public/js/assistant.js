@@ -33,13 +33,51 @@ function bubble(role, html, extra = "") {
   return el;
 }
 
-function renderReply(r, id) {
-  const html = `<span class="ask-who">${icon("bot")} ${esc(r.agent_label)}</span><p>${esc(r.text).replace(/\n/g, "<br>")}</p>
+function replyHtml(r, id) {
+  return `<span class="ask-who">${icon("bot")} ${esc(r.agent_label)}</span><p>${esc(r.text).replace(/\n/g, "<br>")}</p>
     ${r.cards?.length ? `<div class="ask-cards">${r.cards.map(card).join("")}</div>` : ""}
     ${r.actions?.length ? `<div class="ask-actions">${r.actions.map(action).join("")}</div>` : ""}
     ${r.suggestions?.length ? `<div class="ask-sugg">${r.suggestions.map((s) => `<button data-ask="${esc(s)}">${esc(s)}</button>`).join("")}</div>` : ""}
     <div class="ask-rate" data-id="${esc(id)}"><button data-r="1" aria-label="Helpful">${icon("thumbsUp")}</button><button data-r="-1" aria-label="Not helpful">${icon("thumbsDown")}</button></div>`;
-  bubble("bot", html);
+}
+function renderReply(r, id) { bubble("bot", replyHtml(r, id)); }
+
+/** Read the answer as it's written: meta (cards and buttons) → text pieces → done (final clean text). */
+async function streamChat(body, typing) {
+  const res = await fetch("/api/assistant/chat", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "x-scc-admin": "1" }, body: JSON.stringify({ ...body, stream: true }) });
+  if (!res.ok || !(res.headers.get("content-type") || "").includes("event-stream")) {
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok || d.ok === false) throw new Error(d.error || "Something went wrong. Please try again.");
+    return d;   // the built-in answer (AI switched off)
+  }
+  const reader = res.body.getReader(), dec = new TextDecoder();
+  let buf = "", meta = null, el = null, p = null, text = "";
+  const thread = document.getElementById("ask-thread");
+  const stick = () => { if (thread.scrollHeight - thread.scrollTop - thread.clientHeight < 140) thread.scrollTop = thread.scrollHeight; };
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i;
+    while ((i = buf.indexOf("\n\n")) >= 0) {
+      const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+      const ev = /^event: (\w+)/m.exec(chunk)?.[1], data = /^data: (.*)$/m.exec(chunk)?.[1];
+      if (!ev || !data) continue;
+      const d = JSON.parse(data);
+      if (ev === "meta") meta = d;
+      else if (ev === "t") {
+        if (!el) { typing.remove(); el = bubble("bot", `<span class="ask-who">${icon("bot")} ${esc(meta?.reply?.agent_label || "Ask SCC")}</span><p class="ask-live"></p>`); p = el.querySelector(".ask-live"); }
+        text += d.t; p.textContent = text; stick();
+      } else if (ev === "done") {
+        const reply = { ...(meta?.reply || {}), text: d.text };
+        if (el) { el.innerHTML = replyHtml(reply, meta?.id); } else { typing.remove(); renderReply(reply, meta?.id); }
+        stick();
+        return { id: meta?.id, reply, streamed: true };
+      }
+    }
+  }
+  if (el && text) return { id: meta?.id, reply: { ...(meta?.reply || {}), text }, streamed: true };
+  throw new Error("The answer was cut off. Please try again.");
 }
 
 async function send(text) {
@@ -51,9 +89,8 @@ async function send(text) {
   const form = document.getElementById("ask-form");
   form.classList.add("sending");
   try {
-    const d = await api("/api/assistant/chat", { method: "POST", body: { message: text, agent, last_agent: lastAgent, history: history.slice(-6) } });
-    typing.remove();
-    renderReply(d.reply, d.id);
+    const d = await streamChat({ message: text, agent, last_agent: lastAgent, history: history.slice(-6) }, typing);
+    if (!d.streamed) { typing.remove(); renderReply(d.reply, d.id); }
     lastAgent = d.reply.agent;
     history.push({ role: "user", content: text }, { role: "assistant", content: d.reply.text });
   } catch (e) {

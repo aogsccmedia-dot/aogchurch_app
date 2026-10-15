@@ -1159,6 +1159,31 @@ describe("Ask SCC, youth tickets, event updates, prayer list and access requests
     assert.equal(route("how much is it?", "events"), "events", "follow-ups stay with the last helper");
   });
 
+  test("smart chat streams the answer as it's written; quick questions use the fast model", async () => {
+    const calls: { model: string; stream: boolean }[] = [];
+    const e = env as unknown as { AI?: unknown };
+    e.AI = { run: async (model: string, input: Record<string, unknown>) => {
+      calls.push({ model, stream: !!input.stream });
+      if (input.text) return { data: (input.text as string[]).map(() => Array(8).fill(0.1)) };
+      if (!input.stream) return { response: "Two." };
+      const enc = new TextEncoder();
+      return new ReadableStream({ start(c) { for (const t of ["1 + 1 ", "is **2**."]) c.enqueue(enc.encode(`data: ${JSON.stringify({ response: t })}\n\n`)); c.enqueue(enc.encode("data: [DONE]\n\n")); c.close(); } });
+    } };
+    try {
+      const r = await post("/api/assistant/chat", { message: "What is 1+1?", stream: true }, { cookie: member });
+      assert.match(r.headers.get("content-type") || "", /event-stream/);
+      const body = await r.text();
+      assert.match(body, /event: meta/); assert.match(body, /event: t\ndata: \{"t":"1 \+ 1 "\}/);
+      const done = JSON.parse(/event: done\ndata: (.*)/.exec(body)![1]) as { text: string };
+      assert.equal(done.text, "1 + 1 is 2.");
+      assert.ok(calls.some((c) => c.stream && /8b/.test(c.model)), "simple question → fast model");
+      assert.ok(!calls.some((c) => !c.stream && !c.model.includes("bge")) , "no extra non-stream call");
+      calls.length = 0;
+      await post("/api/assistant/chat", { message: "Explain the meaning of grace in Ephesians 2", stream: true }, { cookie: member }).then((x) => x.text());
+      assert.ok(calls.some((c) => c.stream && /70b/.test(c.model)), "deeper question → big model");
+    } finally { delete e.AI; }
+  });
+
   test("chat: sign-in required, built-in answers with event cards and calendar links; AI text is cleaned; rollout buckets are stable", async () => {
     assert.equal((await post("/api/assistant/chat", { message: "hi" })).status, 401);
     const r = await post("/api/assistant/chat", { message: "What's coming up?" }, { cookie: member });

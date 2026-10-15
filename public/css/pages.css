@@ -1906,3 +1906,4 @@ a.pam-page { display: block; }
 .go-tips b { display: flex; align-items: center; gap: 8px; } .go-tips b .i { width: 18px; height: 18px; color: #6b5aa8; }
 .push-offer .po-ico { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: #f4f0ff; color: #6b5aa8; }
 .push-offer .po-ico .i { width: 22px; height: 22px; }
+.ask-live { white-space: pre-wrap; }

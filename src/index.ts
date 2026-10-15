@@ -25,6 +25,7 @@ import { voteRoutes } from "./routes/votes.ts";
 import { outreachRoutes } from "./routes/outreach.ts";
 import { analyticsRoutes } from "./routes/analytics.ts";
 import { pushRoutes, processDailyVerse } from "./routes/push.ts";
+import { retrieve } from "./lib/rag.ts";
 import { processAnnouncements } from "./lib/newsletter.ts";
 import { processCheckins, processWelcomes } from "./lib/membership.ts";
 import { processServiceReminders } from "./lib/reminders.ts";
@@ -97,6 +98,7 @@ export default {
       await processPrayerWeekly(env, now).catch((e) => console.error("weekly prayer email failed", e));
       await processElections(env, now).catch((e) => console.error("elections failed", e));
       await processDailyVerse(env, now).catch((e) => console.error("daily verse push failed", e));
+      await retrieve(env, "service times", 1).catch(() => {});   // keep Ask SCC's church knowledge ready, so the first question is fast
 
       const h = now.getUTCHours(), m = now.getUTCMinutes();
       if (now.getUTCDay() === 6 && h === 8 && m < 10) {

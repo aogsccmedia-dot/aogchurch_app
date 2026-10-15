@@ -25,6 +25,16 @@ import { retrieve, contextBlock } from "../lib/rag.ts";
 import { AGENTS, PROMPT_VERSION, route, runAgent, churchCalendar, type AgentId, type Reply, type Who } from "../lib/agents.ts";
 
 export const MODELS = ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/meta/llama-3.1-8b-instruct-fast"];
+const BIG = MODELS[0], FAST = MODELS[1];
+/** Quick questions ("what's 1+1?", "hi") go to the fast model; deep ones (explain, write, compare…) to the big one. */
+export function pickModel(message: string): string {
+  const deep = /\b(explain|why|how does|compare|difference|write|essay|summari[sz]e|plan|detail|history|meaning|interpret|story|letter|poem|teach|lesson|sermon|devotion|outline|study|analy[sz]e|advice|should i)\b/i;
+  return message.length > 160 || deep.test(message) ? BIG : FAST;
+}
+/** Only look things up in the church's website when the question is about church. */
+export function churchy(message: string, general: boolean): boolean {
+  return !general || /\b(church|scc|aog|assembl|sandton|woodmead|pastor|service|sunday|friday|youth|member|join|baptis|disciple|go ye|evangel|ticket|event|prayer wall|welcome pack|bhengu|azusa|app|vote|voting|store|call office|freecreator|podcast|letter)\b/i.test(message);
+}
 export const STEPS = [0, 10, 25, 50, 100];
 
 async function setting(env: Env, key: string, dflt: string) {
@@ -70,19 +80,60 @@ ${general ? "" : `\nThe app's built-in answer (keep every fact if you use it): $
 }
 
 type Msg = { role: "user" | "assistant"; content: string };
-async function smartAnswer(env: Env, r: Reply, who: Who, question: string, history: Msg[], context: string, general: boolean): Promise<{ text: string; model: string }> {
+async function smartAnswer(env: Env, r: Reply, who: Who, question: string, history: Msg[], context: string, general: boolean, first = BIG): Promise<{ text: string; model: string }> {
   if (!env.AI) throw new Error("Workers AI binding missing");
   let lastErr: unknown = null;
-  for (const model of MODELS) {
+  for (const model of [first, ...MODELS.filter((m) => m !== first)]) {
     try {
-      const run = env.AI.run(model, { messages: [{ role: "system", content: systemPrompt(r, who, context, general) }, ...history.slice(-6), { role: "user", content: question }], max_tokens: 700, temperature: 0.5 });
-      const out = await Promise.race([run, new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), 20000))]) as { response?: string };
+      const run = env.AI.run(model, { messages: [{ role: "system", content: systemPrompt(r, who, context, general) }, ...history.slice(-6), { role: "user", content: question }], max_tokens: model === FAST ? 400 : 600, temperature: 0.4 });
+      const out = await Promise.race([run, new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), model === FAST ? 8000 : 15000))]) as { response?: string };
       const text = cleanAi(String(out?.response || ""));
       if (text.length >= 8) return { text, model };
       lastErr = new Error("empty answer");
     } catch (e) { lastErr = e; }
   }
   throw lastErr instanceof Error ? lastErr : new Error("AI failed");
+}
+
+/** Stream the answer as it's written (first words in about a second). Events: meta → t (text pieces) → done (clean final text). */
+function streamAnswer(env: Env, o: { reply: Reply; pubReply: Omit<Reply, "facts">; who: Who; message: string; history: Msg[]; context: string; general: boolean; model: string; agent: AgentId; t0: number }): Response {
+  const id = uuid(), enc = new TextEncoder();
+  const body = new ReadableStream({
+    async start(controller) {
+      const send = (ev: string, data: unknown) => controller.enqueue(enc.encode(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`));
+      send("meta", { id, mode: "ai", reply: { ...o.pubReply, text: "", agent_label: AGENTS[o.agent].label } });
+      let full = "", model = o.model, ok = 1, error: string | null = null;
+      try {
+        const src = await env.AI!.run(model, { messages: [{ role: "system", content: systemPrompt(o.reply, o.who, o.context, o.general) }, ...o.history.slice(-6), { role: "user", content: o.message }],
+          stream: true, max_tokens: model === FAST ? 400 : 600, temperature: 0.4 }) as ReadableStream<Uint8Array>;
+        const reader = src.pipeThrough(new TextDecoderStream() as unknown as ReadableWritablePair<string, Uint8Array>).getReader();
+        let buf = "";
+        const deadline = Date.now() + 25000;
+        for (;;) {
+          const { value, done } = await Promise.race([reader.read(), new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), Math.max(1, deadline - Date.now())))]);
+          if (done) break;
+          buf += value;
+          let i: number;
+          while ((i = buf.indexOf("\n")) >= 0) {
+            const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+            if (!line.startsWith("data:")) continue;
+            const d = line.slice(5).trim();
+            if (!d || d === "[DONE]") continue;
+            try { const j = JSON.parse(d) as { response?: string }; if (j.response) { full += j.response; send("t", { t: j.response }); } } catch { /* partial line */ }
+          }
+        }
+      } catch (e) { ok = full ? 1 : 0; error = String((e as Error)?.message || e).slice(0, 200); }
+      if (!full) {   // nothing came through: one quick non-streamed try on the other model, then the built-in answer
+        try { const r = await smartAnswer(env, o.reply, o.who, o.message, o.history, o.context, o.general, model === FAST ? BIG : FAST); full = r.text; model = r.model; ok = 1; }
+        catch { full = o.general ? "I can't think that one through right now. Please try again in a moment, or tap one of the suggestions below." : o.reply.text; }
+      }
+      send("done", { text: cleanAi(full) || o.reply.text });
+      await env.DB.prepare("INSERT INTO assistant_log (id, user_id, agent, mode, model, prompt_ver, latency_ms, ok, error) VALUES (?,?,?,?,?,?,?,?,?)")
+        .bind(id, o.who!.userId, o.agent, "ai", model, PROMPT_VERSION, Date.now() - o.t0, ok, error).run().catch(() => {});
+      controller.close();
+    },
+  });
+  return new Response(body, { headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store", "X-Accel-Buffering": "no" } });
 }
 
 async function whoFor(env: Env, req: Request): Promise<Who> {
@@ -105,7 +156,7 @@ export function assistantRoutes(router: Router, env: Env): void {
     const who = await whoFor(env, req);
     if (!who) throw new HttpError(401, "Please sign in to chat.");
     await rateLimit(env, "assist", who.userId, 40, 600);
-    const b = await readJson<{ message?: string; agent?: string; last_agent?: string; history?: Msg[] }>(req, 16 * 1024);
+    const b = await readJson<{ message?: string; agent?: string; last_agent?: string; history?: Msg[]; stream?: boolean }>(req, 16 * 1024);
     const message = String(b.message || "").trim().slice(0, 2000);
     if (!message) throw new HttpError(400, "Type a question.");
     const asked = b.agent && b.agent in AGENTS ? b.agent as AgentId : null;
@@ -120,10 +171,13 @@ export function assistantRoutes(router: Router, env: Env): void {
     const pct = Number(await setting(env, "assistant_ai_pct", "100")) || 0;
     const useAi = !!env.AI && bucket(who.userId) < pct;
     let mode: "ai" | "rules" = "rules", model: string | null = null, ok = 1, error: string | null = null, text = reply.text;
+    const history = (Array.isArray(b.history) ? b.history : []).filter((m) => m && (m.role === "user" || m.role === "assistant")).map((m) => ({ role: m.role, content: String(m.content || "").slice(0, 1200) }));
+    const model0 = pickModel(message);
+    const context = useAi && churchy(message, general) ? contextBlock(await retrieve(env, message, general ? 4 : 5)) : "";
+    const { facts: _ff, ...pubReply } = reply;
+    if (useAi && b.stream) return streamAnswer(env, { reply, pubReply, who, message, history, context, general, model: model0, agent, t0 });
     if (useAi) {
-      const history = (Array.isArray(b.history) ? b.history : []).filter((m) => m && (m.role === "user" || m.role === "assistant")).map((m) => ({ role: m.role, content: String(m.content || "").slice(0, 1200) }));
-      const context = contextBlock(await retrieve(env, message, general ? 4 : 5));
-      try { const r = await smartAnswer(env, reply, who, message, history, context, general); text = r.text; model = r.model; mode = "ai"; }
+      try { const r = await smartAnswer(env, reply, who, message, history, context, general, model0); text = r.text; model = r.model; mode = "ai"; }
       catch (e) { ok = 0; error = String((e as Error)?.message || e).slice(0, 200); mode = "rules"; }
     }
     if (general && mode !== "ai") text = "I can't think that one through right now. Please try again in a moment, or tap one of the suggestions below.";
