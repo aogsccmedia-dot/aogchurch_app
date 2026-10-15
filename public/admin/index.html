@@ -9,7 +9,7 @@
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="stylesheet" href="/css/base.css?v=eae68f236b">
   <link rel="stylesheet" href="/css/pages.css?v=98ca8e6089">
-  <link rel="stylesheet" href="/css/admin.css?v=c6a60b790c">
+  <link rel="stylesheet" href="/css/admin.css?v=040906a43e">
   <script src="/js/switch-boot.js?v=4afbe33104"></script>
 </head>
 <body class="admin">
@@ -365,7 +365,7 @@
         <div id="rep-ministry">
           <div class="card report-controls no-print">
             <div class="row"><label>Ministry <select class="input" id="mr-group" data-groups></select></label><label>Year <select class="input" id="mr-year"></select></label>
-              <button class="btn" type="button" id="mr-print">Print / save PDF</button></div>
+              <div class="rep-dl"><button class="btn" type="button" id="mr-csv"><span data-icon-before="download"></span>Download spreadsheet</button><button class="btn" type="button" id="mr-print">Save as PDF</button></div></div>
           </div>
           <article class="report-doc" id="ministry-doc"><p class="muted">Loading…</p></article>
         </div>
@@ -373,7 +373,7 @@
         <div class="card report-controls no-print">
           <div class="seg" id="rep-presets"><button data-p="month">This month</button><button data-p="lastmonth">Last month</button><button data-p="quarter" class="on">This quarter</button><button data-p="lastquarter">Last quarter</button><button data-p="year">This year</button><button data-p="lastyear">Last year</button></div>
           <div class="row"><label>From <input class="input" type="date" id="rep-from"></label><label>To <input class="input" type="date" id="rep-to"></label>
-            <button class="btn btn-gold" type="button" id="rep-go">Create report</button><button class="btn" type="button" id="rep-print">Print / save PDF</button><a class="btn" id="rep-csv">Download CSV</a></div>
+            <button class="btn btn-gold" type="button" id="rep-go">Create report</button><div class="rep-dl"><a class="btn" id="rep-csv" download><span data-icon-before="download"></span>Download spreadsheet</a><button class="btn" type="button" id="rep-print">Save as PDF</button></div></div>
         </div>
         <article class="report-doc" id="report-doc"><p class="muted">Choose a period and tap “Create report”.</p></article>
         </div>
@@ -492,6 +492,6 @@
   <dialog class="drawer" id="rsvp-drawer"><div class="drawer-body" id="rsvp-body"></div></dialog>
   <dialog class="drawer" id="services-drawer"><div class="drawer-body" id="services-body"></div></dialog>
   <dialog class="drawer" id="member-drawer"><div class="drawer-body" id="member-body"></div></dialog>
-  <script type="module" src="/js/admin.js?v=897f10765b"></script>
+  <script type="module" src="/js/admin.js?v=9cbaf598b4"></script>
 </body>
 </html>

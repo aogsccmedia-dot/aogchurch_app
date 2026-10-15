@@ -4,6 +4,7 @@ import { AVAILABILITY, LABELS, MINISTRIES } from "./options.js";
 import { FIELD_TYPES, renderField } from "./forms.js";
 import { icon } from "./icons.js";
 import { initInsights } from "./admin-insights.js";
+import { watchReports } from "./report-fit.js";
 import { initMore } from "./admin-more.js";
 import { initExtra } from "./admin-extra.js";
 import { arrivedBySwitch, switchReady } from "./switcher.js";
@@ -1157,6 +1158,7 @@ addEventListener("resize", () => { if (innerWidth > 860) setSide(false); });
 $$("[data-ico]:not([data-go-tab])").forEach((b) => { b.innerHTML = icon(b.dataset.ico); });
 $$("[data-go-tab]").forEach((b) => { if (b.dataset.ico) b.insertAdjacentHTML("afterbegin", icon(b.dataset.ico)); b.addEventListener("click", () => { location.hash = b.dataset.goTab; }); });
 // Insights, weekly services and the board report live in their own module.
+watchReports(document.querySelector(".main"));
 const insights = initInsights({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate, canManageServices: () => !perms || perms.includes("services") });
 const more = initMore({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate, icon });
 initExtra({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate, icon });

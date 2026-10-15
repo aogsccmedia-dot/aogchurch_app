@@ -1,3 +1,4 @@
+import { downloadCsv } from "./report-fit.js";
 // Admin: event insights (per-event drill-in), the weekly services manager and the church board report.
 // Wired in from admin.js with its helpers so it shares the same api(), toast() and routing.
 
@@ -409,6 +410,7 @@ export function initInsights(ctx) {
   });
   ["mr-group", "mr-year"].forEach((id) => $("#" + id).addEventListener("change", () => safe(ministryReport)()));
   $("#mr-print").addEventListener("click", () => window.print());
+  $("#mr-csv").addEventListener("click", () => { const d = $("#ministry-doc"); if (!d.querySelector(".rep-head")) return toast("The report is still loading."); downloadCsv(d); });
 
   // ------------------------------------------------------------ Code changes (main admin): pull requests, checks, approve / decline
   const agoCode = (iso) => { const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`; };
