@@ -261,7 +261,7 @@ export function initInsights(ctx) {
         <div class="field" data-when-held><label>MC ${R}</label>
           <select class="input" name="mc_pick"><option value="">Choose who led…</option>${people.map((n) => `<option ${n === mc ? "selected" : ""}>${esc(n)}</option>`).join("")}<option value="__other" ${mcListed ? "" : "selected"}>Someone else (not on the list)</option></select>
           <input class="input" name="mc_other" maxlength="120" placeholder="Their name" value="${mcListed ? "" : esc(mc)}" ${mcListed ? "hidden" : ""} style="margin-top:8px"></div>
-        <div class="field" data-when-held><label>Word of the day ${R}</label><textarea class="input" name="scripture" maxlength="500" rows="2" placeholder="e.g. Hebrews 11:1 · Now faith is the substance of things hoped for">${val("scripture")}</textarea></div>
+        <div class="field" data-when-held><label>Word of the day ${R}</label><textarea class="input" name="scripture" maxlength="500" rows="1" placeholder="e.g. Hebrews 11:1 · Now faith is the substance of things hoped for">${val("scripture")}</textarea></div>
         <div data-when-held>
           <div class="ss-nums">
             <label class="field"><span>Attendance ${R}</span><input class="input" name="attendance" type="number" inputmode="numeric" min="0" step="1" placeholder="0" value="${val("attendance")}"></label>
@@ -270,10 +270,11 @@ export function initInsights(ctx) {
           </div>
           <p class="muted small" data-future-note hidden>This service hasn't happened yet. Save it now and add attendance, visitors and money on the day.</p>
         </div>
-        <div class="field" data-when-held><label>Poster <span class="muted small">(optional)</span></label>
-          <div class="poster-pick"><img alt="" ${sess?.poster_url ? `src="${esc(sess.poster_url)}"` : "hidden"}><label class="btn btn-sm"><input type="file" name="poster" accept="image/jpeg,image/png,image/webp" hidden>${sess?.poster_url ? "Change poster" : "Choose poster image"}</label></div></div>
+        <div class="ss-poster" data-when-held><span class="poster-pick"><img alt="" ${sess?.poster_url ? `src="${esc(sess.poster_url)}"` : "hidden"}></span>
+          <span class="ss-poster-t">Poster <small>optional</small></span>
+          <label class="btn btn-sm"><input type="file" name="poster" accept="image/jpeg,image/png,image/webp" hidden>${sess?.poster_url ? "Change" : "Add image"}</label></div>
       </div>
-      <details class="card ss-more" data-when-held><summary><b>More details</b> <span class="muted small">optional: salvations, baptisms, speaker, notes…</span></summary>
+      <details class="ss-more" data-when-held><summary>More details <span>optional · salvations, baptisms, speaker, notes</span></summary>
         <div class="num-grid">${EXTRA.map(([k, l]) => `<label class="field"><span>${l}</span><input class="input" name="${k}" type="number" inputmode="numeric" min="0" step="1" placeholder="0" value="${val(k)}"></label>`).join("")}</div>
         <div class="field"><label>Speaker</label><input class="input" name="speaker" maxlength="120" value="${val("speaker")}" placeholder="Pastor …"></div>
         <div class="field"><label>Summary</label><textarea class="input" name="summary" maxlength="3000" rows="2" placeholder="Key points from the message">${val("summary")}</textarea></div>
@@ -299,7 +300,7 @@ export function initInsights(ctx) {
     // Numbers only in the number boxes (no e, +, - or commas).
     $$('input[type="number"]', f).forEach((el) => el.addEventListener("keydown", (e) => { if (["e", "E", "+", "-", ","].includes(e.key)) e.preventDefault(); }));
     const file = f.poster, img = $(".poster-pick img", f);
-    file.addEventListener("change", () => { const x = file.files[0]; if (x) { img.src = URL.createObjectURL(x); img.hidden = false; file.closest("label").lastChild.textContent = "Change poster"; } });
+    file.addEventListener("change", () => { const x = file.files[0]; if (x) { img.src = URL.createObjectURL(x); img.hidden = false; file.closest("label").lastChild.textContent = "Change"; } });
     f.onsubmit = (e) => { e.preventDefault(); saveSession(sess); };
     $("#ss-delete", f)?.addEventListener("click", async () => {
       if (!confirm("Delete this service record and its poster?")) return;

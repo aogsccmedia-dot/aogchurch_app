@@ -977,3 +977,26 @@ body.admin .app-fade { --bg: #eef0f4; }
 .ss-more summary { cursor: pointer; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .ss-more[open] summary { margin-bottom: 12px; }
 .ss-more .field { margin-top: 10px; }
+
+/* Record a service: calmer, lighter form */
+#session-form .field > label, #session-form .ss-nums .field > span { font-size: 13.5px; letter-spacing: 0; text-transform: none; font-weight: 500; color: var(--text-2); font-family: var(--font-sans); }
+#session-form .field > label .req, #session-form .ss-nums .req { color: var(--gold); }
+#session-form textarea[name=scripture] { min-height: 52px; resize: vertical; field-sizing: content; max-height: 200px; }
+#session-form .ss-poster { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px dashed var(--line-strong); border-radius: 12px; }
+#session-form .ss-poster .poster-pick img { width: 40px; height: 40px; border-radius: 8px; }
+#session-form .ss-poster .poster-pick:has(img[hidden]) { display: none; }
+#session-form .ss-poster-t { flex: 1; font-size: 14px; color: var(--text-2); }
+#session-form .ss-poster-t small { margin-left: 6px; color: var(--muted); font-size: 12.5px; }
+#session-form .ss-more { margin: 0; padding: 0 4px; border: 0; background: none; }
+#session-form .ss-more summary { list-style: none; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; padding: 6px 0; font-size: 14.5px; font-weight: 600; color: var(--text); cursor: pointer; }
+#session-form .ss-more summary::-webkit-details-marker { display: none; }
+#session-form .ss-more summary::before { content: "+"; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface, #f2f1f7); color: var(--text-2); font-weight: 500; }
+#session-form .ss-more[open] summary::before { content: "–"; }
+#session-form .ss-more summary span { font-size: 12.5px; font-weight: 400; color: var(--muted); }
+#session-form .ss-more[open] { padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; }
+#session-form .sticky-actions { margin: 4px -26px -26px; padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); border: 0; border-top: 1px solid var(--line); border-radius: 0;
+  background: rgba(255, 255, 255, .92); backdrop-filter: blur(10px); bottom: 0; justify-content: flex-end; }
+#session-form .sticky-actions [data-close] { background: none; border: 0; color: var(--text-2); box-shadow: none; }
+#session-form .sticky-actions .btn-gold { min-width: 120px; justify-content: center; }
+#session-form .ss-more .num-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }
+#session-form .ss-more .num-grid .field > span { font-size: 13px; }
