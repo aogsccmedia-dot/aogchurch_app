@@ -7,7 +7,7 @@ import { initInsights } from "./admin-insights.js";
 import { initMore } from "./admin-more.js";
 import { initExtra } from "./admin-extra.js";
 import { arrivedBySwitch, switchReady } from "./switcher.js";
-import { cacheMe, helloOnce, renderTabs, setBadge } from "./portal.js";
+import { cacheMe, helloOnce, renderTabs, setBadge, moreTabs } from "./portal.js";
 import { faceInner } from "./faces.js";
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -21,7 +21,7 @@ const parseList = (s) => { try { return JSON.parse(s || "[]"); } catch { return 
 const toLocal = (iso) => { if (!iso) return ""; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
 const fromLocal = (v) => (v ? new Date(v).toISOString() : "");
 
-let me = null, perms = null;   // perms: youth leaders only (null = full admin)
+let me = null, perms = null, meAll = null;   // perms: youth leaders only (null = full admin)
 const allowed = (tab) => { const b = document.querySelector(`#nav [data-tab="${tab}"]`); if (!perms) return true; if (!b) return false; return !!b.dataset.perm && (b.dataset.perm === "*" || b.dataset.perm.split("|").some((p) => perms.includes(p))); };
 
 
@@ -167,7 +167,7 @@ async function boot() {
     $(".m-bar").innerHTML = quick.map(([t, ico, l]) => `<button data-go-tab="${t}" class="${t === "scan" ? "m-scan" : ""}">${icon(ico)}<span>${l}</span></button>`).join("");
     $$(".m-bar [data-go-tab]").forEach((b) => b.addEventListener("click", () => { location.hash = b.dataset.goTab; }));
   }
-  dressSide(r, role); drawRecent();
+  meAll = r; dressSide(r, role); drawRecent();
   $("#to-profile").hidden = true; $("#m-switch").hidden = true;   // one portal: no switching
   // People with a role are in their own portal here, just looking at their tools: same bar, logo goes Home.
   if (perms) {
@@ -254,18 +254,24 @@ function openTools() {
   }
   const all = new Map(visibleTools().map((t) => [t.tab, t])), rec = recent().filter((t) => all.has(t)).slice(0, 4).map((t) => all.get(t));
   const sh = document.createElement("div");
-  sh.className = "tools-sheet"; sh.setAttribute("role", "dialog"); sh.setAttribute("aria-modal", "true"); sh.setAttribute("aria-label", "Tools");
+  sh.className = "tools-sheet"; sh.setAttribute("role", "dialog"); sh.setAttribute("aria-modal", "true"); sh.setAttribute("aria-label", "Menu");
   sh.innerHTML = `<div class="ts-card"><div class="ts-grab" aria-hidden="true"></div>
-    <header class="ts-head"><h2>Tools</h2><button type="button" class="ts-x" data-ts-close aria-label="Close">${icon("x")}</button></header>
+    <header class="ts-head"><h2>Menu</h2><button type="button" class="ts-x" data-ts-close aria-label="Close">${icon("x")}</button></header>
     <label class="ts-search">${icon("search")}<input type="search" placeholder="Find a tool…" aria-label="Find a tool" autocomplete="off"></label>
     <div class="ts-body">${rec.length ? `<section class="ts-sec" data-sec><p class="ts-label">Recent</p><div class="ts-grid ts-rec">${rec.map((t) => tile(t, "big")).join("")}</div></section>` : ""}
       ${groups.filter((g) => g.items.length).map((g) => `<section class="ts-sec" data-sec><p class="ts-label">${esc(g.label)}</p><div class="ts-grid">${g.items.map((t) => tile(t)).join("")}</div></section>`).join("")}
       <p class="ts-none" hidden>No tool by that name.</p>
-      ${perms ? `<button type="button" class="ts-ask" data-ask-access>${icon("plus")} Ask for more access</button>` : ""}</div></div>`;
+      ${perms ? `<button type="button" class="ts-ask" data-ask-access>${icon("plus")} Ask for more access</button>` : ""}
+      <section class="ts-sec ts-you" data-sec><p class="ts-label">You</p><div class="ts-links">
+        ${[["/me", "home", "My home"], ...moreTabs(meAll || {})].filter(([h]) => !(meAll?.admin_account && h === "/me")).map(([h, i, l]) => `<a href="${h}">${icon(i)}<span>${esc(l)}</span></a>`).join("")}
+        <button type="button" data-ts-signout>${icon("logOut")}<span>Sign out</span></button></div></section></div></div>`;
   document.body.append(sh);
   requestAnimationFrame(() => sh.classList.add("open"));
   const close = () => { sh.classList.remove("open"); setTimeout(() => sh.remove(), 200); };
-  sh.addEventListener("click", (e) => { if (e.target === sh || e.target.closest("[data-ts-close], [data-go-tab], [data-ask-access]")) close(); });
+  sh.addEventListener("click", (e) => {
+    if (e.target.closest("[data-ts-signout]")) { close(); $("#logout").click(); return; }
+    if (e.target === sh || e.target.closest("[data-ts-close], [data-go-tab], [data-ask-access]")) close();
+  });
   const q = sh.querySelector("input");
   q.addEventListener("input", () => {
     const v = q.value.trim().toLowerCase();

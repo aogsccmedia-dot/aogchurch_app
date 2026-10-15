@@ -954,3 +954,11 @@ body.admin { --ink-0: #1f1c34; --tint-panel: #f2effb; --tile: #ffffff; --tile-li
 @media (max-width: 860px) { .vb { height: 150px; } .st-cols { min-height: 150px; } .ov-hello { order: -1; } .ov-top { display: flex; flex-direction: column; } }
 .side nav#nav .side-recent .tl { grid-auto-flow: row; grid-template-columns: none; justify-items: center; min-height: 84px; padding: 10px 6px; gap: 7px; border: 1px solid var(--tile-line); border-radius: 16px; background: #fff; text-align: center; font-size: 13px; font-weight: 400; }
 .side nav#nav .side-recent .tl:hover { background: #f7f6fb; }
+/* Admin pages: the fade matches the admin background; on computers the sidebar is the navigation (no bar, no fade) */
+body.admin .app-fade { --bg: #eef0f4; }
+@media (min-width: 861px) { body.admin .app-fade { display: none !important; } }
+.ts-you .ts-links { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ts-you a, .ts-you button { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 14px; background: #fff; border: 1px solid var(--tile-line); color: var(--ink-0); text-decoration: none; font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
+.ts-you svg { width: 18px; height: 18px; color: #6b5aa8; flex: none; }
+.ts-you [data-ts-signout] { color: #9b2c44; } .ts-you [data-ts-signout] svg { color: #9b2c44; }
+.tools-sheet { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }

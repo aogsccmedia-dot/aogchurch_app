@@ -115,8 +115,9 @@ function barHtml(me) {
   if (onAdmin()) {
     const tab = location.hash.slice(1).split(":")[0] || "overview";
     const dash = me.admin_account ? `<a href="/admin/#overview"${tab === "overview" ? ' class="on" aria-current="page"' : ""}>${icon("gauge")}<span>Dashboard</span></a>` : link("/me", "home", "Home");
-    return dash + `<button type="button" class="${tab !== "overview" || !me.admin_account ? "on" : ""}" data-admin-tools aria-haspopup="dialog">${icon("grid")}<span>Tools</span></button>`
-      + link("/assistant", "sparkles", "Ask SCC") + `<button type="button" data-app-more aria-haspopup="dialog" aria-expanded="false">${icon("menu")}<span>More</span></button>`;
+    // One menu for everything (tools + your own pages + sign out), like members' "More".
+    return dash + link("/assistant", "sparkles", "Ask SCC") + link("/devotions", "bookOpen", "Devotions")
+      + `<button type="button" class="${tab !== "overview" || !me.admin_account ? "on" : ""}" data-admin-tools aria-haspopup="dialog">${icon("grid")}<span>Menu</span></button>`;
   }
   return mainTabs(me).map(([h, i, l]) => link(h, i, l)).join("")
     + `<button type="button" class="${more ? "on" : ""}" data-app-more aria-haspopup="dialog" aria-expanded="false">${icon("menu")}<span>More</span></button>`;
@@ -129,6 +130,7 @@ function renderBottom(me) {
   if (!el) { el = document.createElement("nav"); el.className = "app-bottom"; el.dataset.appBottom = ""; el.setAttribute("aria-label", "Your portal"); document.body.append(el); }
   const html = barHtml(me);
   if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; for (const [h, n] of Object.entries(badges)) setBadge(h, n); }
+  if (!document.querySelector(".app-fade")) { const f = document.createElement("div"); f.className = "app-fade"; f.setAttribute("aria-hidden", "true"); el.before(f); }
   document.body.classList.add("has-bottom");
 }
 

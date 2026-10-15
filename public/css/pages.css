@@ -1907,3 +1907,20 @@ a.pam-page { display: block; }
 .push-offer .po-ico { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: #f4f0ff; color: #6b5aa8; }
 .push-offer .po-ico .i { width: 22px; height: 22px; }
 .ask-live { white-space: pre-wrap; }
+
+/* ---- Bottom bar v2: flush to the bottom edge (nothing shows below it), a little smaller, pages fade into it ---- */
+html.signed-in .app-bottom, body.has-bottom .app-bottom {
+  left: 0; right: 0; bottom: 0; transform: none; width: 100%; gap: 2px; border-radius: 20px 20px 0 0; border: 0; border-top: 1px solid rgba(31, 28, 52, .08);
+  padding: 5px max(8px, calc((100% - 540px) / 2)) calc(5px + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, .98); box-shadow: 0 -8px 28px rgba(31, 28, 52, .08);
+}
+.app-bottom a, .app-bottom button { min-height: 50px; padding: 4px 2px; gap: 3px; font-size: 11.5px; border-radius: 14px; }
+.app-bottom .i { width: 21px; height: 21px; }
+.app-bottom .nb { top: 2px; right: calc(50% - 22px); }
+html.signed-in body, body.has-bottom { padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
+html.signed-in .toast, body.has-bottom .toast { bottom: calc(80px + env(safe-area-inset-bottom)); }
+.push-offer { bottom: calc(76px + env(safe-area-inset-bottom)); }
+.app-sheet { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+html.signed-in .app-fade, body.has-bottom .app-fade {
+  display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 65; pointer-events: none; height: calc(150px + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--bg) 0%, transparent) 0%, color-mix(in srgb, var(--bg) 55%, transparent) 35%, color-mix(in srgb, var(--bg) 92%, transparent) 60%, var(--bg) 75%);
+}
