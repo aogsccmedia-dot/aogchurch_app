@@ -2114,3 +2114,20 @@ html:has(body.si-open) { overflow-x: clip; }
 .go-rings li:nth-child(4), .go-rings li:nth-child(5) { opacity: .88; }
 @media (min-width: 760px) { .go-rings { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .go-rings li { flex-direction: column; align-items: flex-start; } .go-rings li div { grid-template-columns: 1fr; } .go-rings li em { grid-row: auto; grid-column: 1; margin-top: 6px; } }
+
+/* Today's Word as art */
+.word-art { margin: 0; position: relative; width: 100%; max-width: 460px; aspect-ratio: 4 / 5; border-radius: 22px; overflow: hidden;
+  background: linear-gradient(160deg, #1b1340, #5a3fd0); box-shadow: 0 30px 60px -34px rgba(30, 20, 80, .55); }
+.word-art img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.word-art-wait { position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.12) 50%, transparent 70%) 0 0 / 200% 100%; animation: wa-shine 1.4s linear infinite; }
+@keyframes wa-shine { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .word-art-wait { animation: none; } }
+.word-art-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.word-art-only { display: grid; gap: 16px; justify-items: center; }
+.word-art-only .word-art { max-width: 420px; }
+.word-art-only .word-art-actions { justify-content: center; }
+.word-home-in { display: grid; gap: 18px; justify-items: center; text-align: center; }
+.word-home-in .section-head { max-width: 640px; }
+@media (min-width: 900px) { .word-home-in { grid-template-columns: 1fr 420px; justify-items: start; text-align: left; align-items: center; gap: 56px; } .word-art-only { justify-items: start; } .word-art-only .word-art-actions { justify-content: flex-start; } }
+.know-word > span:has(img) { padding: 0; overflow: hidden; background: none; }
+.know-word > span img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }

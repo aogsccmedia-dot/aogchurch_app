@@ -80,6 +80,18 @@ function paint(me, d, fromCache) {
   if (!upcoming.length) { $("me-tix").hidden = true; pill.setAttribute("aria-expanded", "false"); }
   if (!fromCache) fetch("/api/chat", { cache: "no-store" }).then((r) => r.json()).then((c) => { const b = $("me-msg-n"); b.hidden = !c.unread; b.textContent = c.unread || ""; }).catch(() => {});
   loadUpcoming(fromCache); loadKnow(fromCache);
+  if (!fromCache) wordThumb();
+}
+// The "Today's verse" tile shows today's word art as a small picture.
+let thumbDone = false;
+async function wordThumb() {
+  if (thumbDone) return; thumbDone = true;
+  try {
+    const { word } = await fetch("/api/word/today", { cache: "no-store" }).then((r) => r.json());
+    const { wordArt } = await import("./word-art.js");
+    const blob = await wordArt(word); const slot = $("me-word-art");
+    if (blob && slot) slot.innerHTML = `<img src="${URL.createObjectURL(blob)}" alt="">`;
+  } catch { /* keep the icon */ }
 }
 
 $("me-tix-pill").addEventListener("click", () => {

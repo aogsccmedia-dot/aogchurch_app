@@ -31,7 +31,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preconnect" href="https://accounts.google.com">
   <link rel="stylesheet" href="/css/base.css?v=eae68f236b">
-  <link rel="stylesheet" href="/css/pages.css?v=7eeba75705">
+  <link rel="stylesheet" href="/css/pages.css?v=89d10c8909">
   <script src="/js/switch-boot.js?v=4afbe33104"></script>
   <script type="speculationrules">{"prerender": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/admin/*"}}, {"not": {"href_matches": "/api/*"}}]}, "eagerness": "moderate"}]}</script>
   <link rel="preload" as="image" href="/assets/photos/worship-1600.webp" type="image/webp">
@@ -103,6 +103,15 @@
             <a class="btn btn-gold" href="#letter">Tell me when it's out <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
           </div>
         </article>
+      </div>
+    </section>
+
+    <!-- TODAY'S WORD (as art, shareable) -->
+    <section class="block word-home" aria-labelledby="wh-title">
+      <div class="wrap word-home-in">
+        <div class="section-head reveal"><p class="eyebrow gold">Today's Word</p><h2 id="wh-title">A verse for your day</h2>
+          <p class="lede">A new verse every day. Share it with someone who needs it, or save it as your wallpaper.</p></div>
+        <div data-word="art"></div>
       </div>
     </section>
 
@@ -218,5 +227,6 @@
   <script type="module" src="/js/site.js?v=46e05eedb0"></script>
   <script type="module" src="/js/auth.js?v=14f4156eec"></script>
   <script type="module" src="/js/pages.js?v=1b7402d835"></script>
+  <script type="module" src="/js/word.js?v=d493134761"></script>
 </body>
 </html>

@@ -238,7 +238,7 @@ TABBAR = """
 C = "Sandton City Church"
 T = f" · {C}"
 PAGES = {
-    "index": dict(title="AOG Sandton City Church · Church in Woodmead, Sandton", desc="AOG Sandton City Church: a community-centred, Bible-based, Spirit-filled church at 17 Humber Street, Woodmead, Sandton. Sunday services, youth ministry, events and a weekly letter.", canonical="/", scripts=["site.js", "auth.js", "pages.js"],
+    "index": dict(title="AOG Sandton City Church · Church in Woodmead, Sandton", desc="AOG Sandton City Church: a community-centred, Bible-based, Spirit-filled church at 17 Humber Street, Woodmead, Sandton. Sunday services, youth ministry, events and a weekly letter.", canonical="/", scripts=["site.js", "auth.js", "pages.js", "word.js"],
                   extra='\n  <link rel="preload" as="image" href="/assets/photos/worship-1600.webp" type="image/webp">' + ld(CHURCH, WEBSITE)),
     "about": dict(title="About us" + T, crumb="About us", desc="Who we are: AOG Sandton City Church is an Assemblies of God family in Woodmead, Sandton — Bible-based, community-centred and Spirit-filled.", canonical="/about", scripts=["site.js", "auth.js", "pages.js", "programme.js"]),
     "our-story": dict(title="Our story" + T, crumb="Our story", desc="The story of AOG Sandton City Church: part of the worldwide Assemblies of God family, at home in Woodmead, Sandton, with a youth ministry on fire.", canonical="/our-story", scripts=["site.js", "auth.js", "pages.js"]),

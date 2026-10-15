@@ -2,6 +2,7 @@
 import { api, esc, toast } from "./site.js";
 import { openSignIn, whenSignedIn } from "./auth.js";
 import { icon } from "./icons.js";
+import { saveArt, shareArt, wordArt } from "./word-art.js";
 
 const DOW = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -12,8 +13,32 @@ function dots(last7) {
   }).join("")}</div>`;
 }
 
+// Today's Word is always shown as art (an image), never as plain text. The words stay in the image's alt text for screen readers.
+let artPromise = null, artFor = "";
+const art = (w) => { if (artFor !== w.ref + w.number) { artFor = w.ref + w.number; artPromise = wordArt(w); } return artPromise; };
+const figure = (w) => `<figure class="word-art" data-art><img alt="${esc(`Today's Word: “${w.text}” ${w.ref}`)}" width="1080" height="1350" hidden><span class="word-art-wait" aria-hidden="true"></span></figure>`;
+function paintArt(el, w) {
+  art(w).then((blob) => {
+    const img = el.querySelector("[data-art] img"); if (!img || !blob) return;
+    img.src = URL.createObjectURL(blob); img.hidden = false; el.querySelector(".word-art-wait")?.remove();
+  });
+  el.querySelectorAll("[data-art-share]").forEach((b) => b.addEventListener("click", async () => {
+    const r = await shareArt(await art(w), w); if (r === "saved") toast("Image saved");
+  }));
+  el.querySelectorAll("[data-art-save]").forEach((b) => b.addEventListener("click", async () => { saveArt(await art(w)); toast("Image saved"); }));
+}
+
 function render(el, data) {
   const { word: w, readers_today: readers, me } = data;
+  if (el.dataset.word === "art") {
+    // Website: just the artwork with share and save.
+    el.innerHTML = `<div class="word-art-only">${figure(w)}<div class="word-art-actions">
+      <button class="btn btn-gold" type="button" data-art-share>${icon("share")} Share image</button>
+      <button class="btn" type="button" data-art-save>${icon("download")} Save</button>
+      <a class="btn btn-ghost" href="/devotions">${icon("bookOpen")} Read &amp; pray</a></div></div>`;
+    paintArt(el, w);
+    return;
+  }
   const compact = el.dataset.word === "compact";
   const status = me
     ? me.done
@@ -23,7 +48,7 @@ function render(el, data) {
   el.innerHTML = `<article class="word-card ${compact ? "compact" : ""}">
     <div class="word-main">
       <p class="eyebrow">Today's Word · Day ${w.number} of ${w.of}</p>
-      <blockquote class="word-verse">“${esc(w.text)}”</blockquote>
+      ${figure(w)}
       <p class="word-ref">${esc(w.ref)} <span>KJV</span> · <a href="${esc(w.read_url)}" target="_blank" rel="noopener">Read the chapter ${icon("externalLink")}</a></p>
       ${compact ? "" : `<div class="word-prompts"><p><b>Think about it</b>${esc(w.reflect)}</p><p><b>Pray</b>${esc(w.pray)}</p></div>`}
     </div>
@@ -31,7 +56,7 @@ function render(el, data) {
       <div class="word-actions">${status}</div>
       ${me ? dots(me.last7) : ""}
       <p class="word-community">${icon("users")} ${readers ? `<b>${readers}</b> ${readers === 1 ? "person has" : "people have"} read today` : "Be the first to read today"}</p>
-      <button class="btn btn-ghost btn-sm" type="button" data-word-share>${icon("share")} Share today's verse</button>
+      <div class="word-art-actions"><button class="btn btn-gold btn-sm" type="button" data-art-share>${icon("share")} Share image</button><button class="btn btn-ghost btn-sm" type="button" data-art-save>${icon("download")} Save</button></div>
     </aside>
   </article>`;
   el.querySelector("[data-word-signin]")?.addEventListener("click", openSignIn);
@@ -43,10 +68,7 @@ function render(el, data) {
       toast(r.me.streak > 1 ? `🔥 ${r.me.streak} days in a row. Amazing!` : "Day one done. See you tomorrow! 🙌");
     } catch (err) { toast(err.message); e.currentTarget.disabled = false; }
   });
-  el.querySelector("[data-word-share]").addEventListener("click", async () => {
-    const text = `“${w.text}” ${w.ref}\n\nToday's Word from Sandton City Church`;
-    try { if (navigator.share) await navigator.share({ text, url: location.origin + "/devotions" }); else { await navigator.clipboard.writeText(text + "\n" + location.origin); toast("Verse copied"); } } catch { /* cancelled */ }
-  });
+  paintArt(el, w);
 }
 
 export async function loadWord() {
