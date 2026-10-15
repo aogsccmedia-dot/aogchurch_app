@@ -970,3 +970,10 @@ body.admin .app-fade { --bg: #eef0f4; }
 .rand-in:focus-within { border-color: var(--gold-deep); }
 .money-total { margin: 4px 0 0; padding: 10px 14px; border-radius: 12px; background: #eefaf2; color: #1f5a37; font-size: 15px; }
 .money-total b { font-variant-numeric: tabular-nums; }
+/* Record a service: three key numbers in one row, the rest tucked away */
+.ss-nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.ss-nums .field span { font-size: 13px; color: var(--text-2); }
+@media (max-width: 520px) { .ss-nums { grid-template-columns: 1fr 1fr; } .ss-nums > :last-child { grid-column: 1 / -1; } }
+.ss-more summary { cursor: pointer; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.ss-more[open] summary { margin-bottom: 12px; }
+.ss-more .field { margin-top: 10px; }

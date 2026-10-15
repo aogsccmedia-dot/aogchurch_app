@@ -97,9 +97,10 @@ function readService(body: Record<string, unknown>) {
 }
 
 /**
- * Parse a service-session form (multipart). Every field is required except the poster.
- * The "how it went" numbers and money are required once the service date has arrived (a coming service can be
- * planned ahead with its topic, people and poster). Money is Rands as a plain number ("1250.50"), stored as cents.
+ * Parse a service-session form (multipart). Kept simple:
+ *   always required: date, topic, MC, word of the day (poster is optional)
+ *   required once the day has arrived: attendance, first-time visitors and the money made (one amount, Rands, numbers only)
+ *   optional (under "More details"): speaker, summary, notes, children, volunteers, salvations, rededications, baptisms, testimonies
  */
 function readSession(fd: FormData, service: ServiceRow, today = saToday()) {
   const errors: Record<string, string> = {};
@@ -113,22 +114,25 @@ function readSession(fd: FormData, service: ServiceRow, today = saToday()) {
   const topic = cancelled ? `No ${service.title.toLowerCase()}` : get("topic").slice(0, 200);
   const out: Record<string, string | number | null> = { date, topic, status: cancelled ? "cancelled" : "held", cancel_reason: cancel_reason || null, mc: null, speaker: null, scripture: null, summary: null, notes: null };
   if (!cancelled) {
-    const TEXT: [string, string, number][] = [["topic", "the topic or theme", 200], ["speaker", "the speaker", 120], ["mc", "the MC", 120], ["scripture", "the scripture", 160], ["summary", "a summary", 3000], ["notes", "notes", 2000]];
-    for (const [k, label, max] of TEXT) { const v = get(k).slice(0, max); if (!v) errors[k] = `Please add ${label}.`; else out[k] = v; }
+    if (!topic) errors.topic = "Please add the topic or theme.";
+    out.mc = get("mc").slice(0, 120) || null; if (!out.mc) errors.mc = "Who was the MC?";
+    out.scripture = get("scripture").slice(0, 500) || null; if (!out.scripture) errors.scripture = "Please add the word of the day.";
+    out.speaker = get("speaker").slice(0, 120) || null; out.summary = get("summary").slice(0, 3000) || null; out.notes = get("notes").slice(0, 2000) || null;
   }
   const happened = !cancelled && DATE.test(date) && date <= today;
+  const MUST = new Set(["attendance", "first_time_visitors"]);
   for (const [k, label] of SESSION_COUNTS) {
     const v = get(k);
-    if (v === "") { out[k] = null; if (happened) errors[k] = `${label}: enter a number (0 if none).`; continue; }
+    if (v === "") { out[k] = null; if (happened && MUST.has(k)) errors[k] = `${label}: enter a number (0 if none).`; continue; }
     if (!/^\d{1,6}$/.test(v) || Number(v) > 100000) errors[k] = `${label}: enter a whole number.`; else out[k] = Number(v);
   }
-  for (const [k, label] of SESSION_MONEY) {
-    const name = k.replace("_cents", ""), v = get(name).replace(/\s/g, "");
-    if (v === "") { out[k] = null; if (happened) errors[name] = `${label}: enter the amount in Rands (0 if none).`; continue; }
-    // Numbers only: Rands with up to 2 decimals, no letters, symbols or other currencies.
-    if (!/^\d{1,9}(\.\d{1,2})?$/.test(v) || Number(v) > 100_000_000) errors[name] = `${label}: numbers only, in Rands (e.g. 1250.50).`; else out[k] = Math.round(Number(v) * 100);
-  }
-  if (Object.keys(errors).length) throw new HttpError(422, "Please fill in every field (only the poster is optional).", errors);
+  // Money made: one amount in Rands, numbers only (stored as the offering; tithes/other are no longer split out).
+  const m = get("money").replace(/\s/g, "");
+  out.offering_cents = null; out.tithes_cents = null; out.other_income_cents = null;
+  if (m === "") { if (happened) errors.money = "Money made: enter the amount in Rands (0 if none)."; }
+  else if (!/^\d{1,9}(\.\d{1,2})?$/.test(m) || Number(m) > 100_000_000) errors.money = "Money made: numbers only, in Rands (e.g. 1250.50).";
+  else out.offering_cents = Math.round(Number(m) * 100);
+  if (Object.keys(errors).length) throw new HttpError(422, "Please fill in the required fields.", errors);
   if (cancelled) for (const [k] of [...SESSION_COUNTS, ...SESSION_MONEY]) out[k] = null;
   return out;
 }
@@ -369,6 +373,16 @@ export function insightsRoutes(router: Router, env: Env): void {
   }));
 
   // ---- service sessions
+  // Names for the MC picker: church members and the team (names only).
+  router.get("/api/admin/sessions/people", guard(async () => {
+    const { results } = await env.DB.prepare(
+      `SELECT DISTINCT name FROM (
+         SELECT trim(COALESCE(NULLIF(preferred_name, ''), first_name) || ' ' || COALESCE(last_name, '')) AS name FROM members WHERE status NOT IN ('revoked', 'inactive')
+         UNION SELECT trim(COALESCE(u.name, '')) FROM admin_roles r JOIN users u ON u.id = r.user_id)
+       WHERE name != '' ORDER BY name COLLATE NOCASE LIMIT 2000`).all<{ name: string }>();
+    return json({ ok: true, people: results.map((r) => r.name) });
+  }));
+
   router.get("/api/admin/sessions", guard(async (req) => {
     const url = new URL(req.url);
     const { from, to } = period(url, occurrences(0, 12, 0)[0]);

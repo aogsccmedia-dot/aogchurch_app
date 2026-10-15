@@ -799,48 +799,46 @@ describe("door, insights, weekly services and the board report", () => {
     assert.equal((await call(`/api/admin/insights/events/${eventId}`)).status, 401, "admins only");
   });
 
-  test("weekly services: every field required except the poster, money in Rands only, right weekday, one record per date, shows on the website", async () => {
+  test("weekly services: simple record (topic, MC, word of the day, attendance, visitors, money in Rands), poster optional, right weekday, one per date", async () => {
     const svc = await (await call("/api/admin/services", { headers: { cookie } })).json() as { services: { id: string; day: number; next_date: string; dates: string[] }[] };
     const youth = svc.services.find((s) => s.id === "svc-fri-youth")!;
     assert.ok(youth.dates.every((d) => new Date(d + "T12:00:00Z").getUTCDay() === 5), "dates follow the service's weekday");
     const form = (o: Record<string, string>, poster = true) => { const f = new FormData(); Object.entries(o).forEach(([k, v]) => f.append(k, v)); if (poster) f.append("poster", new File([PNG], "poster.png", { type: "image/png" })); return f; };
     const send = (f: FormData, method = "POST", path = "/api/admin/sessions") => call(path, { method, headers: A(cookie), body: f });
-    const people = { speaker: "Pastor K", mc: "Thabo", scripture: "Hebrews 11:1-6", summary: "Faith that acts.", notes: "Great energy." };
-    const results = { attendance: "84", first_time_visitors: "6", children: "0", volunteers: "12", salvations: "3", rededications: "1", spirit_baptisms: "0", water_baptisms: "0", testimonies: "2", offering: "1250.50", tithes: "4000", other_income: "0" };
+    const plan = { mc: "Thabo", scripture: "Hebrews 11:1" };
+    const results = { attendance: "84", first_time_visitors: "6", money: "5250.50", salvations: "3" };
     const friday = lastWeekday(5);
     const bad = await send(form({ service_id: youth.id, date: friday, topic: "Bold faith" }));
-    assert.equal(bad.status, 422, "every field is required");
+    assert.equal(bad.status, 422);
     const det = (await bad.json() as { details: Record<string, string> }).details;
-    for (const k of ["speaker", "mc", "scripture", "summary", "notes", "attendance", "offering"]) assert.ok(det[k], `${k} is required`);
-    assert.ok(!det.poster, "the poster is optional");
-    assert.equal((await send(form({ service_id: youth.id, date: friday, topic: "Bold faith", ...people, ...results, offering: "R1250" }))).status, 422, "money is numbers only");
-    assert.equal((await send(form({ service_id: youth.id, date: friday, topic: "Bold faith", ...people, ...results, tithes: "$40" }))).status, 422, "Rands only");
-    assert.equal((await send(form({ service_id: youth.id, date: lastWeekday(3), topic: "Bold faith", ...people, ...results }))).status, 422, "must be on the service's day");
-    const ok = await send(form({ service_id: youth.id, date: friday, topic: "Bold faith", ...people, ...results }, false));
+    for (const k of ["mc", "scripture", "attendance", "first_time_visitors", "money"]) assert.ok(det[k], `${k} is required`);
+    for (const k of ["poster", "speaker", "summary", "notes", "salvations", "rededications"]) assert.ok(!det[k], `${k} is optional`);
+    assert.equal((await send(form({ service_id: youth.id, date: friday, topic: "Bold faith", ...plan, ...results, money: "R1250" }))).status, 422, "money is numbers only");
+    assert.equal((await send(form({ service_id: youth.id, date: friday, topic: "Bold faith", ...plan, ...results, money: "$40" }))).status, 422, "Rands only");
+    assert.equal((await send(form({ service_id: youth.id, date: lastWeekday(3), topic: "Bold faith", ...plan, ...results }))).status, 422, "must be on the service's day");
+    const ok = await send(form({ service_id: youth.id, date: friday, topic: "Bold faith", ...plan, ...results }, false));
     assert.equal(ok.status, 201, await ok.clone().text());
     const { id } = await ok.json() as { id: string };
-    assert.equal((await send(form({ service_id: youth.id, date: friday, topic: "Again", ...people, ...results }))).status, 409, "one record per service per date");
-    // Editing keeps the poster (none here) and needs every field too.
-    assert.equal((await send(form({ date: friday, topic: "Bold faith", attendance: "90" }, false), "PUT", `/api/admin/sessions/${id}`)).status, 422);
-    assert.equal((await send(form({ date: friday, topic: "Bold faith", ...people, ...results, attendance: "90" }), "PUT", `/api/admin/sessions/${id}`)).status, 200);
-    const row = env.DB._db.prepare("SELECT attendance, offering_cents, poster_attachment_id FROM service_sessions WHERE id = ?").get(id) as Record<string, unknown>;
-    assert.equal(row.attendance, 90); assert.equal(row.offering_cents, 125050);
+    assert.equal((await send(form({ service_id: youth.id, date: friday, topic: "Again", ...plan, ...results }))).status, 409, "one record per service per date");
+    assert.equal((await send(form({ date: friday, topic: "Bold faith", ...plan, ...results, attendance: "90" }), "PUT", `/api/admin/sessions/${id}`)).status, 200);
+    const row = env.DB._db.prepare("SELECT attendance, offering_cents, salvations, poster_attachment_id FROM service_sessions WHERE id = ?").get(id) as Record<string, unknown>;
+    assert.equal(row.attendance, 90); assert.equal(row.offering_cents, 525050); assert.equal(row.salvations, 3);
     assert.ok(row.poster_attachment_id);
-    // A coming service can be planned ahead: the results come on the day. It shows on the website with its poster.
-    const next = youth.next_date;
-    assert.equal((await send(form({ service_id: youth.id, date: next, topic: "Next week's word", ...people }))).status, 201);
+    // A coming service can be planned ahead (numbers on the day). It shows on the website with its poster.
+    assert.equal((await send(form({ service_id: youth.id, date: youth.next_date, topic: "Next week's word", ...plan }))).status, 201);
     const pub = await (await call("/api/programme")).json() as { weekly: { id: string; next: { topic: string; poster_url: string } | null }[] };
     const y = pub.weekly.find((w) => w.id === youth.id)!;
     assert.equal(y.next?.topic, "Next week's word");
     assert.equal((await call(y.next!.poster_url)).status, 200, "poster is public");
+    // MC picker: church members' and team names.
+    const ppl = await (await call("/api/admin/sessions/people", { headers: { cookie } })).json() as { people: string[] };
+    assert.ok(Array.isArray(ppl.people));
+    // Anyone on the team can record a service; managing the list, reminders and deleting stay with Weekly services access.
+    assert.equal(permFor("GET", "/api/admin/services"), "*"); assert.equal(permFor("POST", "/api/admin/sessions"), "*"); assert.equal(permFor("PUT", "/api/admin/sessions/x"), "*"); assert.equal(permFor("GET", "/api/admin/sessions/people"), "*");
+    assert.equal(permFor("DELETE", "/api/admin/sessions/x"), "services"); assert.equal(permFor("POST", "/api/admin/services"), "services"); assert.equal(permFor("POST", "/api/admin/services/x/remind"), "services");
     // Admins can add a service; it needs a ministry group.
     assert.equal((await post("/api/admin/services", { title: "Men's breakfast", day: 6, start_time: "08:00" }, A(cookie))).status, 422);
     assert.equal((await post("/api/admin/services", { title: "Men's breakfast", day: 6, start_time: "08:00", end_time: "10:00", ministry_group: "fathers", frequency: "monthly" }, A(cookie))).status, 201);
-    // Anyone on the team can record a service; managing the list, reminders and deleting stay with Weekly services access.
-    assert.equal(permFor("GET", "/api/admin/services"), "*"); assert.equal(permFor("POST", "/api/admin/sessions"), "*"); assert.equal(permFor("PUT", "/api/admin/sessions/x"), "*");
-    assert.equal(permFor("DELETE", "/api/admin/sessions/x"), "services"); assert.equal(permFor("POST", "/api/admin/services"), "services"); assert.equal(permFor("POST", "/api/admin/services/x/remind"), "services");
-    // Put the attendance back for the report test.
-    await send(form({ date: friday, topic: "Bold faith", ...people, ...results }, false), "PUT", `/api/admin/sessions/${id}`);
   });
 
   test("board report: money per event and ministry, services, growth, membership; CSV download", async () => {

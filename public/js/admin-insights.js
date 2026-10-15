@@ -142,7 +142,7 @@ export function initInsights(ctx) {
     SVC = s; SESS = x.sessions;
     drawWhatsapp();
     const sel = $("#svc-filter"), v = sel.value;
-    sel.innerHTML = `<option value="">All services</option>` + SVC.services.map((w) => `<option value="${esc(w.id)}">${esc(w.title)} · ${esc(w.day_label)}</option>`).join("");
+    sel.innerHTML = `<option value="">All services</option>` + SVC.services.filter((w) => w.day !== 0).map((w) => `<option value="${esc(w.id)}">${esc(w.title)} · ${esc(w.day_label)}</option>`).join("");
     sel.value = v;
     drawServices();
   };
@@ -154,7 +154,7 @@ export function initInsights(ctx) {
     const sum = (k) => recent.reduce((t, s) => t + Number(s[k] || 0), 0);
     $("#svc-kpis").innerHTML = kpi(num(recent.length), "Services recorded", "last 12 weeks") + kpi(num(sum("attendance")), "Total attendance", withAtt.length ? `about ${num(Math.round(sum("attendance") / withAtt.length))} per service` : "")
       + kpi(num(sum("first_time_visitors")), "First-time visitors") + kpi(num(sum("salvations")), "Salvations") + kpi(R2(recent.reduce((t, s) => t + money(s), 0)), "Offerings & tithes");
-    const active = SVC.services.filter((w) => w.active);
+    const active = SVC.services.filter((w) => w.active && weekday(w));
     $("#svc-week").innerHTML = active.length ? active.map((w) => {
       const next = w.next_date, prev = w.dates[w.dates.indexOf(next) - 1];
       const sNext = SESS.find((s) => s.service_id === w.id && s.date === next), sPrev = prev && SESS.find((s) => s.service_id === w.id && s.date === prev);
@@ -179,7 +179,7 @@ export function initInsights(ctx) {
       : `<div class="empty">No services recorded yet.</div>`;
   }
   $("#svc-filter").addEventListener("change", drawServices);
-  $("#svc-new").addEventListener("click", () => openSession(null, SVC.services.find((w) => w.active)?.id, null));
+  $("#svc-new").addEventListener("click", () => openSession(null, SVC.services.find((w) => w.active && weekday(w))?.id, null));
   $("[data-view=services]").addEventListener("click", (e) => {
     const rv = e.target.closest("[data-rsvps]");
     if (rv) { safe(openRsvps)(rv.dataset.rsvps, rv.dataset.date); return; }
@@ -223,64 +223,74 @@ export function initInsights(ctx) {
   }
 
   // The record form: service → date list fills in automatically from the service's weekday.
-  function openSession(sess, serviceId, date) {
+  // The record form, kept simple: service, date, topic, MC, word of the day, attendance, first-time visitors, money made
+  // and an optional poster. Salvations, baptisms and the rest sit under "More details" (optional, closed by default).
+  // Only the weekday services are recorded here (not the Sunday main service).
+  const weekday = (w) => w.day !== 0;
+  let PEOPLE = null;
+  const EXTRA = [["children", "Children"], ["volunteers", "Volunteers serving"], ["salvations", "Salvations"], ["rededications", "Rededications"], ["spirit_baptisms", "Holy Spirit baptisms"], ["water_baptisms", "Water baptisms"], ["testimonies", "Testimonies & healings"]];
+  async function openSession(sess, serviceId, date) {
     const dlg = $("#session-drawer"), f = $("#session-form");
+    const people = await (PEOPLE ??= api("/api/admin/sessions/people").then((r) => r.people).catch(() => []));
     const svcId = sess?.service_id || serviceId;
-    const services = SVC.services.filter((w) => w.active || w.id === svcId);
+    const services = SVC.services.filter((w) => (w.active && weekday(w)) || w.id === svcId);
+    if (!services.length) { toast("Add a weekday service first (Edit services)."); return; }
     const val = (k) => esc(sess?.[k] ?? "");
-    const moneyVal = (k) => (sess?.[k + "_cents"] != null ? String(sess[k + "_cents"] / 100) : "");
-    f.innerHTML = `<header class="vh"><div><p class="eyebrow gold">${sess ? "Edit service record" : "Record a service"}</p><h2>${sess ? esc(sess.topic) : "Service details"}</h2></div><button class="icon-btn" type="button" data-close aria-label="Close">✕</button></header>
+    const moneyNow = sess && (sess.offering_cents != null || sess.tithes_cents != null || sess.other_income_cents != null) ? String(money(sess)) : "";
+    const mc = sess?.mc || "", mcListed = !mc || people.includes(mc);
+    const R = `<span class="req"></span>`;
+    f.innerHTML = `<header class="vh"><div><p class="eyebrow gold">${sess ? "Edit service record" : "Record a service"}</p><h2>${sess ? esc(sess.topic) : "Weekly service"}</h2></div><button class="icon-btn" type="button" data-close aria-label="Close">✕</button></header>
       <p class="form-error" id="ss-error" hidden></p>
       <div class="card form-grid">
         <div class="grid-2">
-          <div class="field"><label>Service <span class="req"></span></label><select class="input" name="service_id" ${sess ? "disabled" : ""}>${services.map((w) => `<option value="${esc(w.id)}" ${w.id === svcId ? "selected" : ""}>${esc(w.title)} · ${esc(w.day_label)}</option>`).join("")}</select></div>
-          <div class="field"><label>Date <span class="req"></span></label><select class="input" name="date_pick"></select>
+          <div class="field"><label>Service ${R}</label><select class="input" name="service_id" ${sess ? "disabled" : ""}>${services.map((w) => `<option value="${esc(w.id)}" ${w.id === svcId ? "selected" : ""}>${esc(w.title)} · ${esc(w.day_label)}</option>`).join("")}</select></div>
+          <div class="field"><label>Date ${R}</label><select class="input" name="date_pick"></select>
             <input class="input" type="date" name="date_other" hidden style="margin-top:8px">
             <label class="check" data-otherday hidden><input type="checkbox" name="other_day" value="1"> Held on a different day this time</label></div>
         </div>
         <label class="check no-svc"><input type="checkbox" name="cancelled" ${sess?.status === "cancelled" ? "checked" : ""}> No service this week</label>
-        <div class="field" data-when-cancelled hidden><label>Why was there no service? <span class="req"></span></label><input class="input" name="cancel_reason" maxlength="200" value="${val("cancel_reason")}" placeholder="e.g. Easter weekend, Youth Quarterly, church prayer night"></div>
-        <div class="field" data-when-held><label>Topic or theme <span class="req"></span></label><input class="input" name="topic" maxlength="200" required value="${val("topic")}" placeholder="e.g. Walking by faith"></div>
-        <div class="grid-2" data-when-held><div class="field"><label>Speaker <span class="req"></span></label><input class="input" name="speaker" maxlength="120" value="${val("speaker")}" placeholder="Pastor …"></div>
-          <div class="field"><label>MC <span class="req"></span></label><input class="input" name="mc" maxlength="120" value="${val("mc")}" placeholder="Who led the night"></div></div>
-        <div class="field" data-when-held><label>Scripture <span class="req"></span></label><input class="input" name="scripture" maxlength="160" value="${val("scripture")}" placeholder="Hebrews 11:1–6"></div>
-        <div class="field" data-when-held><label>Summary <span class="req"></span></label><textarea class="input" name="summary" maxlength="3000" rows="3" placeholder="Key points from the message">${val("summary")}</textarea></div>
+        <div class="field" data-when-cancelled hidden><label>Why was there no service? ${R}</label><input class="input" name="cancel_reason" maxlength="200" value="${val("cancel_reason")}" placeholder="e.g. Easter weekend, Youth Quarterly"></div>
+        <div class="field" data-when-held><label>Topic or theme ${R}</label><input class="input" name="topic" maxlength="200" value="${val("topic")}" placeholder="e.g. Walking by faith"></div>
+        <div class="field" data-when-held><label>MC ${R}</label>
+          <select class="input" name="mc_pick"><option value="">Choose who led…</option>${people.map((n) => `<option ${n === mc ? "selected" : ""}>${esc(n)}</option>`).join("")}<option value="__other" ${mcListed ? "" : "selected"}>Someone else (not on the list)</option></select>
+          <input class="input" name="mc_other" maxlength="120" placeholder="Their name" value="${mcListed ? "" : esc(mc)}" ${mcListed ? "hidden" : ""} style="margin-top:8px"></div>
+        <div class="field" data-when-held><label>Word of the day ${R}</label><textarea class="input" name="scripture" maxlength="500" rows="2" placeholder="e.g. Hebrews 11:1 · Now faith is the substance of things hoped for">${val("scripture")}</textarea></div>
+        <div data-when-held>
+          <div class="ss-nums">
+            <label class="field"><span>Attendance ${R}</span><input class="input" name="attendance" type="number" inputmode="numeric" min="0" step="1" placeholder="0" value="${val("attendance")}"></label>
+            <label class="field"><span>First-time visitors ${R}</span><input class="input" name="first_time_visitors" type="number" inputmode="numeric" min="0" step="1" placeholder="0" value="${val("first_time_visitors")}"></label>
+            <label class="field"><span>Money made ${R}</span><span class="rand-in"><b>R</b><input class="input" name="money" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" value="${esc(moneyNow)}"></span></label>
+          </div>
+          <p class="muted small" data-future-note hidden>This service hasn't happened yet. Save it now and add attendance, visitors and money on the day.</p>
+        </div>
         <div class="field" data-when-held><label>Poster <span class="muted small">(optional)</span></label>
-          <div class="poster-pick"><img alt="" ${sess?.poster_url ? `src="${esc(sess.poster_url)}"` : "hidden"}><label class="btn btn-sm"><input type="file" name="poster" accept="image/jpeg,image/png,image/webp" hidden>${sess?.poster_url ? "Change poster" : "Choose poster image"}</label></div>
-          <small class="hint">JPG, PNG or WebP. Shown on the website for the coming week.</small></div>
+          <div class="poster-pick"><img alt="" ${sess?.poster_url ? `src="${esc(sess.poster_url)}"` : "hidden"}><label class="btn btn-sm"><input type="file" name="poster" accept="image/jpeg,image/png,image/webp" hidden>${sess?.poster_url ? "Change poster" : "Choose poster image"}</label></div></div>
       </div>
-      <div class="card form-grid" data-when-held>
-        <div><h3 style="margin:0">How it went</h3><p class="muted small" data-future-note hidden>This service hasn't happened yet. Save it now, and fill these in on the day.</p></div>
-        <h4 class="mini-h">Attendance <span class="req"></span></h4><div class="num-grid">${COUNTS.map(([k, l]) => `<label class="field"><span>${l}</span><input class="input" name="${k}" type="number" inputmode="numeric" min="0" step="1" value="${val(k)}" placeholder="0"></label>`).join("")}</div>
-        <h4 class="mini-h">Spiritual growth <span class="req"></span></h4><div class="num-grid">${GROWTH.map(([k, l]) => `<label class="field"><span>${l}</span><input class="input" name="${k}" type="number" inputmode="numeric" min="0" step="1" value="${val(k)}" placeholder="0"></label>`).join("")}</div>
-        <h4 class="mini-h">Money made (Rands) <span class="req"></span></h4><div class="num-grid">${MONEY.map(([k, l]) => `<label class="field"><span>${l}</span><span class="rand-in"><b>R</b><input class="input" name="${k}" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" value="${esc(moneyVal(k))}"></span></label>`).join("")}</div>
-        <p class="money-total">Total money made: <b data-money-total>R 0.00</b></p>
-        <div class="field"><label>Notes <span class="req"></span></label><textarea class="input" name="notes" maxlength="2000" rows="2" placeholder="Anything worth remembering about the night">${val("notes")}</textarea></div>
-      </div>
+      <details class="card ss-more" data-when-held><summary><b>More details</b> <span class="muted small">optional: salvations, baptisms, speaker, notes…</span></summary>
+        <div class="num-grid">${EXTRA.map(([k, l]) => `<label class="field"><span>${l}</span><input class="input" name="${k}" type="number" inputmode="numeric" min="0" step="1" placeholder="0" value="${val(k)}"></label>`).join("")}</div>
+        <div class="field"><label>Speaker</label><input class="input" name="speaker" maxlength="120" value="${val("speaker")}" placeholder="Pastor …"></div>
+        <div class="field"><label>Summary</label><textarea class="input" name="summary" maxlength="3000" rows="2" placeholder="Key points from the message">${val("summary")}</textarea></div>
+        <div class="field"><label>Notes</label><textarea class="input" name="notes" maxlength="2000" rows="2">${val("notes")}</textarea></div>
+      </details>
       <div class="sticky-actions">${sess && canManage() ? `<button class="btn btn-sm" type="button" id="ss-delete">Delete</button>` : ""}<button class="btn" type="button" data-close>Cancel</button><button class="btn btn-gold" type="submit">Save</button></div>`;
     const pick = f.date_pick, other = f.date_other, svcSel = f.service_id;
     const fillDates = () => {
       const w = SVC.services.find((x) => x.id === svcSel.value); if (!w) return;
       const want = sess?.date || date || w.next_date;
       const dates = [...new Set([...w.dates, ...(want ? [want] : [])])].sort();
-      pick.innerHTML = dates.map((d) => `<option value="${d}" ${d === want ? "selected" : ""}>${esc(day(d))}${d === SVC.today ? " (today)" : d === w.next_date ? " (next)" : d < SVC.today ? "" : ""}</option>`).join("") + `<option value="other">Another date…</option>`;
+      pick.innerHTML = dates.map((d) => `<option value="${d}" ${d === want ? "selected" : ""}>${esc(day(d))}${d === SVC.today ? " (today)" : d === w.next_date ? " (next)" : ""}</option>`).join("") + `<option value="other">Another date…</option>`;
       other.hidden = true; $("[data-otherday]", f).hidden = true;
     };
     svcSel.addEventListener("change", fillDates); fillDates();
     pick.addEventListener("change", () => { const o = pick.value === "other"; other.hidden = !o; $("[data-otherday]", f).hidden = !o; if (o) other.focus(); });
     const syncCancelled = () => { const c = f.cancelled.checked; $$("[data-when-held]", f).forEach((el) => { el.hidden = c; }); $$("[data-when-cancelled]", f).forEach((el) => { el.hidden = !c; }); };
     f.cancelled.addEventListener("change", syncCancelled); syncCancelled();
-    // Coming services can be saved ahead; the results are needed once the day arrives.
     const pickedDate = () => (pick.value === "other" ? other.value : pick.value);
     const syncFuture = () => { $("[data-future-note]", f).hidden = !(pickedDate() > SVC.today); };
     pick.addEventListener("change", syncFuture); other.addEventListener("change", syncFuture); svcSel.addEventListener("change", syncFuture); syncFuture();
-    // Money: numbers only, and a live total.
-    const total = () => { const t = MONEY.reduce((sum, [k]) => sum + (Number(f[k].value) || 0), 0); $("[data-money-total]", f).textContent = R2(t) + (Number.isInteger(t) ? ".00" : ""); };
-    MONEY.forEach(([k]) => {
-      f[k].addEventListener("keydown", (e) => { if (["e", "E", "+", "-", ","].includes(e.key)) e.preventDefault(); });
-      f[k].addEventListener("input", total);
-    });
-    total();
+    f.mc_pick.addEventListener("change", () => { const o = f.mc_pick.value === "__other"; f.mc_other.hidden = !o; if (o) f.mc_other.focus(); });
+    // Numbers only in the number boxes (no e, +, - or commas).
+    $$('input[type="number"]', f).forEach((el) => el.addEventListener("keydown", (e) => { if (["e", "E", "+", "-", ","].includes(e.key)) e.preventDefault(); }));
     const file = f.poster, img = $(".poster-pick img", f);
     file.addEventListener("change", () => { const x = file.files[0]; if (x) { img.src = URL.createObjectURL(x); img.hidden = false; file.closest("label").lastChild.textContent = "Change poster"; } });
     f.onsubmit = (e) => { e.preventDefault(); saveSession(sess); };
@@ -296,20 +306,22 @@ export function initInsights(ctx) {
     const date = f.date_pick.value === "other" ? f.date_other.value : f.date_pick.value;
     const problems = [], noService = f.cancelled.checked;
     const blank = (n) => !String(f[n].value).trim();
+    const mc = f.mc_pick.value === "__other" ? f.mc_other.value.trim() : f.mc_pick.value;
     if (!date) problems.push("the date");
     if (noService && blank("cancel_reason")) problems.push("why there was no service");
     if (!noService) {
-      [["topic", "the topic"], ["speaker", "the speaker"], ["mc", "the MC"], ["scripture", "the scripture"], ["summary", "a summary"], ["notes", "notes"]].forEach(([n, l]) => { if (blank(n)) problems.push(l); });
+      if (blank("topic")) problems.push("the topic or theme");
+      if (!mc) problems.push("the MC");
+      if (blank("scripture")) problems.push("the word of the day");
       const happened = date && date <= SVC.today;
-      const missing = [...COUNTS, ...GROWTH].filter(([k]) => blank(k) || !/^\d+$/.test(f[k].value)).map(([, l]) => l);
-      const badMoney = MONEY.filter(([k]) => blank(k) ? happened : !/^\d+(\.\d{1,2})?$/.test(f[k].value)).map(([, l]) => l);
-      if (happened && missing.length) problems.push(`the numbers for ${missing.join(", ")} (0 if none)`);
-      if (badMoney.length) problems.push(`the money in Rands for ${badMoney.join(", ")} (numbers only, 0 if none)`);
+      if (happened && (blank("attendance") || !/^\d+$/.test(f.attendance.value))) problems.push("attendance (0 if none)");
+      if (happened && (blank("first_time_visitors") || !/^\d+$/.test(f.first_time_visitors.value))) problems.push("first-time visitors (0 if none)");
+      if (blank("money") ? happened : !/^\d+(\.\d{1,2})?$/.test(f.money.value)) problems.push("the money made in Rands (numbers only, 0 if none)");
     }
-    $$(".input", f).forEach((el) => el.classList.toggle("bad", false));
     if (problems.length) { err.textContent = `Please add ${problems.join(", ")}.`; err.hidden = false; err.scrollIntoView({ block: "nearest" }); return; }
     const fd = new FormData(f);
     fd.set("date", date); fd.delete("date_pick"); fd.delete("date_other");
+    fd.set("mc", mc); fd.delete("mc_pick"); fd.delete("mc_other");
     if (sess) fd.set("service_id", sess.service_id);
     fd.set("status", noService ? "cancelled" : "held"); fd.delete("cancelled");
     if (!f.poster.files.length) fd.delete("poster");
