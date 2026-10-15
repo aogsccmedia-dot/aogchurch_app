@@ -7,7 +7,7 @@ const H = { "Content-Type": "application/json", "x-scc-admin": "1" };
 async function post(path, body) {
   const r = await fetch(path, { method: "POST", headers: H, credentials: "same-origin", body: JSON.stringify(body) });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok || d.ok === false) throw new Error(d.error || "Something went wrong. Please try again.");
+  if (!r.ok || d.ok === false) throw Object.assign(new Error(d.error || "Something went wrong. Please try again."), { status: r.status });
   return d;
 }
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -35,7 +35,7 @@ export function mountSignIn(host, { google, onDone, mode = "login", note = "" } 
   const views = {
     login: () => `
       <p class="si-kicker">Login</p><h2 class="si-h">Welcome back!</h2>
-      ${note ? `<p class="si-note">${note}</p>` : ""}
+      ${state.notice ? `<p class="si-taken" role="alert">${esc(state.notice)}</p>` : note ? `<p class="si-note">${note}</p>` : ""}
       <form class="si-form" data-form="login" novalidate>
         ${field({ name: "email", type: "email", label: "Email", ico: icon("mail"), auto: "username", extra: `inputmode="email" value="${esc(state.email)}"` })}
         ${pwField("Password", "current-password")}
@@ -94,6 +94,7 @@ export function mountSignIn(host, { google, onDone, mode = "login", note = "" } 
   };
 
   function show(m) {
+    if (m !== "login") state.notice = "";
     state.mode = m;
     host.dataset.mode = m;
     host.innerHTML = views[m]();
@@ -162,6 +163,8 @@ export function mountSignIn(host, { google, onDone, mode = "login", note = "" } 
       }
       if (kind === "code") { await onDone?.(await post("/api/auth/password/confirm", { challenge: state.challenge, code: v.code, password: v.password })); return; }
     } catch (err) {
+      // Already a member, or already has an account: straight back to the login screen with their email filled in.
+      if (err.status === 409 && (kind === "signup" || kind === "visitor")) { state.notice = err.message; show("login"); host.querySelector("[name=password]")?.focus(); return; }
       say(err.message);
       if (kind === "code") { const c = f.code; c.value = ""; c.dispatchEvent(new Event("input")); c.focus(); }
     } finally { working = false; f.classList.remove("busy"); f.querySelector(".si-go")?.removeAttribute("aria-busy"); }

@@ -116,6 +116,11 @@ function emailLink(el) {
 
 /** The sign-in card, for pages that show it in place (member Home). */
 export async function signInCard(host, opts = {}) {
+  // Already signed in (e.g. another tab, or Back after signing in): go Home instead of showing the sign-in card.
+  if (cachedMe()?.user) {
+    const me = await getMe(true).catch(() => null), home = me?.admin_account ? "/admin/" : "/me";
+    if (me?.user && location.pathname.replace(/\.html$/, "").replace(/\/$/, "") !== home.replace(/\/$/, "")) { location.replace(home); return null; }
+  }
   const { mountSignIn } = await import("./signin.js");
   return mountSignIn(host, { google: (g) => googleButton(g, { card: true, text: g.dataset.text || "signin_with" }), onDone: (r) => finishSignIn(r), ...opts });
 }
@@ -170,6 +175,7 @@ export async function openSignIn(mode = "login") {
     dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
   }
   const card = await signInCard(dlg.querySelector(".si-card"), { mode: typeof mode === "string" ? mode : "login" });
+  if (!card) return;   // already signed in: on the way Home
   card.show(typeof mode === "string" ? mode : "login");
   if (!dlg.open) dlg.showModal();
 }
@@ -183,4 +189,11 @@ getMe().then((me) => {
     google.accounts.id.initialize({ client_id: me.google_client_id, callback: handleCredential, ux_mode: "popup", auto_select: false, itp_support: true });
     gsiReady = true;
   }).catch(() => {}));
+});
+
+// Back/forward after signing in can show a stored copy of the sign-in screen: check again and go Home.
+addEventListener("pageshow", (e) => {
+  if (!e.persisted || !cachedMe()?.user) return;
+  const card = document.querySelector(".si-card");
+  if (card && card.offsetParent !== null) getMe(true).then((me) => { if (me?.user) location.replace(me.admin_account ? "/admin/" : "/me"); }).catch(() => {});
 });

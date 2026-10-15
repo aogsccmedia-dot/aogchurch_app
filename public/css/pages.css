@@ -2312,3 +2312,4 @@ html.signed-in .ask-page .ask-thread { border: 0 !important; box-shadow: none !i
 .si-g { width: 100%; height: auto; min-height: 44px; min-width: 0; border-radius: 999px; overflow: visible; display: flex; justify-content: center; }
 .si-g:empty { height: 44px; background: #fff; border: 1px solid rgba(22, 21, 27, .12); }
 .si-g > div, .si-g iframe { margin: 0 auto !important; }
+.si-taken { margin: 0 0 4px; padding: 10px 12px; border-radius: 12px; background: #fff5e6; border: 1px solid #f1d5a3; color: #6b4d12; font-size: 14px; line-height: 1.4; }

@@ -61,6 +61,7 @@ export function authRoutes(router: Router, env: Env): void {
     const user = await env.DB.prepare("SELECT id, email, name, given_name, family_name, picture FROM users WHERE id = ?").bind(userId).first();
     return json({ ok: true, user, ...extra }, 200, { "Set-Cookie": await createSession(env, req, userId, isAdminEmail(env, email) ? "admin" : "user") });
   };
+  const isMemberEmail = async (email: string) => !!(await env.DB.prepare("SELECT 1 FROM members WHERE lower(email) = ? AND status = 'member' LIMIT 1").bind(email).first());
   /** Does the church already hold records under this email (so the person should prove it's theirs first)? */
   const knownEmail = async (email: string) => !!(await env.DB.prepare(
     "SELECT 1 FROM members WHERE lower(email) = ? UNION SELECT 1 FROM event_registrations WHERE lower(email) = ? UNION SELECT 1 FROM subscribers WHERE lower(email) = ? LIMIT 1")
@@ -99,7 +100,9 @@ export function authRoutes(router: Router, env: Env): void {
     if (!EMAIL_RE.test(email)) throw new HttpError(422, "Please enter a valid email address.");
     const problem = passwordProblem(pw, email); if (problem) throw new HttpError(422, problem);
     const existing = await env.DB.prepare("SELECT id, password_hash FROM users WHERE lower(email) = ?").bind(email).first<{ id: string; password_hash: string | null }>();
-    if (existing?.password_hash) throw new HttpError(409, "You already have an account with this email. Sign in, or tap “Forgot password”.");
+    if (existing?.password_hash) throw new HttpError(409, "This email already has an account. Please sign in, or tap “Forgot password”.");
+    // A church member's email: they sign in (Google, or “Forgot password” to set a password), never sign up again.
+    if (!existing && await isMemberEmail(email)) throw new HttpError(409, "This email already belongs to a church member. Please sign in, or tap “Forgot password” to set a password.");
     const given = name.split(" ")[0], hash = await hashPassword(pw);
     if (existing || await knownEmail(email)) {
       // An account (e.g. from Google) or church records already use this email: prove it's yours once, then the password is added.
@@ -122,7 +125,8 @@ export function authRoutes(router: Router, env: Env): void {
     if (name.length < 2) throw new HttpError(422, "Please add your name.");
     if (!EMAIL_RE.test(email)) throw new HttpError(422, "Please enter a valid email address.");
     const existing = await env.DB.prepare("SELECT id, visitor FROM users WHERE lower(email) = ?").bind(email).first<{ id: string; visitor: number }>();
-    if (existing && !existing.visitor) throw new HttpError(409, "You already have an account with this email. Please sign in instead.");
+    if (existing && !existing.visitor) throw new HttpError(409, "This email already has an account. Please sign in instead.");
+    if (await isMemberEmail(email)) throw new HttpError(409, "This email already belongs to a church member. Please sign in instead.");
     if (isAdminEmail(env, email)) throw new HttpError(409, "Please sign in instead.");
     if (existing || await knownEmail(email)) return json({ ok: true, needs_code: true, ...(await sendCode(email, existing?.id ?? null, "visitor", { name, given: name.split(" ")[0], phone }, ctx)) });
     const id = uuid();

@@ -1484,3 +1484,18 @@ describe("Visitors", () => {
     assert.ok(!me2.visitor, "upgraded");
   });
 });
+
+describe("Sign-up for existing people", () => {
+  test("members and existing accounts are sent back to sign in", async () => {
+    const g = await makeEnv({ GOOGLE_CLIENT_ID: CLIENT_ID });
+    await post("/api/auth/google", { credential: await googleToken({ sub: "g-ex", email: "existing.person@gmail.com", name: "Existing" }) }, {}, g);
+    assert.equal((await call("/api/join", { method: "POST", body: joinForm({ email: "member.only@gmail.com", first_name: "Mem" }) }, g)).status, 201);
+    g.DB._db.prepare("UPDATE members SET status = 'member' WHERE email = ?").run("member.only@gmail.com");
+    const s1 = await post("/api/auth/password/signup", { name: "Mem Ber", email: "member.only@gmail.com", password: "Long-enough-pw-1" }, {}, g);
+    assert.equal(s1.status, 409); assert.match((await s1.json() as { error: string }).error, /already belongs to a church member/);
+    assert.equal((await post("/api/auth/visitor", { name: "Mem", email: "member.only@gmail.com" }, {}, g)).status, 409);
+    assert.equal((await post("/api/auth/visitor", { name: "Ex", email: "existing.person@gmail.com" }, {}, g)).status, 409);
+    const f = await post("/api/auth/password/forgot", { email: "member.only@gmail.com" }, {}, g);
+    assert.equal(f.status, 200, "members set a password with “Forgot password”");
+  });
+});
