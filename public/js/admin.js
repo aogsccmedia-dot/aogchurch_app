@@ -1021,6 +1021,7 @@ async function loadTeam() {
   $("#team-admins").innerHTML = admins.length ? admins.map((a) => `<div class="item team-row" data-user="${esc(a.user_id)}">
       <span class="avatar sm">${faceInner({ id: a.user_id, ...a })}</span>
       <div><b>${esc(a.name || a.email)}</b><div class="meta">${esc(a.email)}${a.ref_code ? ` · ${esc(a.ref_code)}` : ""} · since ${fmtDate(a.created_at)}</div>
+        <input class="input team-title" data-title value="${esc(a.title || "")}" maxlength="60" placeholder="Title members see, e.g. Daughters' Ministry leader" aria-label="Ministry title">
         <div class="perm-row" aria-label="What they can open">${all.filter(([k]) => a.role !== "youth_leader" || k !== "people").map(([k, l]) => `<label class="perm"><input type="checkbox" data-perm="${k}" ${(a.perms || []).includes(k) ? "checked" : ""}>${esc(l)}</label>`).join("")}</div></div>
       <div class="team-actions"><select class="input" data-role aria-label="Role"><option value="admin" ${a.role !== "youth_leader" ? "selected" : ""}>Admin</option><option value="youth_leader" ${a.role === "youth_leader" ? "selected" : ""}>Youth leader</option></select>
         <button class="btn btn-sm" data-revoke="${esc(a.user_id)}">Remove</button></div></div>`).join("") : `<div class="empty">Only you for now.</div>`;
@@ -1039,6 +1040,11 @@ $("[data-view=team]").addEventListener("change", safe(async (e) => {
     const role = e.target.value;
     await api(`/api/admin/team/${user}`, { method: "PATCH", body: { role } });
     toast(role === "youth_leader" ? "Now a youth leader (Fridays, scanner, reports and youth tickets to start). Emailed." : "Now an admin (reports and weekly services to start). Emailed."); loadTeam();
+  }
+  if (e.target.matches("[data-title]")) {
+    await api(`/api/admin/team/${user}`, { method: "PATCH", body: { title: e.target.value } });
+    toast("Title saved. Members see it when they message a leader.");
+    return;
   }
   if (e.target.matches("[data-perm]")) {
     const list = $$("[data-perm]", row).filter((x) => x.checked).map((x) => x.dataset.perm);

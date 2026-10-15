@@ -1,0 +1,17 @@
+  <main id="main" class="wrap msg-page">
+    <section class="msg-list" id="msg-list-view">
+      <header class="msg-head"><div><p class="eyebrow gold">Messages</p><h1>Talk to a leader</h1></div>
+        <button type="button" class="btn btn-gold" id="msg-new">{{i:plus}} New message</button></header>
+      <p class="muted-text msg-note">Message any church leader directly. They get an email and reply here. Messages are between you and that leader only.</p>
+      <div id="msg-threads" class="msg-threads"><p class="muted-text">Loading…</p></div>
+    </section>
+    <section class="msg-thread" id="msg-thread-view" hidden>
+      <header class="msg-top"><button type="button" class="msg-back" id="msg-back" aria-label="Back to messages">{{i:arrowLeft}}</button>
+        <span class="avatar" id="msg-face"></span><div><b id="msg-name"></b><small id="msg-role"></small></div></header>
+      <div class="msg-scroll" id="msg-scroll"></div>
+      <form class="msg-compose" id="msg-form" autocomplete="off">
+        <textarea id="msg-in" rows="1" maxlength="2000" placeholder="Write a message…" aria-label="Your message"></textarea>
+        <button class="btn btn-gold" type="submit" aria-label="Send">{{i:send}}</button>
+      </form>
+    </section>
+  </main>

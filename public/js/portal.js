@@ -18,6 +18,7 @@ export function mainTabs(me) {
 export function moreTabs(me) {
   const role = roleName(me);
   return [
+    ["/messages", "messageCircle", "Messages"],
     ["/go", "globe", "Go Ye (evangelism)"],
     ["/discipleship", "bookOpen", "Discipleship classes"],
     ["/vote", "vote", "Vote"],
@@ -161,6 +162,8 @@ document.addEventListener("click", (e) => {
   // The admin portal signs out with its own button.
   if (t.closest?.(".app-sheet [data-app-signout]") && document.getElementById("logout")) { e.preventDefault(); closeSheet(); document.getElementById("logout").click(); }
 });
+document.addEventListener("click", (e) => { if (e.target.closest?.("[data-app-search]")) { e.preventDefault(); closeSheet(); import("./search.js").then((m) => m.openSearch()); } });
+document.addEventListener("keydown", (e) => { if ((e.key === "/" || (e.key === "k" && (e.metaKey || e.ctrlKey))) && document.documentElement.classList.contains("signed-in") && !e.target.closest?.("input, textarea, [contenteditable]")) { e.preventDefault(); import("./search.js").then((m) => m.openSearch()); } });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeSheet(); document.querySelector(".ask-dialog")?.remove(); } });
 
 // ---- Ask the main admin for more access: one small form, right where you are.
@@ -246,12 +249,16 @@ export function helloOnce(me, { skip = false } = {}) {
   if (skip) return;
   const first = (me.user.given_name || me.user.name || "").split(" ")[0];
   const role = roleName(me);
-  const el = document.createElement("div");
-  el.className = "hello-black"; el.setAttribute("role", "status");
-  el.innerHTML = `<div class="hb-in"><img src="/assets/logo-192.png" alt="" width="64" height="64"><p class="hb-hi">Welcome back${first ? `, <b>${esc(first)}</b>` : ""}</p>
-    <p class="hb-role">${role ? `${esc(role)} portal` : "Your church family"}</p><i class="hb-line"></i></div>`;
-  document.documentElement.append(el);
-  const done = () => { el.classList.add("out"); setTimeout(() => el.remove(), 420); };
-  el.addEventListener("click", done);
-  setTimeout(done, matchMedia("(prefers-reduced-motion: reduce)").matches ? 700 : 1500);
+  // The hand-drawn "Welcome" writes itself (inspired by a video), then their name and portal. Tap to skip.
+  import("./welcome-art.js").then(({ WELCOME_SVG }) => {
+    const el = document.createElement("div");
+    el.className = "welcome-screen hello-write"; el.setAttribute("role", "status"); el.setAttribute("aria-label", `Welcome back${first ? ", " + first : ""}`);
+    el.innerHTML = `<div class="welcome-blobs" aria-hidden="true"><i></i><i></i><i></i></div><div class="welcome-inner">${WELCOME_SVG}
+      <h2 class="welcome-title">Welcome back${first ? `, ${esc(first)}` : ""}</h2><p class="welcome-line">${role ? `${esc(role)} portal` : "Your church family"}</p></div>`;
+    document.documentElement.append(el);
+    requestAnimationFrame(() => el.classList.add("play"));
+    const done = () => { el.classList.add("out"); setTimeout(() => el.remove(), 460); };
+    el.addEventListener("click", done);
+    setTimeout(done, matchMedia("(prefers-reduced-motion: reduce)").matches ? 900 : 4300);
+  }).catch(() => {});
 }

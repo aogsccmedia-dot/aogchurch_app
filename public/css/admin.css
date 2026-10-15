@@ -962,3 +962,4 @@ body.admin .app-fade { --bg: #eef0f4; }
 .ts-you svg { width: 18px; height: 18px; color: #6b5aa8; flex: none; }
 .ts-you [data-ts-signout] { color: #9b2c44; } .ts-you [data-ts-signout] svg { color: #9b2c44; }
 .tools-sheet { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+.team-title { margin-top: 8px; max-width: 360px; font-size: 14px; padding: 8px 10px; }

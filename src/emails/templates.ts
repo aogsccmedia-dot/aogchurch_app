@@ -834,3 +834,18 @@ export function presenterFeedbackAdmin(b: Brand, o: { tester: string; slot: numb
     text: `FreeCreator beta feedback from ${o.tester} (#${o.slot})\nOverall: ${o.overall ?? "-"}/5  Ease: ${o.ease ?? "-"}/5\nWorked well: ${o.good}\nProblems: ${o.problems}\nMissing: ${o.missing}\nRecommend: ${o.recommend}` + textFooter(b),
   };
 }
+
+// ---------------------------------------------------------------- Messages
+export function newMessage(b: Brand, o: { to: string; from: string; preview: string; url: string }) {
+  return {
+    subject: `New message from ${o.from}`,
+    html: layout(b, {
+      preheader: o.preview.slice(0, 120),
+      eyebrow: "Messages",
+      heading: `${esc(o.from)} sent you a message`,
+      content: p(`Hi ${esc(o.to)},`) + p(`<i>“${esc(o.preview)}”</i>`) + button(o.url, "Open and reply") +
+        p(`<span style="font-size:13px">You'll get one email per conversation while you're away, not one per message.</span>`),
+    }),
+    text: `${o.from} sent you a message:\n\n"${o.preview}"\n\nOpen and reply: ${o.url}` + textFooter(b),
+  };
+}

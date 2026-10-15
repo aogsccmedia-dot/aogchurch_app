@@ -1159,6 +1159,24 @@ describe("Ask SCC, youth tickets, event updates, prayer list and access requests
     assert.equal(route("how much is it?", "events"), "events", "follow-ups stay with the last helper");
   });
 
+  test("messages: members write to leaders (not to each other), leaders reply, the other person is emailed", async () => {
+    const W = (cookie: string) => ({ cookie, "x-scc-admin": "1" });
+    db().prepare("INSERT OR IGNORE INTO users (id, email, name, given_name) VALUES ('msg-other', 'other@example.com', 'Other M', 'Other')").run();
+    const l = await (await call("/api/chat/leaders", { headers: { cookie: member } })).json() as { leaders: { id: string; name: string }[] };
+    assert.ok(l.leaders.some((x) => x.id === "ask-yl"), "the youth leader can be messaged");
+    assert.equal((await post("/api/chat/start", { to: "msg-other" }, W(member))).status, 403, "members can't message other members");
+    const before = env.EMAIL.outbox.length;
+    const { id } = await (await post("/api/chat/start", { to: "ask-yl" }, W(member))).json() as { id: string };
+    assert.equal((await post(`/api/chat/${id}`, { body: "Hello leader" }, W(member))).status, 200);
+    assert.ok(env.EMAIL.outbox.slice(before).some((m) => JSON.stringify(m.to).includes("leader@example.com") && /New message from/.test(m.subject)), "leader emailed");
+    const inbox = await (await call("/api/chat", { headers: { cookie: youth } })).json() as { unread: number; threads: { id: string }[] };
+    assert.equal(inbox.unread, 1);
+    assert.equal((await post(`/api/chat/${id}`, { body: "Hi! Happy to help." }, W(youth))).status, 200);
+    const t = await (await call(`/api/chat/${id}`, { headers: { cookie: member } })).json() as { messages: { body: string; mine: boolean }[] };
+    assert.deepEqual(t.messages.map((m) => [m.body, m.mine]), [["Hello leader", true], ["Hi! Happy to help.", false]]);
+    assert.equal((await call(`/api/chat/${id}`, { headers: { cookie: "scc_session=nobody" } })).status, 401);
+  });
+
   test("smart chat streams the answer as it's written; quick questions use the fast model", async () => {
     const calls: { model: string; stream: boolean }[] = [];
     const e = env as unknown as { AI?: unknown };

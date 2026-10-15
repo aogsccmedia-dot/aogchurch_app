@@ -26,6 +26,7 @@ import { outreachRoutes } from "./routes/outreach.ts";
 import { analyticsRoutes } from "./routes/analytics.ts";
 import { pushRoutes, processDailyVerse } from "./routes/push.ts";
 import { retrieve } from "./lib/rag.ts";
+import { chatRoutes } from "./routes/chat.ts";
 import { processAnnouncements } from "./lib/newsletter.ts";
 import { processCheckins, processWelcomes } from "./lib/membership.ts";
 import { processServiceReminders } from "./lib/reminders.ts";
@@ -70,6 +71,7 @@ export default {
       outreachRoutes(router, env);
       analyticsRoutes(router, env);
       pushRoutes(router, env);
+      chatRoutes(router, env);
       const res = await router.handle(req, ctx);
       return res ?? json({ ok: false, error: "Not found." }, 404);
     } catch (err) {

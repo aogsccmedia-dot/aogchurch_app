@@ -70,9 +70,20 @@ function paint(me, d, fromCache) {
         ${new Date(r.starts_at) > new Date() ? `<button class="btn btn-sm btn-ghost" data-cancel="${esc(r.ref_code)}">Can't make it</button>` : ""}</div>
     </article>`).join("")
     : `<div class="slide empty-slide"><b>No tickets yet</b><p class="muted-text">When you get a ticket, it shows here with its QR code.</p><a class="btn btn-sm btn-gold btn-glow" href="#upcoming">${icon("ticket")} Get Ticket</a></div>`;
+  // Tickets sit next to the welcome pack, only when they've booked something.
+  const pill = $("me-tix-pill");
+  pill.hidden = !upcoming.length;
+  $("me-tix-n").textContent = upcoming.length || "";
+  if (!upcoming.length) { $("me-tix").hidden = true; pill.setAttribute("aria-expanded", "false"); }
+  if (!fromCache) fetch("/api/chat", { cache: "no-store" }).then((r) => r.json()).then((c) => { const b = $("me-msg-n"); b.hidden = !c.unread; b.textContent = c.unread || ""; }).catch(() => {});
   loadUpcoming(fromCache); loadKnow(fromCache);
 }
 
+$("me-tix-pill").addEventListener("click", () => {
+  const box = $("me-tix"), open = box.hidden;
+  box.hidden = !open; $("me-tix-pill").setAttribute("aria-expanded", String(open));
+  if (open) box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
 $("me-events").addEventListener("click", async (e) => {
   const b = e.target.closest("[data-cancel]");
   if (!b || !confirm("Cancel this registration? Your spot will go to someone on the waitlist.")) return;

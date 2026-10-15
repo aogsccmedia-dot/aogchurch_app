@@ -115,7 +115,7 @@ def header():
     <div class="app-bar-in">
       <a class="app-brand" href="/me"><img src="/assets/logo-64.png" alt="" width="30" height="30"><b>SCC</b><span class="app-role" data-app-role></span></a>
       <span class="app-gap"></span>
-      <div class="app-me"><a class="btn btn-sm btn-ghost app-help" href="/help" aria-label="How to use the app">Help</a><span class="avatar sm" data-app-avatar></span><button class="btn btn-sm" type="button" data-app-signout>Sign out</button></div>
+      <div class="app-me"><button type="button" class="app-search" data-app-search aria-label="Search">{{{{i:search}}}}<span>Search</span></button><a class="btn btn-sm btn-ghost app-help" href="/help" aria-label="How to use the app">Help</a><span class="avatar sm" data-app-avatar></span><button class="btn btn-sm" type="button" data-app-signout>Sign out</button></div>
     </div>
   </header>
   <div class="app-fade" aria-hidden="true"></div>
@@ -266,6 +266,7 @@ PAGES = {
     "go-ye": dict(title="Go Ye: good news, made simple" + T, crumb="Go Ye", canonical="/go-ye", desc="The gospel in four simple steps, a prayer to receive Jesus, a printable Good News pamphlet, and how our evangelism team goes from Sandton to all of South Africa.", scripts=["site.js", "auth.js", "evangelism.js"]),
     "pamphlet": dict(title="Good News pamphlet" + T, body="portal wp", crumb="Pamphlet", canonical="/pamphlet", desc="Good news for you: the gospel in four simple steps. Read, share on WhatsApp, or print the pamphlet from AOG Sandton City Church.", scripts=["site.js", "auth.js", "welcome-pack.js"]),
     "discipleship": dict(title="Discipleship classes" + T, crumb="Discipleship", canonical="/discipleship", desc="Short, friendly discipleship classes at AOG Sandton City Church: Foundations, Baptism, Growing and Serving. Sign up for the next class.", scripts=["site.js", "auth.js", "evangelism.js"]),
+    "messages": dict(title="Messages" + T, body="portal", desc="Message a church leader.", noindex=True, scripts=["site.js", "auth.js", "messages.js"]),
     "go": dict(title="Go Ye" + T, body="portal", desc="The evangelism team in the app: log the people you meet, see the map and tips.", noindex=True, scripts=["site.js", "auth.js", "go.js"]),
     "store": dict(title="Store" + T, crumb="Store", desc="AOG Store: books written by members of AOG Sandton City Church. Coming soon.", canonical="/store", scripts=["site.js", "auth.js", "store.js"]),
     "vote": dict(title="Vote" + T, body="portal", desc="Members' voting at AOG Sandton City Church.", noindex=True, scripts=["site.js", "auth.js", "vote.js"]),

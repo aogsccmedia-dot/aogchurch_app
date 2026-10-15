@@ -623,7 +623,7 @@ export function adminRoutes(router: Router, env: Env): void {
   router.get("/api/admin/team", superOnly(async (req) => {
     const q = (new URL(req.url).searchParams.get("q") || "").trim().toLowerCase();
     const { results: admins } = await env.DB.prepare(
-      `SELECT a.user_id, a.email, a.created_at, a.role, a.perms, u.name, u.picture, m.ref_code, m.status FROM admin_roles a JOIN users u ON u.id = a.user_id
+      `SELECT a.user_id, a.email, a.created_at, a.role, a.perms, a.title, u.name, u.picture, m.ref_code, m.status FROM admin_roles a JOIN users u ON u.id = a.user_id
          LEFT JOIN members m ON m.user_id = a.user_id OR m.email = a.email GROUP BY a.user_id ORDER BY a.created_at`).all();
     const like = `%${q}%`;
     const { results: people } = await env.DB.prepare(
@@ -636,9 +636,14 @@ export function adminRoutes(router: Router, env: Env): void {
   }));
   // Change someone's role (Admin ⇄ Youth leader) or a youth leader's permissions. Main admin only.
   router.patch("/api/admin/team/:userId", superOnly(async (req, { userId }, s) => {
-    const b = await readJson<{ role?: string; perms?: string[] }>(req);
+    const b = await readJson<{ role?: string; perms?: string[]; title?: string }>(req);
     const row = await env.DB.prepare("SELECT role, perms FROM admin_roles WHERE user_id = ?").bind(userId).first<{ role: string; perms: string | null }>();
     if (!row) throw new HttpError(404, "Not on the team.");
+    if (typeof b.title === "string" && b.role === undefined && b.perms === undefined) {
+      // Just the ministry title members see (e.g. "Daughters' Ministry leader").
+      await env.DB.prepare("UPDATE admin_roles SET title = ? WHERE user_id = ?").bind(b.title.trim().slice(0, 60) || null, userId).run();
+      return json({ ok: true });
+    }
     const role = b.role === "youth_leader" || b.role === "admin" ? b.role : row.role;
     const dflt = role === "youth_leader" ? YOUTH_DEFAULT : ADMIN_DEFAULT;
     // New role without a list → that role's starting set. Same role → the ticked list (or what they had).

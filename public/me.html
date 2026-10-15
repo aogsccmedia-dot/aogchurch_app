@@ -29,7 +29,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preconnect" href="https://accounts.google.com">
   <link rel="stylesheet" href="/css/base.css?v=eae68f236b">
-  <link rel="stylesheet" href="/css/pages.css?v=bbaf2884e7">
+  <link rel="stylesheet" href="/css/pages.css?v=803045b142">
   <script src="/js/switch-boot.js?v=4afbe33104"></script>
   <script type="speculationrules">{"prerender": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/admin/*"}}, {"not": {"href_matches": "/api/*"}}]}, "eagerness": "moderate"}]}</script>
 </head>
@@ -39,7 +39,7 @@
     <div class="app-bar-in">
       <a class="app-brand" href="/me"><img src="/assets/logo-64.png" alt="" width="30" height="30"><b>SCC</b><span class="app-role" data-app-role></span></a>
       <span class="app-gap"></span>
-      <div class="app-me"><a class="btn btn-sm btn-ghost app-help" href="/help" aria-label="How to use the app">Help</a><span class="avatar sm" data-app-avatar></span><button class="btn btn-sm" type="button" data-app-signout>Sign out</button></div>
+      <div class="app-me"><button type="button" class="app-search" data-app-search aria-label="Search"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span>Search</span></button><a class="btn btn-sm btn-ghost app-help" href="/help" aria-label="How to use the app">Help</a><span class="avatar sm" data-app-avatar></span><button class="btn btn-sm" type="button" data-app-signout>Sign out</button></div>
     </div>
   </header>
   <div class="app-fade" aria-hidden="true"></div>
@@ -88,32 +88,35 @@
       </section>
     </div>
     <div class="me-home" id="me-view" hidden>
-      <header class="me-explore">
+      <header class="me-hello">
         <span class="avatar face-big" id="me-avatar"></span>
         <div><p class="eyebrow" id="me-greet">Welcome home</p><h1 id="me-name"></h1><p id="me-status"></p></div>
-        <form class="explore-box" action="/assistant" role="search"><span aria-hidden="true"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg></span>
-          <input name="q" placeholder="Ask anything: service times, events, my tickets…" aria-label="Ask SCC" autocomplete="off"><button class="btn btn-gold btn-sm" type="submit">Ask</button></form>
-        <nav class="explore-chips" aria-label="Quick links"><a href="/assistant?q=What%27s%20happening%20this%20week%3F">This week</a><a href="#upcoming">Get a ticket</a><a href="/devotions">Today's verse</a><a href="/vote">Vote</a><a href="/welcome-pack">Welcome pack</a></nav>
       </header>
+      <nav class="me-pills" aria-label="Quick links">
+        <a class="me-pill" href="/welcome-pack"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg><span>Welcome pack</span></a>
+        <button type="button" class="me-pill tix-pill" id="me-tix-pill" hidden aria-expanded="false" aria-controls="me-tix"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg><span>My tickets</span><b id="me-tix-n"></b></button>
+        <a class="me-pill" href="/messages"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg><span>Message a leader</span><b id="me-msg-n" hidden></b></a>
+      </nav>
+      <section class="me-section me-tix" id="me-tix" hidden>
+        <div id="me-events" class="slider" aria-label="My tickets"></div>
+      </section>
       <div id="me-member"></div>
       <a class="goye-card" href="/go"><span class="goye-ico"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></span><span class="goye-txt"><small>Go Ye · our main calling</small><b>Share the good news this week</b><em>Met someone? Log them here and the Call Office follows up.</em></span><span class="goye-go"><svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span></a>
-      <section class="me-section" id="me-tools" hidden>
-        <div class="me-head"><h2>Your tools</h2><span class="me-more" id="me-tools-role"></span></div>
-        <div id="me-tools-grid" class="tool-grid"></div>
-      </section>
       <section class="me-section">
-        <div class="me-head"><h2>My tickets</h2><a href="#upcoming" class="me-more">Get a ticket <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></div>
-        <div id="me-events" class="slider" aria-label="My tickets"></div>
+        <div class="me-head"><h2>Service times</h2></div>
+        <div class="svc-list" id="svc-list"><small>Loading…</small></div>
       </section>
       <section class="me-section" id="upcoming">
         <div class="me-head"><h2>Coming up at church</h2></div>
         <div id="me-upcoming" class="slider" aria-label="Upcoming events"></div>
       </section>
+      <section class="me-section" id="me-tools" hidden>
+        <div class="me-head"><h2>Your tools</h2><span class="me-more" id="me-tools-role"></span></div>
+        <div id="me-tools-grid" class="tool-grid"></div>
+      </section>
       <section class="me-section">
-        <div class="me-head"><h2>What to know</h2></div>
+        <div class="me-head"><h2>More for you</h2></div>
         <div class="know-grid">
-          <a class="know" id="know-pack" href="/welcome-pack"><span><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span><b>Welcome pack</b><small>Who we are: from Azusa Street to Nicholas Bhengu and the birth of our church (PDF)</small></a>
-          <div class="know" id="know-services"><span><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span><b>Service times</b><div class="svc-list" id="svc-list"><small>Loading…</small></div></div>
           <a class="know" href="/vote" id="know-vote"><span><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 12 2 2 4-4"/><path d="M5 7c0-1.1.9-2 2-2h10a2 2 0 0 1 2 2v12H5V7Z"/><path d="M22 19H2"/></svg></span><b>Voting</b><small>Checking…</small></a>
           <a class="know" href="https://maps.google.com/?q=17+Humber+Street+Woodmead+Sandton" target="_blank" rel="noopener"><span><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></span><b>Find us</b><small>17 Humber Street, Woodmead, Sandton</small></a>
           <a class="know" href="/devotions"><span><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></span><b>Today's verse</b><small>Read, pray and keep your streak</small></a>
@@ -163,7 +166,7 @@
   <link rel="modulepreload" href="/js/otp.js">
   <script type="module" src="/js/site.js?v=46e05eedb0"></script>
   <script type="module" src="/js/auth.js?v=0d639d2d04"></script>
-  <script type="module" src="/js/me.js?v=1e77031687"></script>
+  <script type="module" src="/js/me.js?v=b6e924dabf"></script>
   <script type="module" src="/js/programme.js?v=ae3e73b8c1"></script>
 </body>
 </html>

@@ -16,32 +16,35 @@
       </section>
     </div>
     <div class="me-home" id="me-view" hidden>
-      <header class="me-explore">
+      <header class="me-hello">
         <span class="avatar face-big" id="me-avatar"></span>
         <div><p class="eyebrow" id="me-greet">Welcome home</p><h1 id="me-name"></h1><p id="me-status"></p></div>
-        <form class="explore-box" action="/assistant" role="search"><span aria-hidden="true">{{i:sparkles}}</span>
-          <input name="q" placeholder="Ask anything: service times, events, my tickets…" aria-label="Ask SCC" autocomplete="off"><button class="btn btn-gold btn-sm" type="submit">Ask</button></form>
-        <nav class="explore-chips" aria-label="Quick links"><a href="/assistant?q=What%27s%20happening%20this%20week%3F">This week</a><a href="#upcoming">Get a ticket</a><a href="/devotions">Today's verse</a><a href="/vote">Vote</a><a href="/welcome-pack">Welcome pack</a></nav>
       </header>
+      <nav class="me-pills" aria-label="Quick links">
+        <a class="me-pill" href="/welcome-pack">{{i:bookOpen}}<span>Welcome pack</span></a>
+        <button type="button" class="me-pill tix-pill" id="me-tix-pill" hidden aria-expanded="false" aria-controls="me-tix">{{i:ticket}}<span>My tickets</span><b id="me-tix-n"></b></button>
+        <a class="me-pill" href="/messages">{{i:messageCircle}}<span>Message a leader</span><b id="me-msg-n" hidden></b></a>
+      </nav>
+      <section class="me-section me-tix" id="me-tix" hidden>
+        <div id="me-events" class="slider" aria-label="My tickets"></div>
+      </section>
       <div id="me-member"></div>
       <a class="goye-card" href="/go"><span class="goye-ico">{{i:globe}}</span><span class="goye-txt"><small>Go Ye · our main calling</small><b>Share the good news this week</b><em>Met someone? Log them here and the Call Office follows up.</em></span><span class="goye-go">{{arrow}}</span></a>
-      <section class="me-section" id="me-tools" hidden>
-        <div class="me-head"><h2>Your tools</h2><span class="me-more" id="me-tools-role"></span></div>
-        <div id="me-tools-grid" class="tool-grid"></div>
-      </section>
       <section class="me-section">
-        <div class="me-head"><h2>My tickets</h2><a href="#upcoming" class="me-more">Get a ticket {{arrow}}</a></div>
-        <div id="me-events" class="slider" aria-label="My tickets"></div>
+        <div class="me-head"><h2>Service times</h2></div>
+        <div class="svc-list" id="svc-list"><small>Loading…</small></div>
       </section>
       <section class="me-section" id="upcoming">
         <div class="me-head"><h2>Coming up at church</h2></div>
         <div id="me-upcoming" class="slider" aria-label="Upcoming events"></div>
       </section>
+      <section class="me-section" id="me-tools" hidden>
+        <div class="me-head"><h2>Your tools</h2><span class="me-more" id="me-tools-role"></span></div>
+        <div id="me-tools-grid" class="tool-grid"></div>
+      </section>
       <section class="me-section">
-        <div class="me-head"><h2>What to know</h2></div>
+        <div class="me-head"><h2>More for you</h2></div>
         <div class="know-grid">
-          <a class="know" id="know-pack" href="/welcome-pack"><span>{{i:bookOpen}}</span><b>Welcome pack</b><small>Who we are: from Azusa Street to Nicholas Bhengu and the birth of our church (PDF)</small></a>
-          <div class="know" id="know-services"><span>{{i:clock}}</span><b>Service times</b><div class="svc-list" id="svc-list"><small>Loading…</small></div></div>
           <a class="know" href="/vote" id="know-vote"><span>{{i:vote}}</span><b>Voting</b><small>Checking…</small></a>
           <a class="know" href="https://maps.google.com/?q=17+Humber+Street+Woodmead+Sandton" target="_blank" rel="noopener"><span>{{i:mapPin}}</span><b>Find us</b><small>17 Humber Street, Woodmead, Sandton</small></a>
           <a class="know" href="/devotions"><span>{{i:flame}}</span><b>Today's verse</b><small>Read, pray and keep your streak</small></a>
