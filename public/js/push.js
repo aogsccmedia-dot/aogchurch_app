@@ -1,3 +1,4 @@
+import { icon } from "./icons.js";
 // Phone notifications for the church app (daily verse by default). We always ask first, kindly, and once.
 // iPhone: works when the app has been added to the Home Screen (iOS 16.4+). Android and computers: in the browser too.
 const ok = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
@@ -49,8 +50,8 @@ export async function offerOnce() {
   const el = document.createElement("div");
   el.className = "push-offer"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Daily verse notifications");
   el.innerHTML = needsInstall()
-    ? `<span class="po-ico">📖</span><div><b>Get today's verse every morning</b><span>Add the app to your Home Screen (Share → Add to Home Screen), then open it and tap Allow.</span></div><button type="button" class="btn btn-sm" data-po-no>OK</button>`
-    : `<span class="po-ico">📖</span><div><b>Get today's verse every morning?</b><span>A gentle notification at 6am. You can turn it off any time in Settings.</span></div><div class="po-btns"><button type="button" class="btn btn-sm btn-gold" data-po-yes>Allow</button><button type="button" class="btn btn-sm btn-ghost" data-po-no>Not now</button></div>`;
+    ? `<span class="po-ico">${icon("bookOpen")}</span><div><b>Get today's verse every morning</b><span>Add the app to your Home Screen (Share → Add to Home Screen), then open it and tap Allow.</span></div><button type="button" class="btn btn-sm" data-po-no>OK</button>`
+    : `<span class="po-ico">${icon("bookOpen")}</span><div><b>Get today's verse every morning?</b><span>A gentle notification at 6am. You can turn it off any time in Settings.</span></div><div class="po-btns"><button type="button" class="btn btn-sm btn-gold" data-po-yes>Allow</button><button type="button" class="btn btn-sm btn-ghost" data-po-no>Not now</button></div>`;
   document.body.append(el);
   requestAnimationFrame(() => el.classList.add("in"));
   const close = () => { el.classList.remove("in"); setTimeout(() => el.remove(), 250); };

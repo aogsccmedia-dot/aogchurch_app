@@ -112,9 +112,27 @@ export function initExtra(ctx) {
         <div class="card"><h3>Phones & computers</h3>${bars(a.os)}</div>
         <div class="card"><h3>Most tapped</h3>${bars(a.clicks, (r) => `${r.k} · ${r.path}`)}</div>
       </div>
+      <div class="card"><div class="vh" style="align-items:center"><h3>Every visitor</h3><span class="muted">${n(t.unique_ips)} unique connections · tap one to see what they did</span></div><div id="an-visitors"><p class="muted">Loading…</p></div></div>
       <div class="card"><h3>Retention: do people come back?</h3><p class="muted">Each row is the week people first visited; the columns show how many came back in the weeks after.</p>${retention(a.retention)}</div>`;
   }
-  $("#an-range").addEventListener("click", (e) => { const b = e.target.closest("[data-days]"); if (!b) return; days = Number(b.dataset.days); safe(loadAnalytics)(); });
+  const when = (iso) => new Intl.DateTimeFormat("en-ZA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Africa/Johannesburg" }).format(new Date(iso));
+  const flag = (cc) => cc && /^[A-Z]{2}$/.test(cc) ? String.fromCodePoint(...[...cc].map((c) => 127397 + c.charCodeAt(0))) : "";
+  async function loadVisitors() {
+    const box = $("#an-visitors"); if (!box) return;
+    const { visitors } = await api(`/api/admin/analytics/visitors?days=${days}`);
+    box.innerHTML = visitors.length ? `<div class="an-vis">${visitors.map((v) => `<details class="an-v" data-ip="${esc(v.ip)}">
+        <summary><span class="an-vid">${v.person ? `<b>${esc(v.person.name)}</b>` : `<b>Visitor ${esc(String(v.ip).slice(0, 6))}</b>`}<small>${flag(v.country)} ${esc([v.city, v.region, v.country].filter(Boolean).join(", ") || "Unknown place")}</small></span>
+          <span class="an-vmeta">${esc(v.device || "")} · ${esc(v.os || "")} · ${esc(v.browser || "")}${v.app ? " · app" : ""}</span>
+          <span class="an-vnums"><b>${n(v.views)}</b> views · <b>${n(v.clicks)}</b> taps · ${n(v.days)} day${v.days === 1 ? "" : "s"}</span>
+          <span class="an-vwhen">${when(v.last_seen)}</span></summary><div class="an-trail"><p class="muted">Loading…</p></div></details>`).join("")}</div>`
+      : `<p class="muted">No visitors recorded in this period yet.</p>`;
+  }
+  $("#an-body").addEventListener("toggle", async (e) => {
+    const d = e.target; if (!d.matches?.("details.an-v") || !d.open || d.dataset.loaded) return; d.dataset.loaded = "1";
+    const { events } = await api(`/api/admin/analytics/visitor/${d.dataset.ip}`);
+    d.querySelector(".an-trail").innerHTML = events.length ? `<ol>${events.map((x) => `<li class="${x.kind}"><span>${when(x.ts)}</span><b>${x.kind === "view" ? "Opened" : "Tapped"}</b> ${esc(x.kind === "view" ? x.path : `“${x.label}” on ${x.path}`)}${x.source && x.kind === "view" && x.source !== "Direct" ? ` <em>from ${esc(x.source)}</em>` : ""}</li>`).join("")}</ol>` : `<p class="muted">Nothing recorded.</p>`;
+  }, true);
+  $("#an-range").addEventListener("click", (e) => { const b = e.target.closest("[data-days]"); if (!b) return; days = Number(b.dataset.days); safe(loaders.analytics)(); });
   $("#an-push").addEventListener("click", safe(async () => { const r = await api("/api/admin/push/test", { method: "POST" }); toast(r.devices ? `Sent to ${r.sent} of ${r.devices} devices` : "No phones have notifications on yet."); }));
-  loaders.analytics = loadAnalytics;
+  loaders.analytics = async () => { await loadAnalytics(); loadVisitors().catch(() => {}); };
 }

@@ -1900,3 +1900,9 @@ a.pam-page { display: block; }
 #code-dialog::backdrop { background: rgba(20, 18, 34, .5); }
 #code-dialog h3 { font-size: 26px; font-weight: 600; margin: 0; }
 .code-status { display: block; } .code-status .spinner { display: inline-block; vertical-align: -2px; margin-right: 6px; }
+/* Modern icon marks instead of emoji */
+.si-perks li span { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: #fff; color: #6b5aa8; font-size: 0; }
+.si-perks li span .i { width: 18px; height: 18px; }
+.go-tips b { display: flex; align-items: center; gap: 8px; } .go-tips b .i { width: 18px; height: 18px; color: #6b5aa8; }
+.push-offer .po-ico { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: #f4f0ff; color: #6b5aa8; }
+.push-offer .po-ico .i { width: 22px; height: 22px; }

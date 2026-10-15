@@ -8,8 +8,8 @@
   <meta name="theme-color" content="#f7f7fb">
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="stylesheet" href="/css/base.css?v=eae68f236b">
-  <link rel="stylesheet" href="/css/pages.css?v=9c03cb34ae">
-  <link rel="stylesheet" href="/css/admin.css?v=a472163a88">
+  <link rel="stylesheet" href="/css/pages.css?v=c5f97a032e">
+  <link rel="stylesheet" href="/css/admin.css?v=753e75860f">
   <script src="/js/switch-boot.js?v=4afbe33104"></script>
 </head>
 <body class="admin">
@@ -49,7 +49,11 @@
       <button data-go-tab="members" data-ico="users"><span>Members</span></button>
     </nav>
     <aside class="side" id="side">
-      <a class="brand" href="/" target="_blank"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>SCC Admin</span></a>
+      <div class="side-top">
+        <a class="brand" href="/" target="_blank"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>SCC Admin</span></a>
+        <div class="side-user"><span class="avatar" id="su-face"></span><div><b id="su-name">Admin</b><small id="su-role"></small></div>
+          <button type="button" class="su-bell" id="su-bell" aria-label="What needs attention"><span data-icon-before="bell"></span><i class="su-dot" id="su-dot" hidden></i></button></div>
+      </div>
       <nav id="nav" aria-label="Admin">
         <p class="nav-group">Today</p>
         <button data-tab="overview" data-tone="lilac" data-perm="*" class="active">Overview</button>
@@ -83,18 +87,46 @@
         <button data-tab="assistant" data-tone="slate" data-super>Ask SCC</button>
         <button data-tab="code" data-tone="slate" data-super>Code changes <span class="badge" id="code-badge"></span></button>
       </nav>
+      <a class="side-promo" id="side-promo" href="#calls">
+        <span class="sp-art" data-icon-before="globe"></span>
+        <b>Go Ye</b><span>Our main calling: follow up everyone our evangelism teams meet.</span>
+        <span class="sp-btn">Open Call Office <span data-icon-before="arrowRight"></span></span>
+      </a>
       <div class="side-foot"><span id="who"></span><span class="role-chip" id="role-chip"></span><button class="btn btn-sm btn-ghost" type="button" data-switch="member" id="to-profile" hidden>Switch to member view</button><button class="btn btn-sm" id="logout">Sign out</button></div>
     </aside>
 
     <main class="main">
       <nav id="portal-tabs" class="portal-tabs admin-portal-tabs" aria-label="Your portal" hidden></nav>
       <section data-view="overview">
-        <header class="vh"><div><p class="eyebrow gold">Dashboard</p><h1 id="greeting">Overview</h1></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm btn-gold" data-go="events-new">+ New event</button><button class="btn btn-sm" data-go="letters-new">Write this week's letter</button></div></header>
+        <div class="ov-top">
+          <div class="ov-bar">
+            <form class="ov-search" id="ov-search" role="search"><span data-icon-before="search"></span><input name="q" placeholder="Search members by name, phone or ref…" aria-label="Search members" autocomplete="off"></form>
+            <div class="ov-actions">
+              <a class="ov-ghost" id="ov-export" href="/api/admin/report.csv" download><span data-icon-before="upload"></span>Export</a>
+              <button type="button" class="ov-black" data-go="events-new"><span data-icon-before="plus"></span>New event</button>
+            </div>
+          </div>
+          <div class="ov-hello"><p class="eyebrow gold">Dashboard</p><h1 id="greeting">Overview</h1></div>
+          <div class="ov-charts">
+            <article class="ov-card" id="ov-visits-card">
+              <header><h3 id="ov-chart-title">Visits this month</h3><div class="ov-tools"><button type="button" class="ov-sq" data-go-tab="analytics" aria-label="Open analytics"><span data-icon-before="arrowUpRight"></span></button></div></header>
+              <div class="ov-bars" id="ov-visits"><p class="muted">Loading…</p></div>
+            </article>
+            <article class="ov-card">
+              <header><h3>Church family</h3><div class="ov-tools"><button type="button" class="ov-sq" data-go-tab="members" aria-label="Open members"><span data-icon-before="users"></span></button><button type="button" class="ov-sq" data-go-tab="report" aria-label="Open reports"><span data-icon-before="arrowUpDown"></span></button></div></header>
+              <div class="ov-big"><b id="ov-members">–</b><span class="ov-chip" id="ov-members-chg"></span></div>
+              <div class="ov-stack" id="ov-stack"></div>
+            </article>
+          </div>
+        </div>
         <div class="card access-card" id="access-card" hidden><div class="vh" style="align-items:center"><h3>Access requests</h3><span class="muted" style="font-size:13px">From your team, waiting for you</span></div><div id="access-list" class="list"></div></div>
         <div id="setup-notes"></div>
+        <div class="ov-list">
+          <header class="ov-list-head"><h2>Needs attention <span class="ov-count" id="att-count">0</span></h2><nav class="ov-pills" id="att-pills" aria-label="Filter"></nav></header>
+          <div class="ov-cols" aria-hidden="true"><span>Type</span><span>What</span><span>From</span><span>When</span><span></span></div>
+          <div id="attention" class="att-rows"></div>
+        </div>
         <div class="stats" id="stats"></div>
-        <div class="card attention"><div class="vh" style="align-items:center"><h3>Needs attention</h3><span class="muted" style="font-size:13px">Complaints, prayer requests and messages</span></div><div id="attention" class="att-list"></div></div>
         <div class="grid-2" style="align-items:start">
           <div class="card"><h3>Ministry interest</h3><div id="interest-bars" class="bars"></div></div>
           <div class="card"><h3>Weekly letter</h3><div id="next-letter"></div></div>
@@ -473,6 +505,6 @@
   <dialog class="drawer" id="rsvp-drawer"><div class="drawer-body" id="rsvp-body"></div></dialog>
   <dialog class="drawer" id="services-drawer"><div class="drawer-body" id="services-body"></div></dialog>
   <dialog class="drawer" id="member-drawer"><div class="drawer-body" id="member-body"></div></dialog>
-  <script type="module" src="/js/admin.js?v=22cfe805d2"></script>
+  <script type="module" src="/js/admin.js?v=94466f1d0c"></script>
 </body>
 </html>

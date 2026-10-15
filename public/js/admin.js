@@ -167,6 +167,7 @@ async function boot() {
     $(".m-bar").innerHTML = quick.map(([t, ico, l]) => `<button data-go-tab="${t}" class="${t === "scan" ? "m-scan" : ""}">${icon(ico)}<span>${l}</span></button>`).join("");
     $$(".m-bar [data-go-tab]").forEach((b) => b.addEventListener("click", () => { location.hash = b.dataset.goTab; }));
   }
+  dressSide(r, role);
   $("#to-profile").hidden = true; $("#m-switch").hidden = true;   // one portal: no switching
   // People with a role are in their own portal here, just looking at their tools: same bar, logo goes Home.
   if (perms) {
@@ -191,6 +192,88 @@ async function refreshBadges() {
   const r = await api("/api/admin/stats").catch(() => null); if (!r?.stats) return;
   const st = { ...r.stats, prayer_total: (r.stats.new_prayers || 0) + (r.stats.wall_pending || 0) };
   $$("[data-count]").forEach((b) => { b.textContent = st[b.dataset.count] || ""; });
+}
+
+// ================================================================ look: icon tiles, the user card and the Go Ye card
+const NAVI = { overview: "layoutDashboard", approvals: "ticketCheck", fridays: "calendar", scan: "scan", events: "ticket", services: "clock", programme: "calendarPlus",
+  votes: "vote", members: "users", people: "userCheck", calls: "smartphone", prayers: "handHeart", messages: "inbox", complaints: "alert", analytics: "chartColumn",
+  insights: "trendingUp", report: "fileText", letters: "mail", subscribers: "megaphone", templates: "palette", emails: "send", settings: "settings", team: "shield",
+  assistant: "sparkle", code: "code" };
+function dressSide(r, role) {
+  $$("#nav button[data-tab]").forEach((b) => {
+    if (b.dataset.dressed) return; b.dataset.dressed = "1";
+    const badge = b.querySelector(".badge, .admin-only-dot");
+    const label = [...b.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join("").trim();
+    [...b.childNodes].filter((n) => n.nodeType === 3).forEach((n) => n.remove());
+    b.insertAdjacentHTML("afterbegin", `<span class="nt-ico">${icon(NAVI[b.dataset.tab] || "sparkle")}</span><span class="nt-l">${esc(label)}</span>`);
+    if (badge) b.append(badge);
+    if (b.dataset.tab === "overview") { b.classList.add("nt-dash"); b.querySelector(".nt-l").textContent = "Dashboard"; }
+  });
+  const u = r.user || {};
+  $("#su-face").innerHTML = faceInner(u);
+  $("#su-name").textContent = u.given_name || u.name || u.email || "Admin";
+  $("#su-role").textContent = role === "super" ? "Main admin" : role === "youth" ? "Youth leader" : "Admin";
+  $("#su-bell").onclick = () => { location.hash = "overview"; setTimeout(() => $("#attention")?.scrollIntoView({ behavior: "smooth", block: "center" }), 250); };
+  if (!allowed("calls")) { const pr = $("#side-promo"); pr.href = "/go-ye"; pr.target = "_blank"; pr.querySelector(".sp-btn").firstChild.textContent = "Open Go Ye "; }
+  if (!allowed("report")) $("#ov-export").hidden = true;
+  if (perms && !perms.includes("events")) $$('.ov-black[data-go="events-new"]').forEach((b) => { b.hidden = true; });
+}
+$$("[data-icon-before]").forEach((el) => { el.innerHTML = icon(el.dataset.iconBefore); });
+document.addEventListener("click", (e) => { const b = e.target.closest?.("[data-go-tab]"); if (b && !b.closest(".m-bar")) location.hash = b.dataset.goTab; });
+$("#ov-search").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const q = e.target.q.value.trim();
+  location.hash = allowed("members") ? "members" : "people";
+  setTimeout(() => { const i = $("#m-q"); if (i) { i.value = q; i.dispatchEvent(new Event("input", { bubbles: true })); } }, 300);
+});
+
+// ---- Overview pieces in the new look
+let attAll = [], attKind = null, attFilter = "all";
+function drawAttention(list, KIND) {
+  attAll = list; attKind = KIND;
+  const counts = list.reduce((m, a) => (m[a.kind] = (m[a.kind] || 0) + 1, m), {});
+  $("#att-count").textContent = list.length;
+  $("#su-dot").hidden = !list.length;
+  const pills = [["all", "All", list.length], ["complaint", "Complaints", counts.complaint || 0], ["prayer", "Prayer", counts.prayer || 0], ["wall", "Prayer Wall", counts.wall || 0], ["message", "Messages", counts.message || 0]].filter(([k, , n]) => k === "all" || n);
+  if (!pills.some(([k]) => k === attFilter)) attFilter = "all";
+  $("#att-pills").innerHTML = pills.map(([k, l, n]) => `<button type="button" data-att="${k}" class="${k === attFilter ? "on" : ""}">${l} <b>${n}</b></button>`).join("");
+  const rows = list.filter((a) => attFilter === "all" || a.kind === attFilter);
+  $("#attention").innerHTML = rows.length ? rows.map((a) => `<div class="att-row">
+      <span class="ar-type"><i class="dot ${esc(a.kind)}"></i>${esc(KIND[a.kind][0])}</span>
+      <b class="ar-what">${esc(a.title || "")}</b>
+      <span class="ar-who">${esc(a.who || "")}${a.flag ? " · pastors only" : ""}</span>
+      <span class="ar-when">${fmtDate(a.created_at)}</span>
+      <span class="ar-act"><a class="ar-more" href="#${KIND[a.kind][1]}">See more</a><a class="ar-dots" href="#${KIND[a.kind][1]}" aria-label="Open">${icon("moreHorizontal")}</a></span></div>`).join("")
+    : `<div class="att-empty">${icon("check")} All caught up. Nothing waiting. 🙏</div>`;
+}
+$("#att-pills").addEventListener("click", (e) => { const b = e.target.closest("[data-att]"); if (!b) return; attFilter = b.dataset.att; drawAttention(attAll, attKind); });
+
+function drawFamily(st) {
+  $("#ov-members").textContent = Number(st.members || 0).toLocaleString("en-ZA").replace(/,/g, " ");
+  $("#ov-members-chg").innerHTML = st.this_week ? `+${st.this_week} this week ${icon("arrowUpRight")}` : "steady";
+  const cols = [["Members", st.members], ["Accounts", st.accounts], ["Letter", st.subscribers], ["Follow-up", st.new_members]];
+  const max = Math.max(1, ...cols.map(([, v]) => v || 0));
+  $("#ov-stack").innerHTML = `<div class="st-cols">${cols.map(([l, v], i) => { const h = Math.max(18, Math.round(((v || 0) / max) * 150)); const seg = Math.max(2, Math.min(5, Math.round(h / 32)));
+    return `<div class="st-col"><span class="st-val">${v || 0}</span><div class="st-bar c${i}" style="height:${h}px">${Array.from({ length: seg }, (_, j) => `<i style="flex:${j === seg - 1 ? 2 : 1}"></i>`).join("")}</div><span class="st-l">${l}</span></div>`; }).join("")}</div>`;
+}
+
+async function drawVisits() {
+  const box = $("#ov-visits"), card = $("#ov-visits-card");
+  let rows = [], title = "Visits this month", unit = "views";
+  if (!perms) {
+    const a = await api("/api/admin/analytics?days=30");
+    const byDay = new Map(a.daily.map((d) => [d.day, d.views]));
+    for (let i = 29; i >= 0; i--) { const d = new Date(Date.now() + 2 * 3600_000 - i * 86400_000).toISOString().slice(0, 10); rows.push({ k: d, v: byDay.get(d) || 0 }); }
+  } else if (allowed("fridays")) {
+    const f = await api("/api/admin/fridays");
+    rows = f.fridays.filter((x) => x.status === "captured").slice(0, 16).reverse().map((x) => ({ k: x.date, v: x.attendance || 0 }));
+    title = "Friday attendance"; unit = "people";
+    if (!rows.length) { box.innerHTML = `<p class="muted">Capture a Friday and it shows here.</p>`; $("#ov-chart-title").textContent = title; return; }
+  } else { card.hidden = true; return; }
+  $("#ov-chart-title").textContent = title;
+  const max = Math.max(1, ...rows.map((r) => r.v)), hi = rows.reduce((b, r, i) => r.v >= rows[b].v ? i : b, 0);
+  const lab = (d) => new Intl.DateTimeFormat("en-ZA", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(d + "T12:00:00Z"));
+  box.innerHTML = `<div class="vb"><div class="vb-grid"><span>100%</span><span>50%</span><span>0</span></div>${rows.map((r, i) => `<div class="vb-col${i === hi ? " hi" : ""}" title="${lab(r.k)}: ${r.v} ${unit}"><i style="height:${Math.max(4, (r.v / max) * 100)}%"></i>${i === hi ? `<em class="${i > rows.length - 5 ? "end" : i < 4 ? "start" : ""}">${lab(r.k)} · ${r.v}</em>` : ""}</div>`).join("")}</div>`;
 }
 
 // ================================================================ tabs
@@ -246,9 +329,7 @@ loaders.overview = async () => {
       <div class="team-actions"><button class="btn btn-sm btn-gold" data-req-yes>${icon("check")} Approve</button><button class="btn btn-sm" data-req-no>Decline</button></div></div>`).join("");
   setBadge("/admin/", access.length);
   const KIND = { complaint: ["Complaint", "complaints", "new"], prayer: ["Prayer request", "prayers", "pending"], wall: ["Prayer Wall: approve", "prayers", "pending"], message: ["Message", "messages", ""] };
-  $("#attention").innerHTML = attention.length ? attention.map((a) => `<a class="att" href="#${KIND[a.kind][1]}"><span class="pill ${KIND[a.kind][2]}">${KIND[a.kind][0]}</span>
-      <span class="att-body"><b>${esc(a.title || "")}</b><span class="meta">${esc(a.who || "")} · ${fmtDate(a.created_at)}${a.flag ? " · pastors only" : ""}</span></span><span aria-hidden="true">→</span></a>`).join("")
-    : `<p class="muted">All caught up. Nothing waiting. 🙏</p>`;
+  drawAttention(attention, KIND);
   const notes = [];
   if (email_enabled && email_health?.needs_setup) notes.push(EMAIL_SETUP);
   if (!email_enabled) notes.push("<b>Email sending is off.</b> Onboard aogsccyouth.com in Cloudflare → Email Service so confirmations, codes and letters are delivered.");
@@ -258,6 +339,8 @@ loaders.overview = async () => {
     ["upcoming_events", "Upcoming events"], ["registrations_week", "Registrations this week"], ["new_prayers", "New prayer requests"]];
   $("#stats").innerHTML = cards.map(([k, l]) => `<div class="stat"><b>${stats[k]}</b><span>${l}</span></div>`).join("");
   stats.prayer_total = (stats.new_prayers || 0) + (stats.wall_pending || 0);
+  drawFamily(stats);
+  drawVisits().catch(() => { $("#ov-visits-card").hidden = true; });
   $$("[data-count]").forEach((b) => { b.textContent = stats[b.dataset.count] || ""; });
   const max = Math.max(1, ...interests.map((i) => i.n));
   $("#interest-bars").innerHTML = interests.length ? interests.map((i) => `<div class="bar"><span>${esc(ministryLabel(i.slug))}</span><span class="track"><i style="width:${(i.n / max) * 100}%"></i></span><b>${i.n}</b></div>`).join("") : `<p class="muted">No sign-ups yet.</p>`;
