@@ -57,6 +57,9 @@ function openWindow(kind) {
   return { ok: true, windowed: true, count: 1 };
 }
 
+const desk = { listeners: new Set(), emit() { const open = !!wins.studio && !wins.studio.closed; for (const cb of this.listeners) cb(open); } };
+setInterval(() => desk.emit(), 2000);
+
 // ---- Files: the browser's own picker
 function pick(accept, multiple = true) {
   return new Promise((ok) => { const i = document.createElement("input"); i.type = "file"; i.accept = accept; i.multiple = multiple; i.onchange = () => ok([...i.files]); i.oncancel = () => ok([]); i.click(); });
@@ -162,7 +165,15 @@ window.scc = {
   app: { info: async () => ({ version: "online", platform: "browser", web: true }), system: async () => ({ os: navigator.userAgent, cores: navigator.hardwareConcurrency || 0, memoryGB: navigator.deviceMemory || 0, gpu: [] }), open: async (u) => window.open(u, "_blank", "noopener"), openData: async () => { toast(DESKTOP_ONLY); return false; } },
   beta: { feedback: async (d) => { await fetch("/api/presenter/feedback", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "x-scc-admin": "1" }, body: JSON.stringify({ ...d, source: "online" }) }).catch(() => {}); return true; } },
   outputs: { set: async (list) => { db.settings.outputs = list; save(); emitScreens(); return screensState(); } },
-  desk: { open: async () => { toast(DESKTOP_ONLY); return false; }, onChange: () => () => {} },
+  desk: {
+    open: async () => {
+      if (wins.studio && !wins.studio.closed) { wins.studio.focus(); return true; }
+      const w = window.open("/freecreator/app/studio.html", "freecreator-studio", "popup,width=1400,height=860");
+      if (!w) throw new Error("Your browser blocked the Studio window. Allow pop-ups for this site, then try again.");
+      wins.studio = w; desk.emit(); return true;
+    },
+    onChange: (cb) => { desk.listeners.add(cb); return () => desk.listeners.delete(cb); },
+  },
   atem: { get: async () => ({ connected: false, status: "off", web: true }), connect: async () => { throw new Error(DESKTOP_ONLY); }, disconnect: async () => true, action: async () => { throw new Error(DESKTOP_ONLY); }, setupCable: async () => { throw new Error(DESKTOP_ONLY); }, setupNet: async () => { throw new Error(DESKTOP_ONLY); }, stopAuto: async () => true, onState: () => () => {} },
   rec: { start: async () => { throw new Error(DESKTOP_ONLY); }, chunk: async () => true, stop: async () => "", reveal: async () => true },
   importer: { start: async () => { throw new Error(DESKTOP_ONLY); }, get: async () => ({ status: "idle" }), cancel: async () => ({ status: "cancelled" }), freeshow: async () => ({ folders: [], shows: 0 }), pickFolder: async () => [], pickFiles: async () => [], onProgress: () => () => {} },

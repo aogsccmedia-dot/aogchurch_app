@@ -1361,3 +1361,14 @@ describe("FreeCreator Online", () => {
     assert.equal(ai.ok, false, "without AI the app uses its built-in rules");
   });
 });
+
+describe("FreeCreator Studio", () => {
+  test("speed test and painter need sign-in; AI writes lower thirds only with known tasks", async () => {
+    assert.equal((await call("/api/freecreator/speedtest", { method: "POST", headers: { "x-scc-admin": "1" }, body: "x".repeat(1000) })).status, 401);
+    assert.equal((await call("/api/freecreator/paint?topic=worship")).status, 401);
+    const c = await adminCookie();
+    const r = await (await call("/api/freecreator/speedtest", { method: "POST", headers: A(c), body: "x".repeat(200000) })).json() as { bytes: number };
+    assert.equal(r.bytes, 200000);
+    assert.equal((await post("/api/freecreator/ai", { task: "lowerthirds", text: "Youth service" }, A(c))).status, 200);
+  });
+});

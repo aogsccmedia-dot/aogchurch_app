@@ -12,7 +12,7 @@ import { DAYS, groupLabel, nextOccurrence, saToday } from "../lib/groups.ts";
 import { churchNames } from "../lib/names.ts";
 
 const ADDRESS = "17 Humber Street, Woodmead, Sandton";
-const SCENES: Record<string, string> = {
+export const SCENES: Record<string, string> = {
   sunrise: "a gentle sunrise over soft rolling hills, warm golden light, misty atmosphere",
   stars: "a calm night sky full of stars and a soft milky way glow",
   ocean: "calm ocean waves at golden hour, sparkling light on the water",

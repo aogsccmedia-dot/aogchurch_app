@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FreeCreator Studio · Live</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="stylesheet" href="/freecreator/app/studio.css">
+</head>
+<body>
+<header class="st-top">
+  <div class="st-brand"><b>FreeCreator</b><span>Studio</span></div>
+  <div class="st-status"><span class="st-pill" id="stLive">Preview</span><span class="st-pill dim" id="stRec" hidden>REC</span><span class="st-meta" id="stStats"></span></div>
+  <div class="st-top-r"><span class="st-net" id="stNet" title="Upload speed">Net: not tested</span><button class="st-btn" id="stTest">Test internet</button></div>
+</header>
+<main class="st-main">
+  <section class="st-program">
+    <div class="st-monitor"><canvas id="stCanvas" width="1920" height="1080"></canvas><span class="st-tag">PROGRAM</span></div>
+    <div class="st-scenes" id="stScenes" role="radiogroup" aria-label="Scenes"></div>
+    <div class="st-quick">
+      <button class="st-btn big" id="stL3Toggle">Show lower third <kbd>L</kbd></button>
+      <button class="st-btn big" id="stWordsToggle">Song words: on <kbd>W</kbd></button>
+      <button class="st-btn big" id="stLogoToggle">Logo: off <kbd>G</kbd></button>
+      <button class="st-btn big danger" id="stFade">Fade to black <kbd>B</kbd></button>
+    </div>
+  </section>
+  <aside class="st-panel">
+    <nav class="st-tabs" role="tablist">
+      <button data-tab="sources" aria-selected="true">Inputs</button><button data-tab="l3">Lower thirds</button><button data-tab="sound">Sound</button><button data-tab="stream">Stream</button><button data-tab="ai">AI</button>
+    </nav>
+
+    <div class="st-pane" data-pane="sources">
+      <p class="st-hint">Cameras, HDMI capture cards and an ATEM Mini over USB all appear here as video inputs.</p>
+      <label class="st-field"><span>Main camera (A)</span><select id="srcA"></select></label>
+      <label class="st-field"><span>Second camera (B, picture-in-picture)</span><select id="srcB"></select></label>
+      <label class="st-field"><span>Microphone / audio input</span><select id="srcMic"></select></label>
+      <div class="st-meter"><i id="micMeter"></i></div>
+      <div class="st-row"><button class="st-btn" id="srcScreen">Share a screen or window</button><button class="st-btn" id="srcRefresh">Refresh devices</button></div>
+      <label class="st-field"><span>Quality</span><select id="quality"><option value="720p30">720p · 30 fps (weaker internet)</option><option value="1080p30" selected>1080p · 30 fps</option><option value="1080p60">1080p · 60 fps (strong internet)</option></select></label>
+      <div class="st-note"><b>ATEM switchers</b>: plug the ATEM Mini's USB-C into this computer and pick “Blackmagic” as camera A. Switch cameras on the ATEM itself (or ATEM Software Control). Full ATEM control from FreeCreator is in the desktop app.</div>
+    </div>
+
+    <div class="st-pane" data-pane="l3" hidden>
+      <div class="st-l3-list" id="l3List"></div>
+      <button class="st-btn" id="l3Add">+ Add lower third</button>
+      <label class="st-field"><span>Style</span><select id="l3Style"><option value="bar">Modern bar</option><option value="glass">Glass</option><option value="block">Bold block</option><option value="line">Minimal line</option><option value="pill">Pill</option></select></label>
+      <label class="st-field"><span>Accent colour</span><input type="color" id="l3Color" value="#d6a650"></label>
+      <label class="st-field"><span>Hide automatically after</span><select id="l3Auto"><option value="0">Don't hide</option><option value="6">6 seconds</option><option value="10" selected>10 seconds</option><option value="20">20 seconds</option></select></label>
+      <p class="st-hint">Click a lower third to put it on, press <kbd>L</kbd> to show or hide.</p>
+    </div>
+
+    <div class="st-pane" data-pane="sound" hidden>
+      <label class="st-field"><span>Microphone level</span><input type="range" id="micVol" min="0" max="200" value="100"></label>
+      <div class="st-row"><button class="st-btn" id="musicAdd">Add music or pads</button></div>
+      <div class="st-music" id="musicList"><p class="st-hint">Add MP3 or WAV files from this computer. They play into the stream and fade in and out smoothly.</p></div>
+      <label class="st-field"><span>Music level</span><input type="range" id="musicVol" min="0" max="100" value="45"></label>
+      <label class="st-check"><input type="checkbox" id="monitor"> Hear the mix on this computer (use headphones)</label>
+    </div>
+
+    <div class="st-pane" data-pane="stream" hidden>
+      <label class="st-field"><span>Stream URL (WHIP)</span><input id="whipUrl" placeholder="https://customer-….cloudflarestream.com/…/webRTC/publish" autocomplete="off"></label>
+      <label class="st-field"><span>Stream key / token <small>(only if your service needs one)</small></span><input id="whipToken" type="password" autocomplete="off"></label>
+      <div class="st-row"><button class="st-btn go" id="goLive">Go live</button><button class="st-btn" id="recBtn">Record</button></div>
+      <p class="st-hint">Cloudflare Stream: Stream → Live inputs → create one → copy the WebRTC (WHIP) URL. To reach YouTube and Facebook too, add them under that live input's “Outputs” and Cloudflare sends your stream to all of them at once.</p>
+      <p class="st-hint">Recordings download to this computer when you stop.</p>
+    </div>
+
+    <div class="st-pane" data-pane="ai" hidden>
+      <p class="st-hint">Free AI help for signed-in members, powered by the church's open-source AI.</p>
+      <label class="st-field"><span>What's today's service about?</span><input id="aiTopic" placeholder="e.g. Youth service · Walking by faith · Pastor Thabo"></label>
+      <div class="st-row wrap"><button class="st-btn" id="aiL3">Write lower thirds</button><button class="st-btn" id="aiTitle">Write stream title &amp; description</button><button class="st-btn" id="aiBg">Paint a background</button></div>
+      <div class="st-ai-out" id="aiOut"></div>
+    </div>
+  </aside>
+</main>
+<script type="module" src="/freecreator/app/studio.js"></script>
+</body>
+</html>
