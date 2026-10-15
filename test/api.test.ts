@@ -1328,3 +1328,23 @@ describe("word art", () => {
     const r = await call("/api/word/art"); assert.equal(r.status, 200);
   });
 });
+
+describe("poster maker", () => {
+  test("dates: only today and later, this year by default, next year only when asked; members only", async () => {
+    const { posterDates } = await import("../src/routes/poster.ts");
+    const thu = posterDates(4, "2026-10-15");   // a Thursday
+    assert.equal(thu[0], "2026-10-15", "today counts when it's that service's day");
+    assert.ok(thu.every((d) => d >= "2026-10-15" && d <= "2026-12-31"));
+    assert.ok(thu.every((d) => new Date(d + "T12:00:00Z").getUTCDay() === 4));
+    assert.equal(posterDates(1, "2026-10-15")[0], "2026-10-19", "Monday: the next one, never a past date");
+    const both = posterDates(5, "2026-10-15", "2027-12-31");
+    assert.ok(both.some((d) => d.startsWith("2027-")) && both.at(-1)! <= "2027-12-31");
+    assert.equal((await call("/api/poster/options")).status, 401);
+    const g = await makeEnv({ GOOGLE_CLIENT_ID: CLIENT_ID });
+    const stranger = cookieOf(await post("/api/auth/google", { credential: await googleToken({ sub: "g-pm", email: "notamember@gmail.com", name: "Visitor" }) }, {}, g));
+    assert.equal((await call("/api/poster/options", { headers: { cookie: stranger } }, g)).status, 403, "members only");
+    const adm = await superCookie(g);
+    const r = await (await call("/api/poster/options", { headers: { cookie: adm } }, g)).json() as { services: { day: number; dates: string[] }[] };
+    assert.ok(r.services.length && r.services.every((s) => s.day >= 1 && s.day <= 5), "weekday services only");
+  });
+});

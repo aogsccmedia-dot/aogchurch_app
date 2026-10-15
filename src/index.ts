@@ -13,6 +13,7 @@ import { publicRoutes } from "./routes/public.ts";
 import { adminRoutes } from "./routes/admin.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { faithRoutes } from "./routes/faith.ts";
+import { posterRoutes } from "./routes/poster.ts";
 import { ticketRoutes } from "./routes/tickets.ts";
 import { programmeRoutes } from "./routes/programme.ts";
 import { insightsRoutes } from "./routes/insights.ts";
@@ -62,6 +63,7 @@ export default {
       publicRoutes(router, env);
       adminRoutes(router, env);
       faithRoutes(router, env);
+      posterRoutes(router, env);
       ticketRoutes(router, env);
       programmeRoutes(router, env);
       insightsRoutes(router, env);

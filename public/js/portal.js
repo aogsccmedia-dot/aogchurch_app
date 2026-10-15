@@ -20,6 +20,7 @@ export function moreTabs(me) {
   return [
     ["/messages", "messageCircle", "Messages"],
     ["/go", "globe", "Go Ye (evangelism)"],
+    ["/poster", "palette", "Poster maker"],
     ["/discipleship", "bookOpen", "Discipleship classes"],
     ["/vote", "vote", "Vote"],
     ["/store", "landmark", "Store"],
