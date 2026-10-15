@@ -29,7 +29,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preconnect" href="https://accounts.google.com">
   <link rel="stylesheet" href="/css/base.css?v=eae68f236b">
-  <link rel="stylesheet" href="/css/pages.css?v=2f5adcb1b6">
+  <link rel="stylesheet" href="/css/pages.css?v=9b909dd768">
   <script src="/js/switch-boot.js?v=4afbe33104"></script>
   <script type="speculationrules">{"prerender": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/admin/*"}}, {"not": {"href_matches": "/api/*"}}]}, "eagerness": "moderate"}]}</script>
 </head>
@@ -81,7 +81,7 @@
         </div>
       </section>
       <section class="pm-steps">
-        <ol class="pm-dots" aria-label="Steps"><li data-dot="1" class="on">Service</li><li data-dot="2">Details</li><li data-dot="3">Photo</li><li data-dot="4">Look</li></ol>
+        <ol class="pm-dots" aria-label="Steps"><li data-dot="1" class="on">Service</li><li data-dot="2">Details</li><li data-dot="3">Speakers</li><li data-dot="4">Look</li></ol>
 
         <div class="pm-step" data-step="1">
           <h2><span>1</span> Which service, and when?</h2>
@@ -94,7 +94,6 @@
         <div class="pm-step" data-step="2" hidden>
           <h2><span>2</span> The details</h2>
           <label class="field"><span>Topic or theme</span><input class="input" id="pm-topic" maxlength="80" placeholder="e.g. Walking by faith"></label>
-          <label class="field"><span>Speaker <small>optional</small></span><input class="input" id="pm-speaker" maxlength="60" placeholder="e.g. Pastor Thabo"></label>
           <label class="field"><span>Word of the day <small>optional</small></span><input class="input" id="pm-word" maxlength="120" placeholder="e.g. Hebrews 11:1"></label>
           <label class="field"><span>A short line <small>optional</small></span><input class="input" id="pm-tagline" maxlength="90" placeholder="e.g. Come as you are. Everyone welcome."></label>
           <button type="button" class="btn pm-ai" id="pm-ai"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg> Suggest a headline &amp; colours</button>
@@ -102,14 +101,11 @@
         </div>
 
         <div class="pm-step" data-step="3" hidden>
-          <h2><span>3</span> A photo <small>optional</small></h2>
-          <p class="muted-text">Add the speaker's photo or a photo from church. It's used exactly as it is: never changed by AI, only placed and cropped.</p>
-          <label class="btn pm-file"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg> <span id="pm-file-label">Choose a photo</span><input type="file" id="pm-photo" accept="image/jpeg,image/png,image/webp" hidden></label>
-          <div class="pm-photo-opts" id="pm-photo-opts" hidden>
-            <div class="pm-seg" role="radiogroup" aria-label="Photo shape"><button type="button" data-shape="circle" aria-pressed="true">Circle</button><button type="button" data-shape="card" aria-pressed="false">Card</button><button type="button" data-shape="full" aria-pressed="false">Full background</button></div>
-            <label class="field"><span>Move the photo up or down</span><input type="range" id="pm-focus" min="0" max="100" value="35"></label>
-            <button type="button" class="btn btn-ghost btn-sm" id="pm-photo-x">Remove photo</button>
-          </div>
+          <h2><span>3</span> Speakers <small>optional</small></h2>
+          <p class="muted-text">Up to three. Type a name or pick one from the church list, and add their photo if you like. Photos are used exactly as they are: never changed by AI, only placed and cropped, and they stay on your phone.</p>
+          <div class="pm-speakers" id="pm-speakers"></div>
+          <button type="button" class="btn btn-ghost btn-sm" id="pm-add-sp"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Add another speaker</button>
+          <datalist id="pm-people"></datalist>
           <p class="muted-text pm-hint">Only use photos you have permission to share.</p>
         </div>
 
@@ -163,6 +159,6 @@
   <link rel="modulepreload" href="/js/otp.js">
   <script type="module" src="/js/site.js?v=46e05eedb0"></script>
   <script type="module" src="/js/auth.js?v=14f4156eec"></script>
-  <script type="module" src="/js/poster.js?v=32900a819d"></script>
+  <script type="module" src="/js/poster.js?v=7634eee95d"></script>
 </body>
 </html>

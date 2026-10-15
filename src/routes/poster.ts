@@ -9,6 +9,7 @@ import { HttpError, Router, clientIp, json, readJson, trustedWrite } from "../li
 import { getSession } from "../lib/auth.ts";
 import { rateLimit } from "../lib/ratelimit.ts";
 import { DAYS, groupLabel, nextOccurrence, saToday } from "../lib/groups.ts";
+import { churchNames } from "../lib/names.ts";
 
 const ADDRESS = "17 Humber Street, Woodmead, Sandton";
 const SCENES: Record<string, string> = {
@@ -62,6 +63,9 @@ export function posterRoutes(router: Router, env: Env): void {
       })),
     }, 200, { "Cache-Control": "no-store" });
   });
+
+  // Speaker names to pick from (church members and the team, names only).
+  router.get("/api/poster/people", async (req) => { await posterUser(env, req); return json({ ok: true, people: await churchNames(env) }, 200, { "Cache-Control": "private, max-age=300" }); });
 
   // AI help with the words and colours (never the photo).
   router.post("/api/poster/suggest", async (req) => {

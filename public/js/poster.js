@@ -5,8 +5,9 @@ import { icon } from "./icons.js";
 import { PALETTES, THEMES, drawPoster } from "./poster-art.js";
 
 const $ = (id) => document.getElementById(id);
-const S = { step: 1, size: "post", theme: "glow", palette: PALETTES[0], svc: null, date: "", photo: null, photoUrl: null, shape: "circle", focus: 35, scene: "light", bgV: 0, headline: "", blob: null };
+const S = { step: 1, size: "post", theme: "arch", palette: PALETTES[0], svc: null, date: "", speakers: [{ name: "", img: null, url: null, focus: 30 }], scene: "light", bgV: 0, headline: "", blob: null };
 let OPT = null, drawing = 0, timer = 0;
+const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 const long = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 const wd = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("en-ZA", { weekday: "long", timeZone: "UTC" });
 const short = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("en-ZA", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).replace(",", "");
@@ -31,7 +32,8 @@ async function render() {
     size: S.size, theme: S.theme, palette: S.palette, service: s.title, eyebrow: s.title,
     headline: $("pm-topic").value.trim() ? (S.headline && S.headlineFor === $("pm-topic").value.trim() ? S.headline : $("pm-topic").value.trim()) : s.title,
     tagline: $("pm-tagline").value.trim(), weekday: S.date ? wd(S.date) : s.day_label, dateLine: S.date ? long(S.date) : "", time: s.time,
-    speaker: $("pm-speaker").value.trim(), word: $("pm-word").value.trim(), address: OPT.address, photo: S.photo, shape: S.shape, focus: S.focus, bg,
+    wdShort: (S.date ? wd(S.date) : s.day_label).slice(0, 3).toUpperCase(), dayNum: S.date ? String(Number(S.date.slice(8))) : "", monShort: S.date ? MON[Number(S.date.slice(5, 7)) - 1] : "",
+    word: $("pm-word").value.trim(), address: OPT.address, speakers: S.speakers.map((x) => ({ name: x.name.trim(), img: x.img, focus: x.focus })), bg,
   });
   if (n !== drawing || !blob) return;
   S.blob = blob;
@@ -58,8 +60,19 @@ function drawDates() {
 function fillPlanned() {
   const p = planned(); if (!p) return;
   if (!$("pm-topic").value && p.topic) $("pm-topic").value = p.topic;
-  if (!$("pm-speaker").value && p.speaker) $("pm-speaker").value = p.speaker;
+  if (!S.speakers[0].name && p.speaker) { S.speakers[0].name = p.speaker; drawSpeakers(); }
   if (!$("pm-word").value && p.scripture) $("pm-word").value = p.scripture.split(/[·(—-]/)[0].trim().slice(0, 60);
+}
+function drawSpeakers() {
+  $("pm-speakers").innerHTML = S.speakers.map((sp, i) => `<div class="pm-sp" data-i="${i}">
+    <span class="pm-sp-face">${sp.url ? `<img src="${sp.url}" alt="">` : icon("user")}</span>
+    <div class="pm-sp-main">
+      <input class="input" list="pm-people" data-sp-name="${i}" maxlength="60" placeholder="Speaker ${i + 1}: type or pick a name" value="${esc(sp.name)}" autocomplete="off">
+      <div class="pm-sp-row"><label class="btn btn-sm">${icon("upload")} ${sp.img ? "Change photo" : "Add photo"}<input type="file" data-sp-photo="${i}" accept="image/jpeg,image/png,image/webp" hidden></label>
+        ${sp.img ? `<label class="pm-sp-focus"><span>Move up / down</span><input type="range" min="0" max="100" value="${sp.focus}" data-sp-focus="${i}"></label><button type="button" class="link-btn" data-sp-nophoto="${i}">Remove photo</button>` : ""}
+        ${S.speakers.length > 1 ? `<button type="button" class="link-btn" data-sp-x="${i}">Remove</button>` : ""}</div>
+    </div></div>`).join("");
+  $("pm-add-sp").hidden = S.speakers.length >= 3;
 }
 function drawLook() {
   $("pm-themes").innerHTML = THEMES.map(([k, l]) => `<button type="button" class="pm-theme t-${k}" data-theme="${k}" aria-pressed="${k === S.theme}"><i></i><span>${l}</span></button>`).join("")
@@ -90,10 +103,17 @@ async function start() {
   // Default: the next service from today.
   const soonest = OPT.services.filter((s) => s.dates.length).sort((a, b) => a.dates[0].localeCompare(b.dates[0]))[0];
   S.svc = soonest?.id || OPT.services[0]?.id || null;
-  drawServices(); drawDates(); fillPlanned(); render();
+  drawServices(); drawDates(); drawSpeakers(); fillPlanned(); render();
+  api("/api/poster/people").then((r) => { $("pm-people").innerHTML = r.people.map((n) => `<option value="${esc(n)}">`).join(""); }).catch(() => {});
 }
 
 document.addEventListener("click", async (e) => {
+  const sx = e.target.closest("[data-sp-x],[data-sp-nophoto]");
+  if (sx) {
+    if (sx.dataset.spX !== undefined) S.speakers.splice(Number(sx.dataset.spX), 1);
+    else { const sp = S.speakers[Number(sx.dataset.spNophoto)]; if (sp.url) URL.revokeObjectURL(sp.url); sp.img = null; sp.url = null; }
+    drawSpeakers(); redraw(); return;
+  }
   const b = e.target.closest("[data-svc],[data-size],[data-theme],[data-pal],[data-shape],[data-repaint]");
   if (!b) return;
   if (b.dataset.svc) { S.svc = b.dataset.svc; drawServices(); drawDates(); }
@@ -106,24 +126,29 @@ document.addEventListener("click", async (e) => {
 });
 $("pm-date").addEventListener("change", () => { S.date = $("pm-date").value; drawDates(); redraw(); });
 $("pm-next-year").addEventListener("change", () => { drawDates(); redraw(); });
-["pm-topic", "pm-speaker", "pm-word", "pm-tagline"].forEach((id) => $(id).addEventListener("input", redraw));
+["pm-topic", "pm-word", "pm-tagline"].forEach((id) => $(id).addEventListener("input", redraw));
 $("pm-next").addEventListener("click", () => go(S.step + 1));
 $("pm-back").addEventListener("click", () => go(S.step - 1));
 document.querySelectorAll("[data-dot]").forEach((d) => d.addEventListener("click", () => go(Number(d.dataset.dot))));
-$("pm-focus").addEventListener("input", () => { S.focus = Number($("pm-focus").value); redraw(); });
-$("pm-photo").addEventListener("change", async () => {
-  const f = $("pm-photo").files[0]; if (!f) return;
-  if (S.photoUrl) URL.revokeObjectURL(S.photoUrl);
-  S.photoUrl = URL.createObjectURL(f); S.photo = await loadImg(S.photoUrl);   // stays on this phone: never uploaded, never changed
-  $("pm-photo-opts").hidden = !S.photo; $("pm-file-label").textContent = S.photo ? "Change photo" : "Choose a photo";
-  redraw();
+$("pm-add-sp").addEventListener("click", () => { if (S.speakers.length < 3) { S.speakers.push({ name: "", img: null, url: null, focus: 30 }); drawSpeakers(); $("pm-speakers").querySelector(`[data-sp-name="${S.speakers.length - 1}"]`)?.focus(); } });
+$("pm-speakers").addEventListener("input", (e) => {
+  const n = e.target.dataset.spName, f = e.target.dataset.spFocus;
+  if (n !== undefined) { S.speakers[Number(n)].name = e.target.value; redraw(); }
+  if (f !== undefined) { S.speakers[Number(f)].focus = Number(e.target.value); redraw(); }
 });
-$("pm-photo-x").addEventListener("click", () => { S.photo = null; $("pm-photo").value = ""; $("pm-photo-opts").hidden = true; $("pm-file-label").textContent = "Choose a photo"; redraw(); });
+$("pm-speakers").addEventListener("change", async (e) => {
+  const i = e.target.dataset.spPhoto; if (i === undefined) return;
+  const file = e.target.files[0]; if (!file) return;
+  const sp = S.speakers[Number(i)];
+  if (sp.url) URL.revokeObjectURL(sp.url);
+  sp.url = URL.createObjectURL(file); sp.img = await loadImg(sp.url);   // stays on this phone: never uploaded, never changed
+  drawSpeakers(); redraw();
+});
 $("pm-ai").addEventListener("click", async (e) => {
   const btn = e.currentTarget, s = svc();
   btn.disabled = true; const label = btn.innerHTML; btn.innerHTML = `${icon("sparkles")} Thinking…`;
   try {
-    const r = await api("/api/poster/suggest", { method: "POST", body: { service: s?.title, topic: $("pm-topic").value, scripture: $("pm-word").value, speaker: $("pm-speaker").value } });
+    const r = await api("/api/poster/suggest", { method: "POST", body: { service: s?.title, topic: $("pm-topic").value, scripture: $("pm-word").value } });
     if (r.headline) { S.headline = r.headline; S.headlineFor = $("pm-topic").value.trim(); }
     if (r.tagline && !$("pm-tagline").value) $("pm-tagline").value = r.tagline;
     if (r.palette) { S.aiPalette = r.palette; S.palette = r.palette; }
