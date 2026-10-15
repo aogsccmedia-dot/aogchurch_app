@@ -101,6 +101,7 @@ export function initInsights(ctx) {
     const missed = Math.max(0, e.sold - e.came);
     $("#ii-came").innerHTML = `<div class="split"><i class="a" style="flex:${e.came || 0.0001}"></i><i class="b" style="flex:${missed || 0.0001}"></i></div>
       <div class="legend"><span><i class="a"></i>Came · ${num(e.came)}</span><span><i class="b"></i>${e.ended ? "Didn't come" : "Not yet"} · ${num(missed)}</span></div>
+      ${ii.who && e.came ? whoCame(ii.who) : ""}
       ${ii.doors.length ? `<p class="muted small" style="margin-top:12px">Scanned by ${ii.doors.map(([w, c]) => `${esc(w)} (${c})`).join(", ")}</p>` : ""}`;
     $("#ii-money").innerHTML = `<dl class="kv tight"><dt>Tickets (approved)</dt><dd>${R(e.ticket_income)}</dd><dt>Other income</dt><dd>${R(e.extra_income)}${e.extra_income_note ? ` · ${esc(e.extra_income_note)}` : ""}</dd><dt><b>Total</b></dt><dd><b>${R(e.income)}</b></dd>${e.pending_value ? `<dt>Awaiting approval</dt><dd>${R(e.pending_value)}</dd>` : ""}</dl>`;
     const f = $("#ii-income"); f.extra_income.value = e.extra_income || ""; f.extra_income_note.value = e.extra_income_note || "";
@@ -108,12 +109,20 @@ export function initInsights(ctx) {
     $("#ii-signups").innerHTML = vbars(ii.signups.slice(-21), (d) => day(d).replace(/^\w+ /, ""));
     drawPeople();
   }
+  // Verified members vs everyone else among the people who came (guests they brought counted on their own).
+  function whoCame(w) {
+    const parts = [["member", "Verified members", "a"], ["not_member", "Not members yet", "c"], ["visitor", "Visitors", "d"], ["guests", "Their guests", "b"]].filter(([k]) => w[k]);
+    const total = parts.reduce((n, [k]) => n + w[k], 0) || 1;
+    return `<h4 class="mini-h">Members or not</h4><div class="split kinds">${parts.map(([k, , c]) => `<i class="${c}" style="flex:${w[k]}"></i>`).join("")}</div>
+      <div class="legend">${parts.map(([k, l, c]) => `<span><i class="${c}"></i>${l} · ${num(w[k])} <small>(${Math.round((w[k] / total) * 100)}%)</small></span>`).join("")}</div>`;
+  }
   function drawPeople() {
     $$("#ii-filter button").forEach((b) => b.classList.toggle("on", b.dataset.f === iiFilter));
     const rows = ii.registrations.filter((r) => !iiFilter || (iiFilter === "came" ? r.came > 0 : iiFilter === "missed" ? r.status === "confirmed" && !r.came : r.status === "pending"));
     const ST = { confirmed: ["Confirmed", "member"], pending: ["Awaiting approval", "pending"], waitlist: ["Waitlist", "new"], rejected: ["Declined", ""], cancelled: ["Cancelled", ""] };
+    const KIND = { member: ["Verified member", "member"], not_member: ["Not a member yet", "new"], visitor: ["Visitor", ""] };
     $("#ii-people").innerHTML = `<thead><tr><th>Person</th><th>Status</th><th>Came</th><th>Paid</th></tr></thead><tbody>${rows.length ? rows.map((r) => `<tr>
-      <td><b style="font-weight:450">${esc(r.name)}</b>${r.guests ? ` <span class="sub">+${r.guests}</span>` : ""}<div class="sub nowrap">${esc(r.ref_code)}</div></td>
+      <td><b style="font-weight:450">${esc(r.name)}</b>${r.guests ? ` <span class="sub">+${r.guests}</span>` : ""}<div class="sub nowrap">${esc(r.ref_code)}</div>${r.kind ? `<span class="pill tiny ${KIND[r.kind]?.[1] || ""}">${KIND[r.kind]?.[0] || ""}</span>` : ""}</td>
       <td><span class="pill ${ST[r.status]?.[1] || ""}">${ST[r.status]?.[0] || esc(r.status)}</span></td>
       <td>${r.status === "confirmed" ? `${r.came}/${r.tickets || 1 + r.guests}${r.first_in ? ` <span class="sub">· ${new Date(r.first_in).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Johannesburg" })}</span>` : ""}` : `<span class="sub">—</span>`}</td>
       <td>${r.amount_due ? R(r.amount_due) : `<span class="sub">Free</span>`}</td></tr>`).join("") : `<tr><td colspan="4" class="sub" style="text-align:center;padding:24px">Nobody here.</td></tr>`}</tbody>`;

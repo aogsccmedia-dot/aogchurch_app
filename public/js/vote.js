@@ -15,35 +15,63 @@ const picked = {};
 const face = (p, cls = "") => `<span class="vface ${cls}">${faceInner(p)}</span>`;
 const when = (iso) => new Intl.DateTimeFormat("en-ZA", { weekday: "short", day: "numeric", month: "long", timeZone: TZ }).format(new Date(iso));
 const left = (iso) => { const ms = Date.parse(iso) - Date.now(); if (ms <= 0) return "closing"; const h = Math.floor(ms / 3600000); return h >= 48 ? `${Math.floor(h / 24)} days left` : h >= 1 ? `${h} h left` : `${Math.max(1, Math.round(ms / 60000))} min left`; };
+// "How voting works": real screens of the vote page (example names), so everyone is ready when a vote opens.
+const STEPS = [
+  ["When a vote opens", "You'll get an email. Open Vote from your menu: you'll see the roles to fill, the rounds and how long is left."],
+  ["Tap the person you choose", "Search for a name or tap a face, then press “Cast my vote”. One vote per role, and nobody can see who you chose."],
+  ["Your vote is in", "You'll see a thank-you and the live count. You can't change it once cast, so pray first."],
+  ["The results", "When voting closes, the people appointed and the final count appear here for everyone."],
+];
+function guideHtml(open) {
+  return `<details class="vote-guide"${open ? " open" : ""}><summary>${icon("vote")} How voting works</summary>
+    <ol class="vg-steps">${STEPS.map(([t, d], i) => `<li><figure><img src="/img/vote-guide/step-${i + 1}.webp" alt="${esc(t)}: example screen" loading="lazy" decoding="async"></figure><div><b><span>${i + 1}</span>${esc(t)}</b><p>${esc(d)}</p></div></li>`).join("")}</ol>
+    <p class="fine">Example screens with made-up names.</p></details>`;
+}
 const STATE = { open: "Voting now", upcoming: "Coming up", between: "Between rounds", complete: "Finished", cancelled: "Cancelled" };
 
+// Pictures for the guide: the real screens, filled with example data (never real ballots).
+const DEMO = params.get("demo");
+async function startDemo() {
+  const { demo } = await import("./vote-demo.js");
+  data = demo(DEMO);
+  root.innerHTML = `<div id="vote-poll"></div>`;
+  load = async () => {};   // no live refresh in the example
+  renderPoll(true);
+  if (DEMO === "pick") { picked.chair = "d1"; drawGrid("chair", ""); document.querySelector('.pick-person[data-id="d1"]')?.click(); }
+}
+
 async function start() {
+  if (DEMO) return startDemo();
   const me = await getMe();
   renderTabs(document.getElementById("portal-tabs"), me, "/vote");
   if (!me.user) {
-    root.innerHTML = `<section class="vote-card center"><h2>Sign in to vote</h2><p class="muted-text">Voting is for confirmed members of AOG Sandton City Church.</p><div class="gbtn" id="v-g"></div><a class="btn" href="/me">Sign in</a></section>`;
+    root.innerHTML = `<section class="vote-card center"><h2>Sign in to vote</h2><p class="muted-text">Voting is for confirmed members of AOG Sandton City Church.</p><div class="gbtn" id="v-g"></div><a class="btn" href="/me">Sign in</a></section>${guideHtml(true)}`;
     googleButton(document.getElementById("v-g"), { text: "signin_with", width: 300 });
     return;
   }
   let list;
   try { list = await api("/api/votes"); }
-  catch (e) { root.innerHTML = `<section class="vote-card center"><h2>Voting is for members</h2><p class="muted-text">${esc(e.message)}</p><a class="btn btn-gold" href="/join">Join the church</a></section>`; return; }
-  if (list.member === false) { root.innerHTML = `<section class="vote-card center"><h2>Voting is for members</h2><p class="muted-text">Once a leader confirms your membership, you can vote here.</p><a class="btn btn-gold" href="/join">Membership</a></section>`; return; }
+  catch (e) { root.innerHTML = `<section class="vote-card center"><h2>Voting is for members</h2><p class="muted-text">${esc(e.message)}</p><a class="btn btn-gold" href="/join">Join the church</a></section>${guideHtml(true)}`; return; }
+  if (list.member === false) { root.innerHTML = `<section class="vote-card center"><h2>Voting is for members</h2><p class="muted-text">Once a leader confirms your membership, you can vote here.</p><a class="btn btn-gold" href="/join">Membership</a></section>${guideHtml(true)}`; return; }
   const live = list.polls.filter((p) => p.state !== "cancelled");
   if (!live.length) {
     root.innerHTML = `<section class="vote-card center vote-none">${icon("vote")}<h2>No votes planned yet${list.year === 2026 ? " in 2026" : ""}</h2>
-      <p class="muted-text">When the church sets up a vote, you'll see the roles to fill and the voting days here, and we'll email you a reminder to pray every two weeks before it starts.</p></section>`;
+      <p class="muted-text">When the church sets up a vote, you'll see the roles to fill and the voting days here, and we'll email you a reminder to pray every two weeks before it starts.</p></section>${guideHtml(true)}`;
     return;
   }
   current = live.some((p) => p.id === current) ? current : live[0].id;
-  root.innerHTML = `${live.length > 1 ? `<nav class="vote-tabs">${live.map((p) => `<button data-p="${esc(p.id)}" class="${p.id === current ? "on" : ""}"><b>${esc(p.title)}</b><span>${p.state === "open" ? (p.voted ? "Voted ✓" : "Voting now") : p.state === "upcoming" ? `Starts ${when(p.opens_at)}` : STATE[p.state]}</span></button>`).join("")}</nav>` : ""}<div id="vote-poll"></div>`;
+  root.innerHTML = `${live.length > 1 ? `<nav class="vote-tabs">${live.map((p) => `<button data-p="${esc(p.id)}" class="${p.id === current ? "on" : ""}"><b>${esc(p.title)}</b><span>${p.state === "open" ? (p.voted ? "Voted ✓" : "Voting now") : p.state === "upcoming" ? `Starts ${when(p.opens_at)}` : STATE[p.state]}</span></button>`).join("")}</nav>` : ""}<div id="vote-poll"></div>${guideHtml(false)}`;
   root.querySelector(".vote-tabs")?.addEventListener("click", (e) => { const b = e.target.closest("[data-p]"); if (!b) return; current = b.dataset.p; root.querySelectorAll(".vote-tabs button").forEach((x) => x.classList.toggle("on", x === b)); history.replaceState(null, "", `?p=${current}`); load(true); });
   load(true);
 }
 
-async function load(full) {
+let load = async function (full) {
   clearTimeout(timer);
   try { data = await api(`/api/votes/${encodeURIComponent(current)}`); } catch (e) { document.getElementById("vote-poll").innerHTML = `<p class="muted-text">${esc(e.message)}</p>`; return; }
+  renderPoll(full);
+  if (data.poll.state === "open" && !document.hidden) timer = setTimeout(() => load(false), 5000);
+};
+function renderPoll(full) {
   const p = data.poll, box = document.getElementById("vote-poll");
   if (full || !box.querySelector(".vote-role")) {
     const status = p.state === "open" ? `${icon("clock")} Round ${p.round}${p.rounds > 1 ? ` of ${p.rounds}` : ""} · ${left(p.next.closes_at)}`
@@ -60,7 +88,6 @@ async function load(full) {
     data.roles.forEach((r) => { if (p.state === "open" && !r.my_vote) drawGrid(r.id, ""); });
   }
   data.roles.forEach((r) => drawRace(r));
-  if (p.state === "open" && !document.hidden) timer = setTimeout(() => load(false), 5000);
 }
 
 function roleHtml(r, p) {
@@ -136,5 +163,5 @@ function drawRace(r) {
 }
 
 document.addEventListener("visibilitychange", () => { if (!document.hidden && data?.poll.state === "open") load(false); });
-whenSignedIn(() => start());
+if (!DEMO) whenSignedIn(() => start());
 start();

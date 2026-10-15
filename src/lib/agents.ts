@@ -11,7 +11,7 @@ import type { Env } from "../env.ts";
 import { siteUrl } from "../env.ts";
 import { calendarUrl, outlookUrl, TZ } from "./time.ts";
 
-export const PROMPT_VERSION = "ask-scc-2026-10-15-rag";
+export const PROMPT_VERSION = "ask-scc-2026-10-15-kind-lean";
 const ADDRESS = "17 Humber Street, Woodmead, Sandton";
 const MAPS = "https://maps.google.com/?q=17+Humber+Street+Woodmead+Sandton";
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -45,7 +45,6 @@ const RULES: [AgentId, RegExp][] = [
   ["whatson", /\b((this|next) (week|weekend|month)|what'?s (on|happening)|happening (at church|this|next)|today at church|tonight at church|in (january|february|march|april|may|june|july|august|september|october|november|december))\b/],
   ["about", /\b(welcome pack|history|our story|who are (you|we)|azusa|bhengu|back to god|assemblies of god|what is aog|aog is not|founder|founded)\b/],
   ["store", /\b(store|shop|books|bookshop|bookstore|buy (a |the )?book|purchase)\b/],
-  ["calendar", /\b(calendar|calender|remind|subscribe|sync|ical|ics|outlook|google cal|add (it|this|them|that) to)\b/],
   ["tickets", /\b(my (ticket|tickets|booking|bookings|registration|registrations|ref)|(do|did) i (have|get|register|book)( a| my| any)? ?(ticket|tickets|booking|place|seat)?|have i got (a |my |any )?(ticket|tickets)|am i (registered|booked)|qr)\b/],
   ["votes", /\b(vote|votes|voting|poll|nominat|award)\b/],
   ["prayer", /\b(pray|prayer|praying|intercede)\b/],
@@ -113,10 +112,10 @@ const concierge: Run = async (env, _t, who) => {
   const evs = await upcomingEvents(env, 2);
   const hi = who?.name ? `Hi ${who.name.split(" ")[0]}!` : "Hi!";
   const next = evs[0] ? ` Next up is ${evs[0].title} on ${fmtDate(evs[0].starts_at)}.` : "";
-  return { agent: "concierge", text: `${hi} I'm the SCC concierge. Ask me about events, service times, the church programme, your tickets, prayer or voting, and I'll pass you to the right helper.${next}`,
+  return { agent: "concierge", text: `${hi} Ask me anything about church, faith or life.${next}`,
     facts: facts([`Upcoming: ${evs.map((e) => `${e.title} (${fmtDate(e.starts_at)})`).join("; ") || "none listed"}`]),
     cards: evs.map((e) => eventCard(env, e)), actions: [],
-    suggestions: ["What's happening this week?", "What's on this month?", "When is the youth service?", "Add church dates to my calendar"] };
+    suggestions: ["What's happening this week?", "When is the youth service?"] };
 };
 
 const events: Run = async (env, t) => {
@@ -128,10 +127,10 @@ const events: Run = async (env, t) => {
   evs = evs.slice(0, 4);
   if (!evs.length) return { agent: "events", text: "There are no events open right now. New ones appear on your Home first.", facts: "No upcoming events.", cards: [], actions: [{ label: "Coming up", href: "/me#upcoming" }], suggestions: ["When is the youth service?", "Show the church programme"] };
   const list = evs.map((e) => `${e.title}: ${fmtDate(e.starts_at)}${e.location ? `, ${e.location}` : ""}${e.price_label ? `, ${e.price_label}` : ""}${e.registration_open ? ", tickets open" : ""}`);
-  return { agent: "events", text: evs.length === 1 ? `${evs[0].title} is on ${fmtDate(evs[0].starts_at)}. Tap Get Ticket, or add it to your calendar.` : `Here's what's coming up. Tap one to get your ticket, or add it to your calendar.`,
+  return { agent: "events", text: evs.length === 1 ? `${evs[0].title} is on ${fmtDate(evs[0].starts_at)}. Tap Get Ticket to join in.` : `Here's what's coming up. Tap one to get your ticket.`,
     facts: facts(list), cards: evs.map((e) => eventCard(env, e)),
     actions: [{ label: "Get Ticket", href: `/event?e=${encodeURIComponent(evs[0].slug)}`, primary: true }, { label: "Everything coming up", href: "/me#upcoming" }],
-    suggestions: ["Add these to my calendar", "Do I have a ticket?", "Where is it?"] };
+    suggestions: ["Do I have a ticket?", "Where is it?"] };
 };
 
 const servicesAgent: Run = async (env, t) => {
@@ -143,8 +142,8 @@ const servicesAgent: Run = async (env, t) => {
   const text = d != null && !pick.length && !youth.length ? `There's no service on ${DAYS[d]}. Here's the week:` : show.length === 1 ? `${svcLine(show[0])}, at ${ADDRESS}. Everyone is welcome.` : `Our weekly services at ${ADDRESS}:`;
   return { agent: "services", text, facts: facts([...show.map(svcLine), `Address: ${ADDRESS}`]),
     cards: [{ kind: "info", title: "Weekly services", lines: show.map(svcLine) }],
-    actions: [{ label: "Directions", href: MAPS }, { label: "Add services to my calendar", href: "#calendar", primary: true }],
-    suggestions: ["Add church dates to my calendar", "What's coming up?", "Where do I park?"] };
+    actions: [{ label: "Directions", href: MAPS, primary: true }],
+    suggestions: ["What's coming up?", "Where do I park?"] };
 };
 
 const programme: Run = async (env, _t, who) => {
@@ -155,8 +154,8 @@ const programme: Run = async (env, _t, who) => {
   const d = (x: string) => new Intl.DateTimeFormat("en-ZA", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(x + "T12:00:00Z"));
   const lines = results.map((r) => `${d(r.start_date)}${r.end_date && r.end_date !== r.start_date ? `–${d(r.end_date)}` : ""}: ${r.title}${r.time_label ? `, ${r.time_label}` : ""}${r.venue ? ` (${r.venue})` : ""}`);
   return { agent: "programme", text: lines.length ? "Next on the church programme:" : "Nothing else is on the programme yet.", facts: facts(lines),
-    cards: lines.length ? [{ kind: "info", title: "Church programme", lines }] : [], actions: [{ label: "Add to my calendar", href: "#calendar", primary: true }],
-    suggestions: ["What's coming up?", "Add church dates to my calendar"] };
+    cards: lines.length ? [{ kind: "info", title: "Church programme", lines }] : [], actions: [],
+    suggestions: ["What's coming up?"] };
 };
 
 const calendar: Run = async (env) => {
@@ -190,7 +189,7 @@ const tickets: Run = async (env, _t, who) => {
     facts: facts(results.map((r) => `${r.title}, ${fmtDate(r.starts_at)}: ${label(r.status)}, ref ${r.ref_code}`)),
     cards: results.map((r) => eventCard(env, r)),
     actions: results.filter((r) => r.ticket_code).slice(0, 2).map((r, i): Action => ({ label: results.length > 1 ? `Show ticket: ${r.title}` : "Show my ticket", href: `/ticket?c=${encodeURIComponent(r.ticket_code!)}`, primary: i === 0 })).concat([{ label: "My profile", href: "/me" } as Action]),
-    suggestions: ["Add it to my calendar", "Where is it?"], personal: true };
+    suggestions: ["Where is it?"], personal: true };
 };
 
 const visit: Run = async (env) => {
@@ -274,7 +273,7 @@ const whatson: Run = async (env, t) => {
   if (progLines.length) cards.push({ kind: "info", title: "On the church programme", lines: progLines });
   if (weekly.length) cards.push({ kind: "info", title: "Weekly services", lines: weekly.map(svcLine) });
   return { agent: "whatson", text, facts: facts([`Period: ${label} (${from} to ${to})`, ...lines]), cards,
-    actions: [{ label: "Add church dates to my calendar", href: "#calendar", primary: true }, { label: "Everything coming up", href: "/me#upcoming" }],
+    actions: [{ label: "Everything coming up", href: "/me#upcoming", primary: true }],
     suggestions: label === "this week" ? ["What's on this month?", "When is the youth service?"] : ["What's happening this week?", "Do I have a ticket?"] };
 };
 

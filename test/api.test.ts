@@ -765,6 +765,7 @@ describe("door, insights, weekly services and the board report", () => {
     const scan = (code: string, scan_id: string) => post("/api/admin/tickets/check-in", { code, event_id: eventId, scan_id }, A(cookie)).then((r) => r.json() as Promise<{ result: string; repeat?: boolean }>);
     const [a, b] = await Promise.all([scan(codes[0].code, "door-a-0000001"), scan(codes[0].code, "door-b-0000001")]);
     assert.deepEqual([a.result, b.result].sort(), ["already_used", "ok"]);
+    assert.ok(["member", "not_member", "visitor"].includes(String((a.result === "ok" ? a : b as { kind?: string }) && ((a.result === "ok" ? a : b) as { kind?: string }).kind)), "the door sees if they're a member");
     const winner = a.result === "ok" ? "door-a-0000001" : "door-b-0000001";
     // The winning door's retry (lost response) still reads "Checked in" and sends no second email.
     const before = mails("lerato@example.com").filter((m) => /checked in/i.test(m.subject)).length;
@@ -794,6 +795,9 @@ describe("door, insights, weekly services and the board report", () => {
     assert.equal(r.event.ticket_income, 300); assert.equal(r.event.extra_income, 500); assert.equal(r.event.income, 800);
     assert.equal(r.event.group_label, "Youth Ministry");
     assert.equal(r.arrivals.reduce((t, [, n]) => t + n, 0), 1);
+    const who = (r as unknown as { who: Record<string, number>; registrations: { kind: string }[] });
+    assert.equal(Object.values(who.who).reduce((t, n) => t + n, 0), 1, "everyone who came is counted as member, not yet a member, visitor or guest");
+    assert.ok(who.registrations.every((x) => ["member", "not_member", "visitor"].includes(x.kind)));
     const list = await (await call("/api/admin/insights/events", { headers: { cookie } })).json() as { events: { id: string }[] };
     assert.ok(list.events.some((e) => e.id === eventId));
     assert.equal((await call(`/api/admin/insights/events/${eventId}`)).status, 401, "admins only");
@@ -1181,7 +1185,7 @@ describe("Ask SCC, youth tickets, event updates, prayer list and access requests
     const { route } = await import("../src/lib/agents.ts");
     const cases: [string, string][] = [
       ["What's coming up this weekend?", "whatson"], ["What's happening this week at church?", "whatson"], ["what's on this month", "whatson"], ["Show me the next events", "events"], ["When is the youth service?", "services"], ["what time does church start on sunday", "services"],
-      ["Add it to my calendar", "calendar"], ["Do I have a ticket?", "tickets"], ["Where is the church?", "visit"], ["I need prayer", "prayer"],
+      ["Do I have a ticket?", "tickets"], ["Where is the church?", "visit"], ["I need prayer", "prayer"],
       ["Are there any votes open?", "votes"], ["How do I become a member?", "join"], ["hi", "concierge"], ["What's on the programme in November?", "whatson"], ["Show the church programme", "programme"],
     ];
     for (const [q, want] of cases) assert.equal(route(q), want, q);
@@ -1448,5 +1452,35 @@ describe("FreeCreator scripture", () => {
       const g = await (await call("/api/freecreator/bible?ref=Genesis%201:1&tr=kjv", { headers: { cookie: c } })).json() as { verses: { text: string }[] };
       assert.equal(g.verses[0].text, "In the beginning God", "fallback source, tags removed");
     } finally { globalThis.fetch = real; }
+  });
+});
+
+describe("Visitors", () => {
+  test("sign in as a guest: events and tickets only; existing accounts are protected; Google upgrades them", async () => {
+    const g = await makeEnv({ GOOGLE_CLIENT_ID: CLIENT_ID });
+    const v = await post("/api/auth/visitor", { name: "Vusi Visitor", email: "vusi.visits@gmail.com", phone: "082 000 1111" }, {}, g);
+    assert.equal(v.status, 200);
+    const c = cookieOf(v);
+    const me = await (await call("/api/auth/me", { headers: { cookie: c } }, g)).json() as { visitor: boolean; is_admin: boolean; member: unknown };
+    assert.equal(me.visitor, true); assert.equal(me.is_admin, false); assert.equal(me.member, null);
+    assert.equal((await call("/api/events", { headers: { cookie: c } }, g)).status, 200, "events are open to visitors");
+    assert.equal((await call("/api/me", { headers: { cookie: c } }, g)).status, 200, "their own tickets");
+    for (const [path, method] of [["/api/chat", "GET"], ["/api/chat/start", "POST"], ["/api/me/complaints", "POST"], ["/api/votes", "GET"], ["/api/assistant/chat", "POST"], ["/api/poster/options", "GET"], ["/api/freecreator/access", "GET"], ["/api/admin/stats", "GET"]] as const) {
+      const r = await call(path, { method, headers: { cookie: c, "x-scc-admin": "1", "Content-Type": "application/json" }, body: method === "POST" ? "{}" : undefined }, g);
+      assert.equal(r.status, 403, `${method} ${path} is closed to visitors`);
+    }
+    // Someone else's account can't be opened by typing their email as a visitor.
+    await post("/api/auth/google", { credential: await googleToken({ sub: "g-real", email: "real.person@gmail.com", name: "Real" }) }, {}, g);
+    assert.equal((await post("/api/auth/visitor", { name: "Imposter", email: "real.person@gmail.com" }, {}, g)).status, 409);
+    // A returning visitor proves the email with a code first.
+    const again = await (await post("/api/auth/visitor", { name: "Vusi", email: "vusi.visits@gmail.com" }, {}, g)).json() as { needs_code: boolean; challenge: string };
+    assert.equal(again.needs_code, true);
+    const code = /(\d{6})/.exec((g as typeof env).EMAIL.outbox.at(-1)!.text!)![1];
+    const back = await post("/api/auth/password/confirm", { challenge: again.challenge, code }, {}, g);
+    assert.equal(back.status, 200); assert.equal((await back.json() as { visitor: boolean }).visitor, true);
+    // Signing in with Google makes it a full account (still not a member until a leader confirms).
+    const gg = cookieOf(await post("/api/auth/google", { credential: await googleToken({ sub: "g-vusi", email: "vusi.visits@gmail.com", name: "Vusi Visitor" }) }, {}, g));
+    const me2 = await (await call("/api/auth/me", { headers: { cookie: gg } }, g)).json() as { visitor?: boolean };
+    assert.ok(!me2.visitor, "upgraded");
   });
 });

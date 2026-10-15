@@ -45,7 +45,20 @@ export function mountSignIn(host, { google, onDone, mode = "login", note = "" } 
       </form>
       <div class="si-or"><span>OR</span></div>
       <div class="si-social"><span>Sign in with</span><div class="si-g" data-g></div></div>
-      <p class="si-swap">Don't have an account? <button type="button" class="si-link" data-to="signup">Sign up</button></p>`,
+      <p class="si-swap">Don't have an account? <button type="button" class="si-link" data-to="signup">Sign up</button></p>
+      <button type="button" class="si-visit" data-to="visitor">${icon("user")}<span><b>Just visiting?</b> Continue as a visitor</span></button>`,
+    visitor: () => `
+      <p class="si-kicker">Visitor</p><h2 class="si-h">Welcome, friend!</h2>
+      <p class="si-note">See what's on and get tickets for events. No password needed.</p>
+      <form class="si-form" data-form="visitor" novalidate>
+        ${field({ name: "name", label: "Your name", ico: icon("user"), auto: "name", extra: `maxlength="80"` })}
+        ${field({ name: "email", type: "email", label: "Email (for your tickets)", ico: icon("mail"), auto: "email", extra: `inputmode="email" value="${esc(state.email)}"` })}
+        <label class="si-field"><span class="si-lab">Phone (optional)</span><span class="si-line"><input name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="20" placeholder=" ">${icon("smartphone")}</span></label>
+        <p class="si-err" role="alert" hidden></p>
+        ${go("Continue")}
+      </form>
+      <p class="si-hint si-visit-note">Visitors can see events and get tickets. To message leaders, vote and use everything else, sign up and join the church family.</p>
+      <p class="si-swap"><button type="button" class="si-link" data-to="login">← Back to sign in</button></p>`,
     signup: () => `
       <p class="si-kicker">Sign up</p><h2 class="si-h">Join the family!</h2>
       <form class="si-form" data-form="signup" novalidate>
@@ -69,7 +82,7 @@ export function mountSignIn(host, { google, onDone, mode = "login", note = "" } 
       </form>
       <p class="si-swap"><button type="button" class="si-link" data-to="login">← Back to sign in</button></p>`,
     code: () => `
-      <p class="si-kicker">${state.purpose === "reset" ? "New password" : "Confirm your email"}</p><h2 class="si-h">Check your email</h2>
+      <p class="si-kicker">${state.purpose === "reset" ? "New password" : state.purpose === "visitor" ? "Welcome back" : "Confirm your email"}</p><h2 class="si-h">Check your email</h2>
       <p class="si-note">We sent a 6-digit code to <b>${esc(state.sentTo)}</b>. Not there? Look in Spam or Promotions.</p>
       <form class="si-form" data-form="code" novalidate>
         <input class="input" name="code" aria-label="6-digit code">
@@ -106,7 +119,7 @@ export function mountSignIn(host, { google, onDone, mode = "login", note = "" } 
     const resend = e.target.closest("[data-resend]");
     if (resend) {
       resend.disabled = true; resend.textContent = "Sending…";
-      const again = state.purpose === "reset" ? post("/api/auth/password/forgot", { email: state.email }) : post("/api/auth/password/signup", state.signup);
+      const again = state.purpose === "reset" ? post("/api/auth/password/forgot", { email: state.email }) : state.purpose === "visitor" ? post("/api/auth/visitor", state.visitor) : post("/api/auth/password/signup", state.signup);
       again.then((r) => { state.challenge = r.challenge; resend.textContent = "Sent ✓"; setTimeout(() => { resend.disabled = false; resend.textContent = "Send a new code"; }, 30000); })
         .catch((err) => { resend.disabled = false; resend.textContent = "Send a new code"; say(err.message); });
     }
@@ -124,7 +137,7 @@ export function mountSignIn(host, { google, onDone, mode = "login", note = "" } 
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.email)) { say("Please enter a valid email address."); f.email.focus(); return; }
       state.email = v.email;
     }
-    if (kind === "signup" && String(v.name || "").trim().length < 2) { say("Please add your name."); f.name.focus(); return; }
+    if ((kind === "signup" || kind === "visitor") && String(v.name || "").trim().length < 2) { say("Please add your name."); f.name.focus(); return; }
     if ((kind === "signup" || (kind === "code" && state.purpose === "reset")) && String(v.password || "").length < 8) { say("Use at least 8 characters for your password."); f.password.focus(); return; }
     if (kind === "login" && !v.password) { say("Enter your password."); f.password.focus(); return; }
     if (kind === "code" && String(v.code || "").replace(/\D/g, "").length !== 6) { say("Enter the 6-digit code from your email."); return; }
@@ -135,6 +148,12 @@ export function mountSignIn(host, { google, onDone, mode = "login", note = "" } 
         state.signup = { name: v.name, email: v.email, password: v.password };
         const r = await post("/api/auth/password/signup", state.signup);
         if (r.needs_code) { Object.assign(state, { challenge: r.challenge, sentTo: r.sent_to, purpose: "signup" }); show("code"); return; }
+        await onDone?.(r); return;
+      }
+      if (kind === "visitor") {
+        state.visitor = { name: v.name, email: v.email, phone: v.phone };
+        const r = await post("/api/auth/visitor", state.visitor);
+        if (r.needs_code) { Object.assign(state, { challenge: r.challenge, sentTo: r.sent_to, purpose: "visitor" }); show("code"); return; }
         await onDone?.(r); return;
       }
       if (kind === "forgot") {

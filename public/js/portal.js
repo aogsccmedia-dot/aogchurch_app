@@ -5,10 +5,12 @@ import { icon } from "./icons.js";
 import { faceInner } from "./faces.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-export const roleName = (me) => me?.admin_role === "super" ? "Main admin" : me?.admin_role === "youth" ? "Youth leader" : me?.admin_role ? "Admin" : null;
+export const roleName = (me) => me?.visitor ? "Visitor" : me?.admin_role === "super" ? "Main admin" : me?.admin_role === "youth" ? "Youth leader" : me?.admin_role ? "Admin" : null;
 
 // The bottom bar: four big buttons that always fit, on any screen. Everything else sits under "More".
 export function mainTabs(me) {
+  // Visitors: just Home (their tickets), what's on, and the daily verse.
+  if (me?.visitor) return [["/me", "home", "Home"], ["/me#upcoming", "calendar", "Events"], ["/devotions", "bookOpen", "Devotions"]];
   return [
     me.admin_account ? ["/admin/", "layoutDashboard", "Admin"] : ["/me", "home", "Home"],
     ["/assistant", "sparkles", "Ask SCC"],
@@ -37,6 +39,7 @@ export function badgeHtml(me, size = 18) {
 }
 
 export function moreTabs(me) {
+  if (me?.visitor) return [["/join", "userCheck", "Join the church family"], ["/help", "shield", "Help"]];
   const role = roleName(me);
   return [
     ["/messages", "messageCircle", "Messages"],
@@ -90,7 +93,7 @@ export function cacheMe(me) {
     if (!me?.user) { localStorage.removeItem(KEY); localStorage.removeItem("scc-hello"); return; }
     const u = me.user;
     localStorage.setItem(KEY, JSON.stringify({ user: { id: u.id, email: u.email, given_name: u.given_name, name: u.name, picture: u.picture }, admin_role: me.admin_role || null,
-      admin_account: !!me.admin_account, is_admin: !!me.is_admin, member: !!me.member, member_verified: me.member_verified ?? me.member?.status === "member", admin_perms: me.admin_perms || null }));
+      admin_account: !!me.admin_account, is_admin: !!me.is_admin, member: !!me.member, member_verified: me.member_verified ?? me.member?.status === "member", admin_perms: me.admin_perms || null, visitor: !!me.visitor }));
   } catch { /* storage blocked */ }
 }
 export function cachedMe() { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } }

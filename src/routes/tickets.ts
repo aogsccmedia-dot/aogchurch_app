@@ -1,3 +1,4 @@
+import { kindOfRegistration } from "../lib/person-kind.ts";
 /**
  * Tickets: public view (/ticket?c=CODE → /api/tickets/:code), QR + PDF downloads,
  * and the admin door check-in (scan once; copies show as "already used").
@@ -126,7 +127,9 @@ export function ticketRoutes(router: Router, env: Env): void {
     const mail = T.checkedIn({ site: siteUrl(env) }, { name: t.holder_name.split(" ")[0], title: t.title, seq: t.seq, quantity: t.quantity, holder: t.seq > 1 ? `guest ${t.seq - 1}` : t.holder_name, time, ref: t.ref_code });
     const send = sendMail(env, { to: t.holder_email, toName: t.holder_name, ...mail, template: "ticket_checked_in" });
     if (ctx?.waitUntil) ctx.waitUntil(send); else await send;   // respond to the door instantly
-    return json({ ok: true, result: "ok", ticket: adminView({ ...t, checked_in_at: now }) });
+    // The door sees straight away whether this is a verified member, not a member yet, a visitor or someone's guest.
+    const kind = t.seq > 1 ? "guest" : await kindOfRegistration(env, t.registration_id);
+    return json({ ok: true, result: "ok", kind, ticket: adminView({ ...t, checked_in_at: now }) });
   });
   router.post("/api/admin/tickets/undo", async (req) => {
     // Re-opening a used ticket is rare and sensitive: only the main admin can do it.

@@ -58,7 +58,7 @@ export async function finishSignIn(result) {
     };
     if (me.admin_account && !midTask) { await welcomeThenGo("/admin/"); return; }
     if (!onMe && !midTask) {
-      if (me.member || me.is_admin) { await welcomeThenGo("/me"); return; }
+      if (me.member || me.is_admin || me.visitor) { await welcomeThenGo("/me"); return; }
       const label = "Setting up your sign-up…"; veilShow(label); veilCarry(label);   // new people go to the join form
       location.href = "/join";
       return;

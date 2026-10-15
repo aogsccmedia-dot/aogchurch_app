@@ -1085,3 +1085,9 @@ body[data-view="event-edit"] .app-bottom, body[data-view="letter-edit"] .app-bot
   .rep-table.rt-stack.rt-nums td, .rep-table.rt-stack.rt-nums th { font-variant-numeric: tabular-nums; }
   .rep-table.rt-stack tfoot tr { background: #fbf7f0; border-radius: 10px; padding: 10px; margin-top: 6px; }
 }
+/* Who came: verified members vs not */
+.split.kinds { margin-top: 6px; }
+.split .c, .legend .c { background: #d6a650; }
+.split .d, .legend .d { background: #8a7fc9; }
+.legend small { color: var(--muted); }
+.pill.tiny { display: inline-block; margin-top: 4px; font-size: 10.5px; padding: 1px 7px; }

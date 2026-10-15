@@ -26,6 +26,7 @@ export function authRoutes(router: Router, env: Env): void {
     const member = await env.DB.prepare("SELECT ref_code, status, first_name, preferred_name, created_at FROM members WHERE (user_id = ? OR email = ?) AND status != 'revoked' ORDER BY created_at DESC LIMIT 1")
       .bind(s.user.id, s.user.email).first();
     const sub = await env.DB.prepare("SELECT status FROM subscribers WHERE email = ?").bind(s.user.email).first<{ status: string }>();
+    if (s.visitor) return json({ ok: true, user: s.user, visitor: true, is_admin: false, admin_role: null, admin_perms: null, can_admin: false, admin_account: false, member: null, subscribed: false, google_client_id: env.GOOGLE_CLIENT_ID || null });
     return json({ ok: true, user: s.user, is_admin: s.kind === "admin", admin_role: s.role ?? null, admin_perms: s.role && s.role !== "super" ? s.perms : null, can_admin: await canAdmin(env, s.user), admin_account: isAdminEmail(env, s.user.email),
       member, subscribed: sub?.status === "active", google_client_id: env.GOOGLE_CLIENT_ID || null });
   });
@@ -43,6 +44,8 @@ export function authRoutes(router: Router, env: Env): void {
       await env.DB.prepare("INSERT INTO audit_log (user_id, action) VALUES (?, 'admin_login')").bind(user.id).run();
       return json({ ok: true, user, admin: true }, 200, { "Set-Cookie": await createSession(env, req, user.id, "admin") });
     }
+    // A visitor who now signs in with Google has a full account from here on (still not a member until a leader confirms).
+    await env.DB.prepare("UPDATE users SET visitor = 0 WHERE id = ? AND visitor = 1").bind(user.id).run();
     // Link any earlier join-form record made with the same email.
     await env.DB.prepare("UPDATE members SET user_id = ? WHERE user_id IS NULL AND email = ?").bind(user.id, user.email).run();
     const member = await env.DB.prepare("SELECT ref_code FROM members WHERE user_id = ?").bind(user.id).first();
@@ -108,6 +111,26 @@ export function authRoutes(router: Router, env: Env): void {
     return signIn(req, id, email, { created: true });
   });
 
+  // ---------------- visitors: sign in as a guest with name and email (phone optional). Never verified as a member.
+  // A brand-new email goes straight in. An email the church already knows (an account, a booking or records) gets a
+  // 6-digit code first, so nobody can open someone else's tickets by typing their email.
+  router.post("/api/auth/visitor", async (req, _p, ctx) => {
+    await rateLimit(env, "visitor", clientIp(req), 10, 3600);
+    const b = await readJson<{ name?: string; email?: string; phone?: string }>(req);
+    const name = String(b.name || "").trim().replace(/\s+/g, " ").slice(0, 80), email = normEmail(b.email);
+    const phone = String(b.phone || "").replace(/[^\d+ ]/g, "").trim().slice(0, 20) || null;
+    if (name.length < 2) throw new HttpError(422, "Please add your name.");
+    if (!EMAIL_RE.test(email)) throw new HttpError(422, "Please enter a valid email address.");
+    const existing = await env.DB.prepare("SELECT id, visitor FROM users WHERE lower(email) = ?").bind(email).first<{ id: string; visitor: number }>();
+    if (existing && !existing.visitor) throw new HttpError(409, "You already have an account with this email. Please sign in instead.");
+    if (isAdminEmail(env, email)) throw new HttpError(409, "Please sign in instead.");
+    if (existing || await knownEmail(email)) return json({ ok: true, needs_code: true, ...(await sendCode(email, existing?.id ?? null, "visitor", { name, given: name.split(" ")[0], phone }, ctx)) });
+    const id = uuid();
+    await env.DB.prepare("INSERT INTO users (id, email, name, given_name, phone, visitor, last_login_at) VALUES (?,?,?,?,?,1,?)").bind(id, email, name, name.split(" ")[0], phone, new Date().toISOString()).run();
+    const user = { id, email, name, given_name: name.split(" ")[0], family_name: null, picture: null };
+    return json({ ok: true, user, visitor: true, created: true }, 200, { "Set-Cookie": await createSession(env, req, id, "user") });
+  });
+
   router.post("/api/auth/password/forgot", async (req, _p, ctx) => {
     await rateLimit(env, "pw-forgot", clientIp(req), 6, 900);
     const email = normEmail((await readJson<{ email?: string }>(req)).email);
@@ -129,14 +152,21 @@ export function authRoutes(router: Router, env: Env): void {
     const r = await consumeLoginCode(env, b.challenge, b.code);
     const email = r.email.toLowerCase();
     let u = await env.DB.prepare("SELECT id FROM users WHERE lower(email) = ?").bind(email).first<{ id: string }>();
-    const p = row.payload ? JSON.parse(row.payload) as { name: string; given: string; hash: string } : null;
+    const p = row.payload ? JSON.parse(row.payload) as { name: string; given: string; hash?: string; phone?: string | null } : null;
     const hash = row.purpose === "reset" ? await hashPassword(String(b.password)) : p?.hash ?? null;
+    if (row.purpose === "visitor") {
+      // A returning visitor (or someone whose email has bookings) proved the email: in as a guest, still not verified as a member.
+      if (!u) { const id = uuid(); await env.DB.prepare("INSERT INTO users (id, email, name, given_name, phone, visitor, last_login_at) VALUES (?,?,?,?,?,1,?)").bind(id, email, p?.name ?? null, p?.given ?? null, p?.phone ?? null, new Date().toISOString()).run(); u = { id }; }
+      else await env.DB.prepare("UPDATE users SET phone = COALESCE(?, phone), last_login_at = ? WHERE id = ? AND visitor = 1").bind(p?.phone ?? null, new Date().toISOString(), u.id).run();
+      const user = await env.DB.prepare("SELECT id, email, name, given_name, family_name, picture FROM users WHERE id = ?").bind(u.id).first();
+      return json({ ok: true, user, visitor: true }, 200, { "Set-Cookie": await createSession(env, req, u.id, "user") });
+    }
     if (!u) {
       const id = uuid();
       await env.DB.prepare("INSERT INTO users (id, email, name, given_name, password_hash, email_verified_at) VALUES (?,?,?,?,?,?)").bind(id, email, p?.name ?? null, p?.given ?? null, hash, new Date().toISOString()).run();
       u = { id };
     } else {
-      await env.DB.prepare("UPDATE users SET password_hash = COALESCE(?, password_hash), email_verified_at = COALESCE(email_verified_at, ?) WHERE id = ?").bind(hash, new Date().toISOString(), u.id).run();
+      await env.DB.prepare("UPDATE users SET password_hash = COALESCE(?, password_hash), email_verified_at = COALESCE(email_verified_at, ?), visitor = 0 WHERE id = ?").bind(hash, new Date().toISOString(), u.id).run();
     }
     return signIn(req, u.id, email);
   });

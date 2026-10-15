@@ -1,3 +1,4 @@
+import { guardVisitor } from "./lib/visitors.ts";
 import { prepareWordArt } from "./lib/word-art.ts";
 /**
  * AOG Sandton City Church — Cloudflare Worker entry.
@@ -59,6 +60,7 @@ export default {
     }
 
     try {
+      await guardVisitor(env, req, url.pathname);
       const router = new Router();
       authRoutes(router, env);
       publicRoutes(router, env);

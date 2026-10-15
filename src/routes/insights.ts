@@ -1,3 +1,4 @@
+import { KIND_SQL } from "../lib/person-kind.ts";
 /**
  * Insights for leaders: per-event dashboards (tickets sold, who actually came, money), the weekly services
  * manager (topics, posters, offering, attendance and growth), and the church board report.
@@ -293,7 +294,8 @@ export function insightsRoutes(router: Router, env: Env): void {
       `SELECT r.id, r.ref_code, r.name, r.email, r.phone, r.guests, r.status, r.amount_due, r.created_at, r.reviewed_at,
          (SELECT COUNT(*) FROM tickets t WHERE t.registration_id = r.id AND t.status = 'valid') AS tickets,
          (SELECT COUNT(*) FROM tickets t WHERE t.registration_id = r.id AND t.status = 'valid' AND t.checked_in_at IS NOT NULL) AS came,
-         (SELECT MIN(t.checked_in_at) FROM tickets t WHERE t.registration_id = r.id AND t.checked_in_at IS NOT NULL) AS first_in
+         (SELECT MIN(t.checked_in_at) FROM tickets t WHERE t.registration_id = r.id AND t.checked_in_at IS NOT NULL) AS first_in,
+         ${KIND_SQL("r")} AS kind
        FROM event_registrations r WHERE r.event_id = ? ORDER BY r.created_at`).bind(id).all();
     const { results: scans } = await env.DB.prepare(
       `SELECT t.checked_in_at, t.checked_in_by FROM tickets t JOIN event_registrations r ON r.id = t.registration_id
@@ -305,7 +307,10 @@ export function insightsRoutes(router: Router, env: Env): void {
     // Bookings per day (SAST).
     const signups: Record<string, number> = {};
     for (const r of regs as { created_at: string; status: string }[]) if (r.status === "confirmed" || r.status === "pending") { const d = new Date(new Date(r.created_at).getTime() + 2 * 3600_000).toISOString().slice(0, 10); signups[d] = (signups[d] || 0) + 1; }
-    return json({ ok: true, event: summary, registrations: regs, arrivals: Object.entries(arrivals).sort(), doors: Object.entries(doors).sort((a, b) => b[1] - a[1]), signups: Object.entries(signups).sort() });
+    // Who came: verified members, people with an account who aren't members yet, visitors, and the guests they brought.
+    const who = { member: 0, not_member: 0, visitor: 0, guests: 0 };
+    for (const r of regs as { came: number; kind: keyof typeof who }[]) if (r.came > 0) { who[r.kind] = (who[r.kind] || 0) + 1; who.guests += r.came - 1; }
+    return json({ ok: true, event: summary, registrations: regs, who, arrivals: Object.entries(arrivals).sort(), doors: Object.entries(doors).sort((a, b) => b[1] - a[1]), signups: Object.entries(signups).sort() });
   }));
 
   router.patch("/api/admin/events/:id/income", guard(async (req, { id }, s) => {

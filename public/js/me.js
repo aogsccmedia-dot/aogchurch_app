@@ -48,8 +48,13 @@ function paint(me, d, fromCache) {
   $("me-greet").textContent = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   $("me-name").innerHTML = `${esc(firstName)}${badgeHtml({ ...me, member: d.member }, 24)}`;
   const role = roleName(me);
+  $("me-view").classList.toggle("visitor", !!me.visitor);
+  if (me.visitor) {
+    $("me-status").textContent = "Visitor";
+    $("me-member").innerHTML = `<div class="visitor-card"><span>${icon("user")}</span><div><b>You're visiting, welcome!</b><p>You can see what's on and get tickets. Want to message leaders, vote and be part of everything? Join the church family.</p></div><a class="btn btn-sm btn-gold" href="/join">Join</a></div>`;
+  } else
   $("me-status").textContent = [d.member?.status === "member" ? `Member · ${d.member.ref_code}` : d.member ? "Membership being confirmed" : "Not a member yet", role].filter(Boolean).join(" · ");
-  $("me-member").innerHTML = memberCard(d.member);
+  if (!me.visitor) $("me-member").innerHTML = memberCard(d.member);
   // People with a role simply see their extra tools here (no separate admin area to switch to).
   const tools = toolsFor(me), tb = $("me-tools");
   if (tb) {
@@ -78,7 +83,7 @@ function paint(me, d, fromCache) {
   pill.hidden = !upcoming.length;
   $("me-tix-n").textContent = upcoming.length || "";
   if (!upcoming.length) { $("me-tix").hidden = true; pill.setAttribute("aria-expanded", "false"); }
-  if (!fromCache) fetch("/api/chat", { cache: "no-store" }).then((r) => r.json()).then((c) => { const b = $("me-msg-n"); b.hidden = !c.unread; b.textContent = c.unread || ""; }).catch(() => {});
+  if (!fromCache && !me.visitor) fetch("/api/chat", { cache: "no-store" }).then((r) => r.json()).then((c) => { const b = $("me-msg-n"); b.hidden = !c.unread; b.textContent = c.unread || ""; }).catch(() => {});
   loadUpcoming(fromCache); loadKnow(fromCache);
   if (!fromCache) wordThumb();
 }

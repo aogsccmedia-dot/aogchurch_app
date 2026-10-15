@@ -8,7 +8,7 @@ const USER_DAYS = 30;
 const ADMIN_HOURS = 12;
 
 export interface User { id: string; email: string; name: string | null; given_name: string | null; family_name: string | null; picture: string | null }
-export interface Session { user: User; kind: "user" | "admin"; role?: "super" | "staff" | "youth"; perms?: string[] }
+export interface Session { user: User; kind: "user" | "admin"; role?: "super" | "staff" | "youth"; perms?: string[]; visitor?: boolean }
 
 // ---------------------------------------------------------------- youth leaders: a limited admin role
 /** What a youth leader can be allowed to open. The main admin ticks these per person. */
@@ -162,11 +162,13 @@ export async function getSession(env: Env, req: Request): Promise<Session | null
   const hash = await sha256Hex(token);
   const now = Date.now();
   const row = await env.DB.prepare(
-    `SELECT s.kind, s.admin_until, u.id, u.email, u.name, u.given_name, u.family_name, u.picture FROM sessions s JOIN users u ON u.id = s.user_id
+    `SELECT s.kind, s.admin_until, u.id, u.email, u.name, u.given_name, u.family_name, u.picture, u.visitor FROM sessions s JOIN users u ON u.id = s.user_id
       WHERE s.token_hash = ? AND s.expires_at > ?`,
-  ).bind(hash, new Date(now).toISOString()).first<User & { kind: "user" | "admin"; admin_until: string | null }>();
+  ).bind(hash, new Date(now).toISOString()).first<User & { kind: "user" | "admin"; admin_until: string | null; visitor: number | null }>();
   if (!row) return null;
-  const { kind, admin_until, ...user } = row;
+  const { kind, admin_until, visitor, ...user } = row;
+  // Visitors (guest sign-in): never admins, never members; see lib/visitors.ts for what they can use.
+  if (visitor && !isAdminEmail(env, user.email)) return { user, kind: "user", visitor: true };
   // The main (super) admin account still needs the emailed code after Google: its powers only come with a
   // verified admin session, which lapses after 12 quiet hours and renews while in use.
   // The main admin account: its normal sign-in (Google, or email and password) opens the full admin portal.

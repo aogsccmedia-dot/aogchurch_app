@@ -879,7 +879,8 @@ async function onCode(raw) {
   flash(r.result, r.ticket);
   const [label, cls] = SCAN_MSG[r.result] || SCAN_MSG.not_found;
   if (r.result === "ok" && !r.repeat) { scanTotals.in++; drawCount(); }
-  setLast(cls, `${label} · ${r.ticket?.holder || ""}`);
+  const KIND = { member: "Verified member", not_member: "Not a member yet", visitor: "Visitor", guest: "Guest" };
+  setLast(cls, `${label} · ${r.ticket?.holder || ""}${r.kind ? ` · ${KIND[r.kind] || ""}` : ""}`);
 }
 function setLast(cls, text) {
   const time = new Date().toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
