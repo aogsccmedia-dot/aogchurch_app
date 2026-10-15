@@ -108,8 +108,16 @@ export function renderPortalNav(me) {
 }
 
 const inMore = (me) => moreTabs(me).some(([h]) => isOn(h)) || toolsFor(me).some(([h]) => isOn(h));
+const onAdmin = () => location.pathname.startsWith("/admin");
 function barHtml(me) {
   const more = inMore(me);
+  // In the admin portal the bar is the only navigation: Dashboard (or Home), all your Tools, Ask SCC and More.
+  if (onAdmin()) {
+    const tab = location.hash.slice(1).split(":")[0] || "overview";
+    const dash = me.admin_account ? `<a href="/admin/#overview"${tab === "overview" ? ' class="on" aria-current="page"' : ""}>${icon("gauge")}<span>Dashboard</span></a>` : link("/me", "home", "Home");
+    return dash + `<button type="button" class="${tab !== "overview" || !me.admin_account ? "on" : ""}" data-admin-tools aria-haspopup="dialog">${icon("grid")}<span>Tools</span></button>`
+      + link("/assistant", "sparkles", "Ask SCC") + `<button type="button" data-app-more aria-haspopup="dialog" aria-expanded="false">${icon("menu")}<span>More</span></button>`;
+  }
   return mainTabs(me).map(([h, i, l]) => link(h, i, l)).join("")
     + `<button type="button" class="${more ? "on" : ""}" data-app-more aria-haspopup="dialog" aria-expanded="false">${icon("menu")}<span>More</span></button>`;
 }
@@ -132,8 +140,8 @@ function openSheet() {
   el.className = "app-sheet"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "More");
   el.innerHTML = `<div class="sheet-card"><header class="sheet-me"><span class="avatar">${faceInner(u)}</span><div><b>${esc(u.name || u.email)}</b><span>${esc(role)}</span></div>
       <button type="button" class="sheet-x" data-sheet-close aria-label="Close">${icon("x")}</button></header>
-    ${toolsFor(me).length ? `<p class="sheet-group">Your tools</p><nav class="sheet-links tools">${toolsFor(me).map(([h, i, l]) => link(h, i, l)).join("")}<button type="button" class="sheet-ask" data-ask-access>${icon("plus")}<span>Ask for more access</span></button></nav><p class="sheet-group">More</p>` : ""}
-    <nav class="sheet-links">${moreTabs(me).map(([h, i, l]) => link(h, i, l)).join("")}</nav>
+    ${toolsFor(me).length && !onAdmin() ? `<p class="sheet-group">Your tools</p><nav class="sheet-links tools">${toolsFor(me).map(([h, i, l]) => link(h, i, l)).join("")}<button type="button" class="sheet-ask" data-ask-access>${icon("plus")}<span>Ask for more access</span></button></nav><p class="sheet-group">More</p>` : ""}
+    <nav class="sheet-links">${[...(onAdmin() ? [["/devotions", "bookOpen", "Devotions"]] : []), ...moreTabs(me)].map(([h, i, l]) => link(h, i, l)).join("")}</nav>
     <button type="button" class="btn sheet-out" data-app-signout>${icon("logOut")} Sign out</button></div>`;
   document.body.append(el);
   document.querySelector("[data-app-more]")?.setAttribute("aria-expanded", "true");

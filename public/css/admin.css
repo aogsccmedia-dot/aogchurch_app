@@ -891,3 +891,66 @@ body.admin { --ink-0: #1f1c34; --tint-panel: #f2effb; --tile: #ffffff; --tile-li
 @media (max-width: 860px) { .side { grid-template-rows: auto auto auto auto; } .ov-top { border-radius: 22px; padding: 14px; } .ov-actions { width: 100%; } .ov-black { flex: 1; justify-content: center; } .ov-search { max-width: none; } }
 .ov-card { grid-template-columns: minmax(0, 1fr); overflow: hidden; } .vb-col { min-width: 0; }
 .vb-col em.end { left: auto; right: 0; transform: none; } .vb-col em.start { left: 0; transform: none; } .vb { padding-top: 22px; }
+
+/* ==========================================================================
+   v4.1 — easier to move around: compact sidebar (recent tools as tiles, the rest as a tidy list) on computers;
+   on phones the bottom bar is the only navigation (Dashboard · Tools · Ask SCC · More), nothing on top.
+   ========================================================================== */
+.side { grid-template-rows: auto auto auto 1fr auto; }
+.side-recent .nav-group { margin: 6px 4px 8px; }
+.sr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tl { position: relative; display: grid; justify-items: center; align-content: center; gap: 7px; min-height: 84px; padding: 10px 6px; border-radius: 16px; border: 1px solid var(--tile-line); background: #fff;
+  font: inherit; font-size: 13px; color: var(--ink-0); cursor: pointer; text-align: center; line-height: 1.2; transition: background-color .12s, border-color .12s; }
+.tl:hover { background: #f7f6fb; border-color: rgba(31, 28, 52, .18); }
+.tl-ico { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--tint-panel); color: #4e3fa6; }
+.tl-ico svg { width: 20px; height: 20px; }
+.tl-b { position: absolute; top: 7px; right: 7px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #e0567a; color: #fff; font-style: normal; font-size: 11.5px; font-weight: 600; display: grid; place-items: center; }
+/* the full list: one line per tool */
+.side nav#nav { grid-template-columns: 1fr; gap: 1px; }
+.side nav#nav button:not(.nt-dash) { grid-auto-flow: column; grid-template-columns: auto 1fr auto; justify-items: start; min-height: 0; padding: 8px 10px; gap: 10px; border: 0; border-radius: 12px; background: none; font-size: 14px; text-align: left; }
+.side nav#nav button:not(.nt-dash) .nt-ico svg { width: 18px; height: 18px; color: var(--text-2); }
+.side nav#nav button:not(.nt-dash):hover { background: var(--hover); }
+.side nav#nav button:not(.nt-dash).active { background: var(--tint-panel); color: var(--ink-0); font-weight: 600; }
+.side nav#nav button:not(.nt-dash).active .nt-ico svg { color: #4e3fa6; }
+.side nav#nav button:not(.nt-dash) .badge { position: static; justify-self: end; }
+.side nav#nav button:not(.nt-dash) .admin-only-dot { position: static; }
+.side nav#nav button.nt-dash { min-height: 72px; margin-bottom: 4px; }
+.side nav#nav .nav-group { margin: 12px 10px 4px; }
+.side-promo { padding: 14px; } .side-promo .sp-art { width: 44px; height: 44px; } .side-promo b { font-size: 20px; }
+
+/* Phones: no top bar, no drawer. The bottom bar does it all. */
+@media (max-width: 860px) {
+  .m-top, .side, body.side-open::after { display: none !important; }
+  .shell { display: block; }
+  .main { padding: 14px 12px calc(110px + env(safe-area-inset-bottom)) !important; }
+  .ov-top { margin-top: 2px; }
+}
+
+/* The Tools sheet */
+.tools-sheet { position: fixed; inset: 0; z-index: 95; display: grid; align-items: end; justify-items: center; background: rgba(20, 18, 34, 0); transition: background-color .2s; padding: 10px 10px calc(10px + env(safe-area-inset-bottom)); }
+.tools-sheet.open { background: rgba(20, 18, 34, .4); }
+.ts-card { width: min(720px, 100%); max-height: min(86dvh, 820px); display: grid; grid-template-rows: auto auto auto 1fr; background: #fbfaff; border-radius: 26px; padding: 8px 16px 16px; box-shadow: 0 24px 70px rgba(20, 18, 34, .35);
+  transform: translateY(24px); opacity: 0; transition: transform .2s, opacity .2s; }
+.tools-sheet.open .ts-card { transform: none; opacity: 1; }
+.ts-grab { width: 44px; height: 5px; border-radius: 999px; background: rgba(31, 28, 52, .18); justify-self: center; margin: 4px 0 6px; }
+.ts-head { display: flex; justify-content: space-between; align-items: center; } .ts-head h2 { margin: 0; font-size: 24px; font-weight: 600; }
+.ts-x { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: #fff; display: grid; place-items: center; cursor: pointer; }
+.ts-x svg { width: 18px; height: 18px; }
+.ts-search { display: flex; gap: 10px; align-items: center; margin: 10px 0 6px; padding: 0 14px; height: 46px; border-radius: 14px; background: #fff; border: 1px solid var(--line); }
+.ts-search svg { width: 18px; height: 18px; color: var(--muted); } .ts-search input { flex: 1; border: 0; outline: 0; background: none; font: inherit; font-size: 16px; min-width: 0; }
+.ts-body { overflow-y: auto; overscroll-behavior: contain; padding: 4px 2px 6px; }
+.ts-sec { margin-top: 12px; } .ts-label { margin: 0 4px 8px; font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.ts-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.ts-grid .tl { min-height: 92px; font-size: 12.5px; }
+.ts-rec .tl.big { background: var(--ink-0); color: #fff; border-color: var(--ink-0); }
+.ts-rec .tl.big .tl-ico { background: rgba(255, 255, 255, .12); color: #f3c76e; }
+.ts-none { text-align: center; color: var(--muted); padding: 20px; }
+.ts-ask { width: 100%; margin-top: 14px; display: flex; gap: 10px; align-items: center; justify-content: center; padding: 14px; border-radius: 14px; border: 1px dashed #cfc5ef; background: #faf8ff; color: #4e3fa6; font: inherit; cursor: pointer; }
+.ts-ask svg { width: 18px; height: 18px; }
+@media (max-width: 420px) { .ts-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 861px) { .tools-sheet { align-items: center; } }
+.side nav#nav .side-recent { grid-column: 1 / -1; margin: 4px 0 6px; }
+@media (min-width: 861px) { body.admin .app-bottom { display: none !important; } body.admin.has-bottom { padding-bottom: 0 !important; } body.admin .main { padding-bottom: 36px; } }
+@media (max-width: 860px) { .vb { height: 150px; } .st-cols { min-height: 150px; } .ov-hello { order: -1; } .ov-top { display: flex; flex-direction: column; } }
+.side nav#nav .side-recent .tl { grid-auto-flow: row; grid-template-columns: none; justify-items: center; min-height: 84px; padding: 10px 6px; gap: 7px; border: 1px solid var(--tile-line); border-radius: 16px; background: #fff; text-align: center; font-size: 13px; font-weight: 400; }
+.side nav#nav .side-recent .tl:hover { background: #f7f6fb; }

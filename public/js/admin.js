@@ -167,7 +167,7 @@ async function boot() {
     $(".m-bar").innerHTML = quick.map(([t, ico, l]) => `<button data-go-tab="${t}" class="${t === "scan" ? "m-scan" : ""}">${icon(ico)}<span>${l}</span></button>`).join("");
     $$(".m-bar [data-go-tab]").forEach((b) => b.addEventListener("click", () => { location.hash = b.dataset.goTab; }));
   }
-  dressSide(r, role);
+  dressSide(r, role); drawRecent();
   $("#to-profile").hidden = true; $("#m-switch").hidden = true;   // one portal: no switching
   // People with a role are in their own portal here, just looking at their tools: same bar, logo goes Home.
   if (perms) {
@@ -227,6 +227,57 @@ $("#ov-search").addEventListener("submit", (e) => {
   setTimeout(() => { const i = $("#m-q"); if (i) { i.value = q; i.dispatchEvent(new Event("input", { bubbles: true })); } }, 300);
 });
 
+// ---- Tools: one launcher (bottom bar "Tools" on phones; recent tiles in the sidebar on computers)
+const RKEY = "scc-admin-recent";
+const recent = () => { try { return JSON.parse(localStorage.getItem(RKEY) || "[]"); } catch { return []; } };
+function rememberTool(tab) {
+  if (!tab || tab === "overview" || !$(`#nav [data-tab="${tab}"]`)) return;
+  try { localStorage.setItem(RKEY, JSON.stringify([tab, ...recent().filter((t) => t !== tab)].slice(0, 8))); } catch { /* storage blocked */ }
+  drawRecent();
+}
+const toolBtn = (b) => ({ tab: b.dataset.tab, label: b.querySelector(".nt-l")?.textContent || b.textContent.trim(), badge: b.querySelector(".badge")?.textContent || "" });
+const visibleTools = () => $$("#nav button[data-tab]").filter((b) => !b.hidden && b.dataset.tab !== "overview").map(toolBtn);
+const tile = (t, cls = "") => `<button type="button" class="tl ${cls}" data-go-tab="${esc(t.tab)}"><span class="tl-ico">${icon(NAVI[t.tab] || "sparkle")}</span><span class="tl-l">${esc(t.label)}</span>${t.badge ? `<i class="tl-b">${esc(t.badge)}</i>` : ""}</button>`;
+function drawRecent() {
+  const all = new Map(visibleTools().map((t) => [t.tab, t]));
+  const list = [...recent().filter((t) => all.has(t)), ...["approvals", "members", "calls", "events", "fridays", "scan"].filter((t) => all.has(t))].filter((t, i, a) => a.indexOf(t) === i).slice(0, 4).map((t) => all.get(t));
+  const box = $("#side-recent"); if (!box) return;
+  const dash = $('#nav button[data-tab="overview"]'); if (dash && box.previousElementSibling !== dash) dash.after(box);
+  box.innerHTML = list.length ? `<p class="nav-group">Recent</p><div class="sr-grid">${list.map((t) => tile(t)).join("")}</div>` : "";
+}
+function openTools() {
+  document.querySelector(".tools-sheet")?.remove();
+  const groups = []; let cur = null;
+  for (const el of $$("#nav > *")) {
+    if (el.matches(".nav-group")) { cur = { label: el.textContent, items: [] }; groups.push(cur); continue; }
+    if (el.matches("button[data-tab]") && !el.hidden && el.dataset.tab !== "overview" && cur) cur.items.push(toolBtn(el));
+  }
+  const all = new Map(visibleTools().map((t) => [t.tab, t])), rec = recent().filter((t) => all.has(t)).slice(0, 4).map((t) => all.get(t));
+  const sh = document.createElement("div");
+  sh.className = "tools-sheet"; sh.setAttribute("role", "dialog"); sh.setAttribute("aria-modal", "true"); sh.setAttribute("aria-label", "Tools");
+  sh.innerHTML = `<div class="ts-card"><div class="ts-grab" aria-hidden="true"></div>
+    <header class="ts-head"><h2>Tools</h2><button type="button" class="ts-x" data-ts-close aria-label="Close">${icon("x")}</button></header>
+    <label class="ts-search">${icon("search")}<input type="search" placeholder="Find a tool…" aria-label="Find a tool" autocomplete="off"></label>
+    <div class="ts-body">${rec.length ? `<section class="ts-sec" data-sec><p class="ts-label">Recent</p><div class="ts-grid ts-rec">${rec.map((t) => tile(t, "big")).join("")}</div></section>` : ""}
+      ${groups.filter((g) => g.items.length).map((g) => `<section class="ts-sec" data-sec><p class="ts-label">${esc(g.label)}</p><div class="ts-grid">${g.items.map((t) => tile(t)).join("")}</div></section>`).join("")}
+      <p class="ts-none" hidden>No tool by that name.</p>
+      ${perms ? `<button type="button" class="ts-ask" data-ask-access>${icon("plus")} Ask for more access</button>` : ""}</div></div>`;
+  document.body.append(sh);
+  requestAnimationFrame(() => sh.classList.add("open"));
+  const close = () => { sh.classList.remove("open"); setTimeout(() => sh.remove(), 200); };
+  sh.addEventListener("click", (e) => { if (e.target === sh || e.target.closest("[data-ts-close], [data-go-tab], [data-ask-access]")) close(); });
+  const q = sh.querySelector("input");
+  q.addEventListener("input", () => {
+    const v = q.value.trim().toLowerCase();
+    sh.querySelectorAll(".ts-sec").forEach((sec) => { let any = false; sec.querySelectorAll(".tl").forEach((t) => { const hit = !v || t.textContent.toLowerCase().includes(v); t.hidden = !hit; any ||= hit; }); sec.hidden = !any || (v && sec.querySelector(".ts-rec")); });
+    sh.querySelector(".ts-none").hidden = !!sh.querySelector(".ts-sec:not([hidden])");
+  });
+  q.addEventListener("keydown", (e) => { if (e.key === "Enter") { const first = sh.querySelector(".ts-sec:not([hidden]) .tl:not([hidden])"); if (first) first.click(); } });
+  addEventListener("keydown", function esc1(e) { if (e.key === "Escape") { close(); removeEventListener("keydown", esc1); } });
+  if (matchMedia("(min-width: 861px)").matches) q.focus();
+}
+document.addEventListener("click", (e) => { if (e.target.closest?.("[data-admin-tools]")) { e.preventDefault(); openTools(); } });
+
 // ---- Overview pieces in the new look
 let attAll = [], attKind = null, attFilter = "all";
 function drawAttention(list, KIND) {
@@ -282,6 +333,7 @@ const detailRoutes = {};   // "#insight:<id>" style deep links
 const firstAllowed = () => $$("#nav [data-tab]").find((b) => !b.hidden)?.dataset.tab || "fridays";
 function openTab(tab) {
   let [base, arg] = tab.split(":");
+  rememberTool(base);
   if (perms && !allowed(base === "event" || base === "events-new" ? "events" : base)) { base = firstAllowed(); arg = undefined; tab = base; }
   if (arg && detailRoutes[base]) return detailRoutes[base](arg);
   if (base === "events-new") return editEvent(null);
