@@ -55,3 +55,5 @@ kbd { font: 600 11px/1 ui-monospace, monospace; padding: 2px 5px; border-radius:
 .st-ai-card button { margin-top: 6px; }
 @media (max-width: 980px) { .st-main { grid-template-columns: 1fr; height: auto; } .st-panel { border-left: 0; border-top: 1px solid var(--line); } }
 .st-pane[hidden] { display: none; }
+.st-phones { display: grid; gap: 8px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: #101017; }
+.st-code { font: 700 22px/1 "Jost", system-ui; letter-spacing: .25em; padding: 6px 12px; border-radius: 8px; background: #0b0b10; border: 1px dashed rgba(214,166,80,.5); color: #ffd27a; }

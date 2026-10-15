@@ -31,7 +31,7 @@ NAV = [
     ("/visit", "Visit"),
 ]
 # Full menu (phone menu): includes the About sub-pages.
-MENU = [NAV[0], NAV[1], ("/our-story", "Our story"), ("/beliefs", "What we believe")] + NAV[2:] + [("/prayer", "Prayer"), ("/discipleship", "Discipleship"), ("/help", "Help")]
+MENU = [NAV[0], NAV[1], ("/our-story", "Our story"), ("/beliefs", "What we believe")] + NAV[2:] + [("/prayer", "Prayer"), ("/discipleship", "Discipleship"), ("/freecreator", "FreeCreator (tools)"), ("/help", "Help")]
 # Reading order for the "Previous / Next page" buttons at the bottom of content pages.
 ORDER = [("/", "Home"), ("/about", "About us"), ("/our-story", "Our story"), ("/beliefs", "What we believe"), ("/events", "Services &amp; events"),
          ("/go-ye", "Go Ye"), ("/get-involved", "Get involved"), ("/prayer", "Prayer"), ("/visit", "Visit &amp; contact"), ("/join", "Join the church")]
@@ -98,6 +98,7 @@ MENU_GROUPS = [
     ("Go Ye", [("/go-ye", "Go Ye: share the good news"), ("/pamphlet", "Good News pamphlet"), ("/go-ye#respond", "I prayed: next steps")]),
     ("Who we are", [("/about", "About us"), ("/our-story", "Our story"), ("/beliefs", "What we believe")]),
     ("Church life", [("/events", "Services &amp; events"), ("/discipleship", "Discipleship classes"), ("/get-involved", "Get involved"), ("/prayer", "Prayer")]),
+    ("Tools", [("/freecreator", "FreeCreator Online"), ("/tools", "All tools")]),
     ("Find us", [("/visit", "Visit &amp; contact"), ("/me", "Sign in"), ("/help", "Help")]),
 ]
 

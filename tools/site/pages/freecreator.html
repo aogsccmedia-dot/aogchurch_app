@@ -4,9 +4,13 @@
       <h1>FreeCreator, in your browser</h1>
       <p class="lede">Songs, scripture, sermon slides and themes on your projector, with nothing to install. Built by AOG Sandton City Church. Sign in to use it.</p>
       <div class="notice" id="fc-need" hidden>Please sign in to open FreeCreator Online.</div>
-      <div id="fc-go" hidden><a class="btn btn-gold btn-lg" href="/freecreator/app/">{{i:monitor}} Open FreeCreator Online</a><p class="muted-text" id="fc-who"></p></div>
+      <div id="fc-go" hidden><a class="btn btn-gold btn-lg" id="fc-open" href="/freecreator/app/" target="freecreator" rel="noopener">{{i:monitor}} Open FreeCreator Online</a><p class="muted-text" id="fc-who"></p><p class="muted-text">It opens in its own browser window. Free to use; the download comes later.</p></div>
+      <div class="notice" id="fc-phone" hidden></div>
+      <div class="fc-church" id="fc-church" hidden></div>
       <div class="fc-signin" id="fc-signin" hidden><section class="si-card" id="fc-card" aria-label="Sign in"></section></div>
     </section>
+    <section class="fc-admin" id="fc-manage" hidden></section>
+    <section class="fc-admin" id="fc-churches" hidden></section>
     <section class="fc-how">
       <h2>How to use it on a Sunday</h2>
       <ol class="fc-steps">
@@ -18,8 +22,8 @@
       </ol>
       <div class="fc-two">
         <div><h3>Online</h3><ul><li>Songs, scripture (5 public-domain translations), text and sermon slides</li><li>Themes, logo and backgrounds (images and short videos)</li><li>Projector and stage screen windows</li><li>Shows you can save and share as files</li><li>Open-source AI help: tidy lyrics, sermon slides, scriptures, lower thirds, stream titles and painted backgrounds</li><li><b>Studio:</b> cameras, HDMI capture cards and an ATEM Mini over USB, six scenes, animated lower thirds, background music, recording and live streaming (WHIP, e.g. Cloudflare Stream, which can forward to YouTube and Facebook)</li><li>An internet check that picks the right stream quality</li></ul></div>
-        <div><h3>Desktop app only</h3><ul><li>Several projectors and outputs at once, OBS and green screen</li><li>Full ATEM switcher control (cuts, keyers, macros) and OBS</li><li>Phone remote over Wi-Fi</li><li>Bulk import from folders, works fully offline</li></ul><p><a href="/presenter">Get the desktop app {{arrow}}</a></p></div>
+        <div><h3>Desktop app (download coming later)</h3><ul><li>Several projectors and outputs at once, OBS and green screen</li><li>Full ATEM switcher control (cuts, keyers, macros) and OBS</li><li>Phone remote over Wi-Fi</li><li>Bulk import from folders, works fully offline</li></ul></div>
       </div>
-      <p class="muted-text">Your library is saved in this browser on this computer, for your account. To move it, export a show and open it on the other computer.</p>
+      <p class="muted-text">Songs and shows are shared with everyone in your church's workspace, so the team can build the service together and see who else is working. Only your church sees them. Pictures, videos and settings stay on the computer you added them on.</p>
     </section>
   </main>

@@ -33,505 +33,511 @@ export const KB: { id: string; title: string; url: string; text: string }[] = [
 {
 "title": "Home · Sunday afternoons, in your inbox.",
 "url": "/",
-"text": "Sunday afternoons, in your inbox. \n A short, encouraging letter every Sunday with the week's services, what's happening at church and a word to carry with you. No spam — unsubscribe anytime.\n or with email\n About this website",
+"text": "Sunday afternoons, in your inbox. \n A short, encouraging letter every Sunday with the week's services, what's happening at church and a word to carry with you. No spam — unsubscribe anytime.\n or with email\n LIVE \n Tools · free for churches",
 "id": "k5"
+},
+{
+"title": "Home · FreeCreator Online",
+"url": "/",
+"text": "FreeCreator Online\n Songs, scripture and sermon slides on your projector, plus a live-stream studio with lower thirds. Right in your browser, built by Sandton City Church.\n Sign in & open \n About this website",
+"id": "k6"
 },
 {
 "title": "Home · The home of AOG Sandton City Church online",
 "url": "/",
 "text": "The home of AOG Sandton City Church online\n aogsccyouth.com is the official website and members' app of AOG Sandton City Church, 17 Humber Street, Woodmead, Sandton. Everything below is free to browse, with no account needed.\n Church information : who we are, what we believe, service times and how to visit.\n Events & tickets : get tickets for services and events, pay by EFT and receive digital tickets.\n Joining & membership : join the church family and manage your membership and profile.\n Prayer & the Daily Word : share prayer requests and read a daily Bible verse together.\n The weekly letter : an encouraging Sunday email with the week's services.\n Optional Google sign-in : only to create your account and pre-fill forms. We receive your name, email and profile picture, nothing else. See our Privacy policy and Terms of use .",
-"id": "k6"
+"id": "k7"
 },
 {
 "title": "About us · A church that feels like home.",
 "url": "/about",
 "text": "A church that feels like home. \n We're an Assemblies of God family in Woodmead — ordinary people from every walk of life, gathered around the Word of God, the presence of the Holy Spirit and a table where everyone has a seat.\n 01 · Bible-based\n Rooted in the Word\n Scripture is our foundation. We teach the Bible clearly and practically, so it shapes how we live on Monday, not just on Sunday.\n “Your word is a lamp to my feet.” — Psalm 119:105\n 02 · Community-centred\n Family before formality\n We do life together — sharing meals, carrying burdens and celebrating wins. Nobody walks in alone and nobody walks out unseen.\n “They devoted themselves to fellowship.” — Acts 2:42\n 03 · Spirit-filled\n Alive in worship & prayer\n We're Pentecostal and expectant. We make room for the Holy Spirit to move, heal and send us into our city.\n “Not by might, nor by power, but by my Spirit.” — Zechariah 4:6\n Kee",
-"id": "k7"
+"id": "k8"
 },
 {
 "title": "About us · Get to know us better.",
 "url": "/about",
 "text": "Get to know us better. \n Our story Where we come from, our home in Woodmead, and where we're going. \n What we believe The truths at the centre of our faith, in plain language. \n Community at the centre",
-"id": "k8"
+"id": "k9"
 },
 {
 "title": "About us · Every seat is saved for someone.",
 "url": "/about",
 "text": "Every seat is saved for someone. \n Grandmothers and students, families and young professionals, people who've been in church for decades and people walking in for the very first time — this is what the family of God looks like in Sandton.\n Sundays Family service \n All ages Kids · Youth · Adults \n Woodmead 17 Humber Street \n Prayer Philippians 4:6 \n Bible-based · Spirit-filled",
-"id": "k9"
+"id": "k10"
 },
 {
 "title": "About us · Built on the Word, carried by prayer.",
 "url": "/about",
 "text": "Built on the Word, carried by prayer. \n Everything we do begins on our knees and in the Scriptures. Expect honest teaching, heartfelt worship and people who will genuinely pray with you.\n Clear, practical Bible teaching every Sunday\n Prayer team ready to stand with you\n Water baptism and baptism in the Holy Spirit\n Small groups to grow with others\n Send a prayer request \n Our week",
-"id": "k10"
+"id": "k11"
 },
 {
 "title": "About us · Weekly services.",
 "url": "/about",
 "text": "Weekly services. \n At 17 Humber Street, Woodmead. Everyone is welcome.\n Monday Prayer 18:00 – 20:00 \n Tuesday Cell groups Twice a month 18:00 – 20:00 \n Wednesday Choir practice 18:00 – 19:30 \n Thursday Mothers', Fathers' & Daughters' services 18:00 – 20:00 \n Friday Youth service 18:00 – 20:00 \n Saturday Rest — \n Sunday Main service Everyone welcome 08:45 – 11:00 \n Your first Sunday",
-"id": "k11"
+"id": "k12"
 },
 {
 "title": "About us · What to expect.",
 "url": "/about",
 "text": "What to expect. \n When and where do you meet? We gather every Sunday at 17 Humber Street, Woodmead, Sandton. Service times are on the Services & events page and in the weekly letter.\n What should I wear? Whatever you're comfortable in. You'll see everything from traditional attire to jeans and sneakers. Come as you are.\n What happens in a service? Heartfelt worship, prayer, and clear, practical Bible teaching. Services usually last about two hours, and there's always time to connect afterwards.\n Is there something for my kids and teens? Yes. We have ministry for children and a lively youth ministry, with leaders who love them well and keep them safe.\n How do I become part of the church? Fill in the short Join the church form (or tap Google to do it in seconds). Our team confirms your membership, and then a leader is assigned to welcome you personally and walk with you.\n Coming soon",
-"id": "k12"
+"id": "k13"
 },
 {
 "title": "About us · The SCC Podcast",
 "url": "/about",
 "text": "The SCC Podcast\n Sermons, honest conversations and stories from our church family, for your commute, your gym session or your quiet time.\n Coming soon on Spotify Get notified in the weekly letter \n Become part of the family",
-"id": "k13"
+"id": "k14"
 },
 {
 "title": "About us · There's a seat saved for you.",
 "url": "/about",
 "text": "There's a seat saved for you. \n Takes about five minutes, or one tap with Google. Once your membership is confirmed, a leader will walk with you.\n Join the church",
-"id": "k14"
+"id": "k15"
 },
 {
 "title": "Our story · Ordinary people, an extraordinary God.",
 "url": "/our-story",
 "text": "Ordinary people, an extraordinary God. \n We're a family church in the heart of Sandton, part of the worldwide Assemblies of God fellowship, with our doors open at 17 Humber Street, Woodmead.\n 01 Where we come from",
-"id": "k15"
+"id": "k16"
 },
 {
 "title": "Our story · Part of a worldwide family.",
 "url": "/our-story",
 "text": "Part of a worldwide family. \n AOG Sandton City Church belongs to the Assemblies of God, a Pentecostal fellowship of churches that spans the globe and has deep roots across South Africa. We share its passion for the Bible, for prayer, and for the life and power of the Holy Spirit.\n That heritage gives us a firm foundation, and a family far bigger than our own building.\n 02 Our home",
-"id": "k16"
+"id": "k17"
 },
 {
 "title": "Our story · A seat saved in Woodmead.",
 "url": "/our-story",
 "text": "A seat saved in Woodmead. \n Every Sunday our doors open at 17 Humber Street. Grandmothers and students, families and young professionals, people who've followed Jesus for decades and people walking into church for the very first time: this is what God's family looks like in Sandton.\n We worship in many languages and styles, from traditional attire to jeans and sneakers. Nobody walks in alone and nobody walks out unseen.\n 03 The next generation",
-"id": "k17"
+"id": "k18"
 },
 {
 "title": "Our story · Youth on fire.",
 "url": "/our-story",
 "text": "Youth on fire. \n SCC Youth is a big part of our story. Through worship nights, camps, Bible study and plain old hanging out, young people are finding faith, friendship and purpose, and leading the way in worship.\n See youth events \n 04 Where we're going",
-"id": "k18"
+"id": "k19"
 },
 {
 "title": "Our story · Rooted here, reaching out.",
 "url": "/our-story",
 "text": "Rooted here, reaching out. \n Our prayer is to be a church that Sandton is glad to have: a place of real welcome, honest teaching and practical love, sending people out to serve their families, workplaces and city.\n There's a place in this story for you.\n Become part of the story",
-"id": "k19"
+"id": "k20"
 },
 {
 "title": "Our story · There's a seat saved for you.",
 "url": "/our-story",
 "text": "There's a seat saved for you. \n Takes about five minutes, or one tap with Google. Once your membership is confirmed, a leader will walk with you.\n Join the church Plan your visit",
-"id": "k20"
-},
-{
-"title": "What we believe · Built on the Word.",
-"url": "/beliefs",
-"text": "Built on the Word. \n Like Assemblies of God churches around the world, we hold to the historic Christian faith and the full gospel. Here it is in plain language.\n The Bible\n The Bible is the inspired, trustworthy Word of God. It is our final authority for what we believe and how we live.\n 2 Timothy 3:16\n One God\n There is one true God, eternally existing as Father, Son and Holy Spirit.\n Matthew 28:19\n Jesus Christ\n Jesus is the Son of God, fully God and fully man. He lived without sin, died for our sins, rose bodily from the dead and is coming again.\n John 1:14\n Salvation\n Everyone needs a Saviour. We are saved by God's grace through faith in Jesus, not by our own good works, and everyone who calls on Him is welcome.\n Ephesians 2:8\n The Holy Spirit\n The Holy Spirit lives in every believer. We believe in the baptism in the Holy Spirit and His gifts, empowering us to live and witness boldl",
 "id": "k21"
 },
 {
 "title": "What we believe · Built on the Word.",
 "url": "/beliefs",
-"text": "y today.\n Acts 1:8\n Baptism & communion\n We follow Jesus' example in water baptism by immersion, and we share the Lord's Supper to remember Him together.\n Romans 6:4\n Healing & prayer\n God still heals and answers prayer. We pray for one another with faith, compassion and expectation.\n James 5:15\n The church\n The church is God's family on mission: worshipping Him, growing together, and sharing the good news in word and deed.\n Acts 2:42\n Have a question about faith? We'd love to talk. Send us a message .\n Come and see",
+"text": "Built on the Word. \n Like Assemblies of God churches around the world, we hold to the historic Christian faith and the full gospel. Here it is in plain language.\n The Bible\n The Bible is the inspired, trustworthy Word of God. It is our final authority for what we believe and how we live.\n 2 Timothy 3:16\n One God\n There is one true God, eternally existing as Father, Son and Holy Spirit.\n Matthew 28:19\n Jesus Christ\n Jesus is the Son of God, fully God and fully man. He lived without sin, died for our sins, rose bodily from the dead and is coming again.\n John 1:14\n Salvation\n Everyone needs a Saviour. We are saved by God's grace through faith in Jesus, not by our own good works, and everyone who calls on Him is welcome.\n Ephesians 2:8\n The Holy Spirit\n The Holy Spirit lives in every believer. We believe in the baptism in the Holy Spirit and His gifts, empowering us to live and witness boldl",
 "id": "k22"
+},
+{
+"title": "What we believe · Built on the Word.",
+"url": "/beliefs",
+"text": "y today.\n Acts 1:8\n Baptism & communion\n We follow Jesus' example in water baptism by immersion, and we share the Lord's Supper to remember Him together.\n Romans 6:4\n Healing & prayer\n God still heals and answers prayer. We pray for one another with faith, compassion and expectation.\n James 5:15\n The church\n The church is God's family on mission: worshipping Him, growing together, and sharing the good news in word and deed.\n Acts 2:42\n Have a question about faith? We'd love to talk. Send us a message .\n Come and see",
+"id": "k23"
 },
 {
 "title": "What we believe · Faith is better together.",
 "url": "/beliefs",
 "text": "Faith is better together. \n Plan your visit See this week's services",
-"id": "k23"
+"id": "k24"
 },
 {
 "title": "Visit & contact · Come as you are.",
 "url": "/visit",
 "text": "Come as you are. \n We'd love to meet you. Find us at 17 Humber Street in Woodmead, or send us a message and we'll get back to you.\n Visit us",
-"id": "k24"
+"id": "k25"
 },
 {
 "title": "Visit & contact · Come as you are",
 "url": "/visit",
 "text": "Come as you are\n 17 Humber Street, Woodmead, Sandton\n Open in Maps \n Join us every Sunday — see upcoming services for times. \n Follow along\n YouTube \n Instagram \n Facebook \n TikTok \n WhatsApp \n Send us a message\n Getting here 17 Humber Street, Woodmead, Sandton. Parking is available on site, and our welcome team will help you find your way in.\n First time? Look out for the hospitality team at the door. They'll show you around and introduce you to people.\n Need prayer or care? Use the prayer page or the form above, and a pastor will reach out.",
-"id": "k25"
+"id": "k26"
 },
 {
 "title": "Get involved · Find your place on the team.",
 "url": "/get-involved",
 "text": "Find your place on the team. \n Every gift has a place in God's house. Pick what stirs you and we'll connect you with the right leader.\n 1 Join the church Tell us a little about you on the join form and tick the teams that interest you.\n 2 Meet a leader A team leader will reach out within the week to say hello and answer your questions.\n 3 Start serving Shadow the team for a Sunday or two, then jump in. No experience needed, just a willing heart.\n Become part of the family",
-"id": "k26"
+"id": "k27"
 },
 {
 "title": "Get involved · There's a seat saved for you.",
 "url": "/get-involved",
 "text": "There's a seat saved for you. \n Takes about five minutes, or one tap with Google. Once your membership is confirmed, a leader will walk with you.\n Join the church",
-"id": "k27"
+"id": "k28"
 },
 {
 "title": "Go Ye: the gospel and evangelism · Good news, made simple.",
 "url": "/go-ye",
 "text": "Good news, made simple. \n God made you, loves you, and made a way for you to come home to Him through Jesus. Here it is in four short steps.\n Read the good news I want to share it",
-"id": "k28"
-},
-{
-"title": "Go Ye: the gospel and evangelism · The good news in four steps",
-"url": "/go-ye",
-"text": "The good news in four steps\n 1 God loves you\n You are not an accident. God made you and He wants to know you.\n “For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.” John 3:16 \n 2 We have all sinned\n Sin is going our own way instead of God's. Every one of us has done it, and it separates us from Him.\n “For all have sinned, and come short of the glory of God.” Romans 3:23 \n 3 Jesus paid for it\n Jesus, God's Son, died on the cross in our place and rose again on the third day. He took what we deserved.\n “For the wages of sin is death; but the gift of God is eternal life through Jesus Christ our Lord.” Romans 6:23 \n 4 Receive Him today\n Salvation is a gift. You can't earn it; you receive it by trusting Jesus and making Him Lord of your life.\n “If thou shalt confess with thy mouth the Lord Jesus, and shal",
 "id": "k29"
 },
 {
 "title": "Go Ye: the gospel and evangelism · The good news in four steps",
 "url": "/go-ye",
-"text": "t believe in thine heart that God hath raised him from the dead, thou shalt be saved.” Romans 10:9 \n Pray this from your heart",
+"text": "The good news in four steps\n 1 God loves you\n You are not an accident. God made you and He wants to know you.\n “For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.” John 3:16 \n 2 We have all sinned\n Sin is going our own way instead of God's. Every one of us has done it, and it separates us from Him.\n “For all have sinned, and come short of the glory of God.” Romans 3:23 \n 3 Jesus paid for it\n Jesus, God's Son, died on the cross in our place and rose again on the third day. He took what we deserved.\n “For the wages of sin is death; but the gift of God is eternal life through Jesus Christ our Lord.” Romans 6:23 \n 4 Receive Him today\n Salvation is a gift. You can't earn it; you receive it by trusting Jesus and making Him Lord of your life.\n “If thou shalt confess with thy mouth the Lord Jesus, and shal",
 "id": "k30"
+},
+{
+"title": "Go Ye: the gospel and evangelism · The good news in four steps",
+"url": "/go-ye",
+"text": "t believe in thine heart that God hath raised him from the dead, thou shalt be saved.” Romans 10:9 \n Pray this from your heart",
+"id": "k31"
 },
 {
 "title": "Go Ye: the gospel and evangelism · A prayer to begin",
 "url": "/go-ye",
 "text": "A prayer to begin\n “Lord Jesus, I know I have sinned and I need You. Thank You for dying on the cross for me and rising again. I turn from my sin and I trust You as my Saviour. Come into my life and be my Lord. Thank You for forgiving me and making me Your child. Amen.”\n Next steps",
-"id": "k31"
+"id": "k32"
 },
 {
 "title": "Go Ye: the gospel and evangelism · Did you pray? Tell us.",
 "url": "/go-ye",
 "text": "Did you pray? Tell us.\n We'd love to celebrate with you and help you take your first steps. Someone from the church will call you, gently and without pressure.\n Read the Bible Start with the Gospel of John, a chapter a day.\n Talk to God daily Thank Him, ask Him, listen to Him.\n Come to church Sundays 08:45 – 11:00 · Youth on Fridays 18:00 – 20:00 · 17 Humber Street, Woodmead.\n Join discipleship classes Short, friendly classes on the basics of following Jesus. See the classes \n Talk to someone",
-"id": "k32"
+"id": "k33"
 },
 {
 "title": "Go Ye: the gospel and evangelism · A leader is happy to chat",
 "url": "/go-ye",
 "text": "A leader is happy to chat\n Leave your number above and we'll call you, or visit us on Sunday. Signed-in members can see the leaders' numbers here.\n Share it",
-"id": "k33"
+"id": "k34"
 },
 {
 "title": "Go Ye: the gospel and evangelism · The Good News pamphlet",
 "url": "/go-ye",
 "text": "The Good News pamphlet\n Read it here, or print it for your evangelism outing. The PDF stays perfectly sharp at any size; the picture files are 600 dpi.\n Read, share or print \n Send on WhatsApp \n Printing tip: choose A4, “Actual size” (100%), and print both sides (flip on long edge). Glossy or 120–170 gsm paper looks best.\n Go ye",
-"id": "k34"
-},
-{
-"title": "Go Ye: the gospel and evangelism · Start at home, then go further",
-"url": "/go-ye",
-"text": "Start at home, then go further\n Our goal is to reach all of South Africa, and it begins small: in our own homes, then our streets, Sandton, Gauteng and beyond. “Ye shall be witnesses unto me both in Jerusalem, and in all Judaea, and in Samaria, and unto the uttermost part of the earth.” Acts 1:8\n Before you go\n Pray first. Ask God to lead you to the right people and to give you boldness and love.\n Go in twos. Jesus sent them out two by two (Luke 10:1). Never go alone.\n Carry pamphlets. Print the Good News pamphlet above and keep a few in your bag.\n Know your story. Practise saying how Jesus changed your life in one minute.\n When you talk to someone\n Start friendly. A smile, their name, a real question: “How can I pray for you today?”\n Listen more than you speak. People open up when they feel heard.\n Keep it simple. Use the four steps: God loves you, we've all sinned, Jesus paid for it, r",
 "id": "k35"
 },
 {
 "title": "Go Ye: the gospel and evangelism · Start at home, then go further",
 "url": "/go-ye",
-"text": "eceive Him.\n Invite, don't push. Offer to pray with them, and invite them to church on Sunday.\n After you talk\n Ask before taking details. Only with their OK: name, number and area.\n Hand over to the Call Office. Log the contact in the app (Go Ye) the same day. They'll call within 48 hours.\n Follow up kindly. A message on Saturday: “See you tomorrow at 08:45?”\n Celebrate! Every conversation matters, even when someone says “not now”.\n Stay safe\n Go in daylight, to busy public places: malls, taxi ranks, parks, campuses.\n Respect “no” straight away. Never argue.\n Tell a leader where your team is going and when you'll be back.\n Under 18? Always go with an adult leader.\n Join the evangelism team\n Outreach days, training, and a team to go with. Already on the team? Sign in and log the people you meet, so the Call Office can follow up.\n Join the team Log someone I met Serve in the Call Office",
+"text": "Start at home, then go further\n Our goal is to reach all of South Africa, and it begins small: in our own homes, then our streets, Sandton, Gauteng and beyond. “Ye shall be witnesses unto me both in Jerusalem, and in all Judaea, and in Samaria, and unto the uttermost part of the earth.” Acts 1:8\n Before you go\n Pray first. Ask God to lead you to the right people and to give you boldness and love.\n Go in twos. Jesus sent them out two by two (Luke 10:1). Never go alone.\n Carry pamphlets. Print the Good News pamphlet above and keep a few in your bag.\n Know your story. Practise saying how Jesus changed your life in one minute.\n When you talk to someone\n Start friendly. A smile, their name, a real question: “How can I pray for you today?”\n Listen more than you speak. People open up when they feel heard.\n Keep it simple. Use the four steps: God loves you, we've all sinned, Jesus paid for it, r",
 "id": "k36"
+},
+{
+"title": "Go Ye: the gospel and evangelism · Start at home, then go further",
+"url": "/go-ye",
+"text": "eceive Him.\n Invite, don't push. Offer to pray with them, and invite them to church on Sunday.\n After you talk\n Ask before taking details. Only with their OK: name, number and area.\n Hand over to the Call Office. Log the contact in the app (Go Ye) the same day. They'll call within 48 hours.\n Follow up kindly. A message on Saturday: “See you tomorrow at 08:45?”\n Celebrate! Every conversation matters, even when someone says “not now”.\n Stay safe\n Go in daylight, to busy public places: malls, taxi ranks, parks, campuses.\n Respect “no” straight away. Never argue.\n Tell a leader where your team is going and when you'll be back.\n Under 18? Always go with an adult leader.\n Join the evangelism team\n Outreach days, training, and a team to go with. Already on the team? Sign in and log the people you meet, so the Call Office can follow up.\n Join the team Log someone I met Serve in the Call Office",
+"id": "k37"
 },
 {
 "title": "Discipleship classes · Grow in Jesus, step by step.",
 "url": "/discipleship",
 "text": "Grow in Jesus, step by step. \n Short, friendly classes for new believers and anyone who wants strong foundations. Small groups, real questions, no pressure.\n Sign me up \n The classes",
-"id": "k37"
+"id": "k38"
 },
 {
 "title": "Discipleship classes · Four simple tracks",
 "url": "/discipleship",
 "text": "Four simple tracks\n 1 Foundations\n 6 weeks · start here\n Salvation: what happened when I believed\n Who God is: Father, Son and Holy Spirit\n The Bible: how to read it\n Prayer: talking with God\n Grace and forgiveness\n The church: your family\n 2 Baptism\n 2 weeks · before you're baptised\n Water baptism: what it means and why\n Baptism in the Holy Spirit\n Sharing your testimony\n 3 Growing\n 6 weeks · going deeper\n Walking in the Spirit\n Overcoming temptation\n Giving and stewardship\n Relationships and purity\n Faith in hard times\n Hearing God\n 4 Serving\n 4 weeks · finding your place\n Your gifts and calling\n Sharing your faith (evangelism)\n Serving in a ministry team\n Making disciples\n Sign up",
-"id": "k38"
+"id": "k39"
 },
 {
 "title": "Discipleship classes · Join the next class",
 "url": "/discipleship",
 "text": "Join the next class\n Tell us which track you'd like. We'll let you know the day, time and place of the next class (usually after the Sunday service, or online in the week).\n “Go ye therefore, and teach all nations… teaching them to observe all things whatsoever I have commanded you.” Matthew 28:19–20",
-"id": "k39"
+"id": "k40"
 },
 {
 "title": "Prayer · How can we pray for you?",
 "url": "/prayer",
 "text": "How can we pray for you? \n Share as much or as little as you like. Our prayer team will stand with you, and you can stay anonymous or keep it to the pastors only.\n Prayer Wall",
-"id": "k40"
+"id": "k41"
 },
 {
 "title": "Prayer · Carry each other in prayer.",
 "url": "/prayer",
 "text": "Carry each other in prayer. \n Share a request with the church family, and tap I prayed when you've prayed for someone. When God answers, mark it answered so we can celebrate together. \n “Bear ye one another's burdens, and so fulfil the law of Christ.” Galatians 6:2\n We're listening",
-"id": "k41"
+"id": "k42"
 },
 {
 "title": "Prayer · Send a private prayer request",
 "url": "/prayer",
 "text": "Send a private prayer request\n Share as much or as little as you like. Our prayer team will stand with you — you can stay anonymous or keep it to the pastors only.\n “Cast all your anxiety on him because he cares for you.” — 1 Peter 5:7",
-"id": "k42"
+"id": "k43"
 },
 {
 "title": "How to use the app · How to use our church app.",
 "url": "/help",
 "text": "How to use our church app. \n Simple steps with pictures. Take your time: you can't break anything. If you get stuck, ask anyone at the welcome desk, or tap Ask SCC inside the app.\n Step 1",
-"id": "k43"
+"id": "k44"
 },
 {
 "title": "How to use the app · Open the church website",
 "url": "/help",
 "text": "Open the church website\n On your phone or computer, open the internet (Chrome, Safari or Samsung Internet).\n Type aogsccyouth.com at the top and press Go.\n You'll see our church's front page. You don't need to sign in to look around.\n Back to the list \n Step 2",
-"id": "k44"
+"id": "k45"
 },
 {
 "title": "How to use the app · Sign in",
 "url": "/help",
 "text": "Sign in\n Tap Join at the top right, or the little person at the bottom.\n Tap Continue with Google and choose your Gmail account. That's all: no new password to remember.\n No Gmail? Ask anyone at the welcome desk on Sunday and they'll help you.\n Back to the list \n Step 3",
-"id": "k45"
+"id": "k46"
 },
 {
 "title": "How to use the app · Become a member",
 "url": "/help",
 "text": "Become a member\n The first time, we'll ask a few short questions. Most of it is already filled in for you.\n Tap the answer that fits you, then Next .\n When you finish, a leader will welcome you and confirm your membership.\n Back to the list \n Step 4",
-"id": "k46"
+"id": "k47"
 },
 {
 "title": "How to use the app · Your Home",
 "url": "/help",
 "text": "Your Home\n After signing in you always start on Home .\n At the top are your buttons: Home, Devotions, Ask SCC, Vote, Store, Settings . Tap one to go there.\n My tickets shows your tickets. Coming up at church shows what's next. Swipe left and right to see more.\n Back to the list \n Step 5",
-"id": "k47"
+"id": "k48"
 },
 {
 "title": "How to use the app · Get a ticket for an event",
 "url": "/help",
 "text": "Get a ticket for an event\n On Home, tap an event under Coming up at church .\n Read when and where it is, then scroll down to Get your ticket .\n Back to the list \n Step 6",
-"id": "k48"
+"id": "k49"
 },
 {
 "title": "How to use the app · Fill in and tap Get Ticket",
 "url": "/help",
 "text": "Fill in and tap Get Ticket\n Check your name and phone number, and choose how many tickets.\n If the event costs money, pay by EFT using the reference shown, then add a photo of your proof of payment.\n Tap the Get Ticket button. Your ticket comes to your email and appears on Home, ready to show at the door.\n Back to the list \n Step 7",
-"id": "k49"
+"id": "k50"
 },
 {
 "title": "How to use the app · Read today's verse",
 "url": "/help",
 "text": "Read today's verse\n Tap Devotions at the top.\n Read the verse, think about the question, and pray.\n Tap I've read it & prayed .\n Back to the list \n Step 8",
-"id": "k50"
+"id": "k51"
 },
 {
 "title": "How to use the app · Ask SCC a question",
 "url": "/help",
 "text": "Ask SCC a question\n Tap Ask SCC at the top.\n Tap a big button like This week , or type your question in the box at the bottom, for example When is the Sunday service? \n It answers from the church's own calendar, and can add dates to your phone's calendar.\n Back to the list \n Step 9",
-"id": "k51"
+"id": "k52"
 },
 {
 "title": "How to use the app · Ask for prayer",
 "url": "/help",
 "text": "Ask for prayer\n Open Prayer (from Home, under What to know, or ask Ask SCC for prayer).\n Write your request. You choose whether only the prayer team sees it, or it goes on the prayer wall.\n Every Monday, members get the week's prayer list by email to pray together.\n Back to the list \n Step 10",
-"id": "k52"
+"id": "k53"
 },
 {
 "title": "How to use the app · Vote",
 "url": "/help",
 "text": "Vote\n Tap Vote at the top. Voting is for confirmed members.\n When there's a vote, you'll see the roles to fill. Tap a person, then Cast my vote . Your vote is secret.\n We email everyone before voting starts, to pray first.\n Back to the list \n Step 11",
-"id": "k53"
+"id": "k54"
 },
 {
 "title": "How to use the app · Settings and signing out",
 "url": "/help",
 "text": "Settings and signing out\n Tap Settings at the top to choose which emails you get.\n Tap Sign out (top right) when you're done, especially on a shared phone.\n Signing out takes you back to the church website.\n Back to the list \n Step 12",
-"id": "k54"
+"id": "k55"
 },
 {
 "title": "How to use the app · Put the app on your phone",
 "url": "/help",
 "text": "Put the app on your phone\n On the website, open the menu and tap Get the app .\n Follow the two or three steps for your phone. The church icon appears on your home screen, like any other app.\n Tap the icon any time to open it. No app store needed.\n Back to the list",
-"id": "k55"
+"id": "k56"
 },
 {
 "title": "How to use the app · Still stuck?",
 "url": "/help",
 "text": "Still stuck?\n That's okay. Speak to someone at the welcome desk on Sunday, or call or WhatsApp the church office. We're happy to sit with you and set it up together.",
-"id": "k56"
+"id": "k57"
 },
 {
 "title": "Code of conduct · How we treat one another",
 "url": "/code-of-conduct",
 "text": "How we treat one another\n We're a family, and families thrive on love, honesty and respect. This code applies to everyone who takes part in church life: members, visitors, volunteers, leaders, and anyone using our website or online spaces.\n Last updated 9 October 2026",
-"id": "k57"
+"id": "k58"
 },
 {
 "title": "Code of conduct · The heart of it",
 "url": "/code-of-conduct",
 "text": "The heart of it\n Jesus summed it up: love God, and love your neighbour as yourself. Everything below flows from that. We want church to be a place where everyone is safe, welcome and able to grow.",
-"id": "k58"
+"id": "k59"
 },
 {
 "title": "Code of conduct · What we expect of everyone",
 "url": "/code-of-conduct",
 "text": "What we expect of everyone\n Respect. Treat everyone with dignity, whatever their age, background, language, nationality, ability or walk of life.\n Honesty. Be truthful in what you say, in what you share online, and with church money and property.\n Kindness online. No harassment, bullying, gossip, or sharing other people's photos or details without permission.\n Safety. No violence, threats, weapons, alcohol, illegal drugs or smoking on church premises or at church events.\n Care for the space. Look after the building, equipment and neighbours, including parking considerately on Humber Street.",
-"id": "k59"
+"id": "k60"
 },
 {
 "title": "Code of conduct · Leaders and volunteers",
 "url": "/code-of-conduct",
 "text": "Leaders and volunteers\n Those who serve carry extra responsibility. Leaders and volunteers agree to:\n Be good examples in word and conduct, and never misuse their position or influence.\n Keep people's personal information and prayer requests confidential, sharing only what's needed to care for someone, or where the law requires it.\n Declare conflicts of interest, and never accept gifts or favours that could compromise them.\n Handle church money transparently, with two people present when counting offerings and every expense recorded.",
-"id": "k60"
+"id": "k61"
 },
 {
 "title": "Code of conduct · Children and young people",
 "url": "/code-of-conduct",
 "text": "Children and young people\n Keeping children and young people safe is non-negotiable. Everyone working with under-18s agrees to:\n Follow the two-adult rule : never be alone and out of sight with a child or young person.\n Keep communication with young people open: use group chats that include another leader or a parent, never private or secret messaging.\n Get parent or guardian consent for trips, camps, photos and medical needs.\n Report any concern about a child's safety straight away to the pastor. Where a child may be in danger, we report to the police or social services as South African law (the Children's Act) requires.\n Anyone serving with children or youth may be asked for references and a police clearance.",
-"id": "k61"
+"id": "k62"
 },
 {
 "title": "Code of conduct · Our online spaces",
 "url": "/code-of-conduct",
 "text": "Our online spaces\n On our website, WhatsApp groups and social media pages: keep it kind and on topic, no spam or selling, and ask before posting photos of others (especially children). We may remove posts or people that break this code.",
-"id": "k62"
+"id": "k63"
 },
 {
 "title": "Code of conduct · Raising a concern",
 "url": "/code-of-conduct",
 "text": "Raising a concern\n If someone's behaviour worries you, please tell a pastor or leader. Approved members can also raise a complaint confidentially from Settings ; see our complaints policy . If anyone is in immediate danger, call 10111 (SAPS) or 112 first.",
-"id": "k63"
+"id": "k64"
 },
 {
 "title": "Code of conduct · If the code is broken",
 "url": "/code-of-conduct",
 "text": "If the code is broken\n We respond with grace and seriousness: a conversation first, then, if needed, stepping back from a role or ministry, and in serious cases being asked not to attend. Anything that may be a crime is reported to the authorities.\n Ask us a question",
-"id": "k64"
+"id": "k65"
 },
 {
 "title": "Get the app · Sandton City Church, on your home screen.",
 "url": "/app",
 "text": "Sandton City Church, on your home screen. \n Add our site to your phone like an app: one tap to events, your tickets, prayer and the weekly letter. It's free, takes ten seconds, and needs no app store.\n Checking your device… \n Using a different phone or browser? \n Why add it?\n Opens full-screen, just like an app\n Your event tickets in one tap\n Works even on a weak signal\n Uses almost no storage",
-"id": "k65"
+"id": "k66"
 },
 {
 "title": "Tools (FreeCreator) · Free tools for churches.",
 "url": "/tools",
-"text": "Free tools for churches. \n Things we built for our own Sundays, shared freely with every church.\n Coming 1 Feb 2027 Windows & Mac",
-"id": "k66"
-},
-{
-"title": "Tools (FreeCreator)",
-"url": "/tools",
-"text": "FreeCreator\n Built by AOG Sandton City Church\n Songs, scripture and media on your projector, with stage screen, phone remote and livestream output. Free and open source.\n Reserve a beta place \n Online \n New In your browser · sign in to use",
+"text": "Free tools for churches. \n Things we built for our own Sundays, shared freely with every church.\n Online \n New In your browser · sign in to use",
 "id": "k67"
 },
 {
 "title": "Tools (FreeCreator) · FreeCreator Online",
 "url": "/tools",
-"text": "FreeCreator Online\n Built by AOG Sandton City Church\n The same FreeCreator, right in your browser: songs, scripture, sermon slides, themes and a projector window. Nothing to install.\n Sign in & open \n Phone",
+"text": "FreeCreator Online\n Built by AOG Sandton City Church\n The same FreeCreator, right in your browser: songs, scripture, sermon slides, themes and a projector window. Nothing to install.\n Sign in & open \n Coming 1 Feb 2027 Windows & Mac",
 "id": "k68"
+},
+{
+"title": "Tools (FreeCreator)",
+"url": "/tools",
+"text": "FreeCreator\n Built by AOG Sandton City Church\n Songs, scripture and media on your projector, with stage screen, phone remote and livestream output. Free and open source.\n Download later · reserve a beta place \n Phone",
+"id": "k69"
 },
 {
 "title": "Tools (FreeCreator) · The church app",
 "url": "/tools",
 "text": "The church app\n Events, tickets, prayer and the weekly letter on your home screen.\n Get the app",
-"id": "k69"
+"id": "k70"
 },
 {
 "title": "Store · Books by our brethren.",
 "url": "/store",
 "text": "Books by our brethren. \n Every book here is written by someone from our church family. Buying one supports them and the ministry.",
-"id": "k70"
+"id": "k71"
 },
 {
 "title": "Store · The shelves are empty, for now.",
 "url": "/store",
 "text": "The shelves are empty, for now.\n The first books are on their way. Check back soon, or ask in Ask SCC and we'll let you know.\n Ask SCC \n Written a book? Members can have their book listed here. Speak to the church office. \n Support the writers Your purchase goes to the author and the ministry. \n Easy and safe Pay by EFT like event tickets, with your order in your profile.",
-"id": "k71"
+"id": "k72"
 },
 {
 "title": "Raising a concern · When something isn't right",
 "url": "/complaints",
 "text": "When something isn't right\n We're not perfect, and we'd rather hear about it than have you carry it alone. Here's how to raise a complaint and what you can expect from us.\n Last updated 9 October 2026",
-"id": "k72"
+"id": "k73"
 },
 {
 "title": "Raising a concern · Who can raise a complaint",
 "url": "/complaints",
 "text": "Who can raise a complaint\n Approved members can raise a complaint online from Settings . Anyone else, including visitors and parents, can speak to a pastor or use the contact form , and we'll treat it the same way.",
-"id": "k73"
+"id": "k74"
 },
 {
 "title": "Raising a concern · How to raise it",
 "url": "/complaints",
 "text": "How to raise it\n Sign in and open Settings → Concerns & complaints .\n Choose what it's about, describe what happened, and (if you like) what would help put it right.\n Tick Keep this confidential if only the pastors should see it.\n You'll get an email with your reference number straight away.",
-"id": "k74"
+"id": "k75"
 },
 {
 "title": "Raising a concern · What you can expect",
 "url": "/complaints",
 "text": "What you can expect\n Acknowledgement straight away by email, with your reference.\n A response within 7 working days , either an answer or an update on how we're looking into it.\n Updates by email, and the status on your profile: Received → Being looked into → Resolved .\n Fair treatment: we'll listen to everyone involved, and nobody will be treated differently for raising a concern in good faith.",
-"id": "k75"
+"id": "k76"
 },
 {
 "title": "Raising a concern · Confidentiality",
 "url": "/complaints",
 "text": "Confidentiality\n Complaints are only seen by the leaders who handle them. Confidential complaints are restricted to the pastors. We'll only share details when it's needed to resolve the matter, or when the law requires it (for example, to protect a child).",
-"id": "k76"
+"id": "k77"
 },
 {
 "title": "Raising a concern · Safeguarding and urgent matters",
 "url": "/complaints",
 "text": "Safeguarding and urgent matters\n If a complaint is about the safety of a child or vulnerable person, we act immediately and follow our code of conduct , including reporting to the authorities where required. If anyone is in danger right now, call 10111 or 112 first.",
-"id": "k77"
+"id": "k78"
 },
 {
 "title": "Raising a concern · If you're not satisfied",
 "url": "/complaints",
 "text": "If you're not satisfied\n Reply to our response and ask for it to be reviewed by the senior pastor. For privacy complaints you may also contact the Information Regulator (inforeg.org.za).",
-"id": "k78"
+"id": "k79"
 },
 {
 "title": "Raising a concern · Records",
 "url": "/complaints",
 "text": "Records\n We keep complaint records securely for up to five years, so we can learn from them and show we've handled them properly. See our data protection page.\n Ask us a question",
-"id": "k79"
+"id": "k80"
 },
 {
 "title": "Welcome pack · Welcome to the family.",
 "url": "/welcome-pack",
 "text": "Welcome to the family. \n You are part of a story that began with a prayer meeting in Los Angeles more than a century ago, travelled to South Africa, and now lives on in Sandton. This pack tells that story, who we are, and what we're not.\n Welcome pack \n AOG Sandton City Church · 17 Humber Street, Woodmead, Sandton · aogsccyouth.com\n Our roots · 1906 to today",
-"id": "k80"
-},
-{
-"title": "Welcome pack · From Azusa Street to South Africa.",
-"url": "/welcome-pack",
-"text": "From Azusa Street to South Africa. \n 1906 Azusa Street, Los Angeles A revival led by William J. Seymour begins at 312 Azusa Street. People of every race pray together and are filled with the Holy Spirit. Within two years the message reaches more than fifty nations.\n 1908 Missionaries reach South Africa Charles Chawner (Canada), Henry and Anna Turney and Hannah James (England) begin ministry in Zululand and around Pretoria. This is the start of the Assemblies of God in South Africa.\n 1914 The Assemblies of God is formed Pentecostal believers meet in Hot Springs, Arkansas (USA) and form the Assemblies of God. In 1917 the South African work joins, and the name is registered in Pretoria.\n 1929 A young man meets Jesus Nicholas Bhengu, born in 1909 at Entumeni near Eshowe, gives his life to Christ in Kimberley through two travelling evangelists.\n 1938 Bhengu joins the AOG After ministering wit",
 "id": "k81"
 },
 {
 "title": "Welcome pack · From Azusa Street to South Africa.",
 "url": "/welcome-pack",
-"text": "h the Emmanuel Mission in Nelspruit, Bhengu and his companions join the Assemblies of God. His ministry grows from Benoni.\n 1940s \"Back to God\" A crusade in Port Elizabeth sees about a thousand people saved in a few weeks. Bhengu calls the message \"Back to God\", and it spreads to East London and city after city.\n 1950s A nation hears the gospel The Back to God Crusade plants churches across Southern Africa. In 1959 TIME magazine calls Bhengu \"the black Billy Graham\".\n 1990 · today Assemblies of God Back to God The churches born from his ministry become the Assemblies of God Movement, today known as the Assemblies of God Back to God. Bhengu went to be with the Lord in 1985.\n AOG Sandton City Church · Welcome pack 2 \n Our founding father",
+"text": "From Azusa Street to South Africa. \n 1906 Azusa Street, Los Angeles A revival led by William J. Seymour begins at 312 Azusa Street. People of every race pray together and are filled with the Holy Spirit. Within two years the message reaches more than fifty nations.\n 1908 Missionaries reach South Africa Charles Chawner (Canada), Henry and Anna Turney and Hannah James (England) begin ministry in Zululand and around Pretoria. This is the start of the Assemblies of God in South Africa.\n 1914 The Assemblies of God is formed Pentecostal believers meet in Hot Springs, Arkansas (USA) and form the Assemblies of God. In 1917 the South African work joins, and the name is registered in Pretoria.\n 1929 A young man meets Jesus Nicholas Bhengu, born in 1909 at Entumeni near Eshowe, gives his life to Christ in Kimberley through two travelling evangelists.\n 1938 Bhengu joins the AOG After ministering wit",
 "id": "k82"
 },
 {
-"title": "Welcome pack · Nicholas Bhengu.",
+"title": "Welcome pack · From Azusa Street to South Africa.",
 "url": "/welcome-pack",
-"text": "Nicholas Bhengu. \n Nicholas Bhekinkosi Hepworth Bhengu (1909–1985) is the father of the Back to God movement and the founder through whose ministry the Assemblies of God took root in townships and cities across South Africa.\n He preached Jesus Christ with simple, fearless faith. Thousands were saved and healed, and many turned away from crime as their lives were changed.\n He taught holiness and the fear of God, and he called believers to dignity, honest work and self-reliance, so that local churches could stand on their own feet and support their own pastors and buildings.\n \"Back to God\" was never a new denomination. It was a call: turn from sin and come back to the living God.\n What we carry from him\n The gospel first. Every town, city and nation needs to hear about Jesus.\n Holiness. A changed heart shows in a changed life, at home, at work and in the community.\n Dignity and self-relian",
+"text": "h the Emmanuel Mission in Nelspruit, Bhengu and his companions join the Assemblies of God. His ministry grows from Benoni.\n 1940s \"Back to God\" A crusade in Port Elizabeth sees about a thousand people saved in a few weeks. Bhengu calls the message \"Back to God\", and it spreads to East London and city after city.\n 1950s A nation hears the gospel The Back to God Crusade plants churches across Southern Africa. In 1959 TIME magazine calls Bhengu \"the black Billy Graham\".\n 1990 · today Assemblies of God Back to God The churches born from his ministry become the Assemblies of God Movement, today known as the Assemblies of God Back to God. Bhengu went to be with the Lord in 1985.\n AOG Sandton City Church · Welcome pack 2 \n Our founding father",
 "id": "k83"
 },
 {
 "title": "Welcome pack · Nicholas Bhengu.",
 "url": "/welcome-pack",
-"text": "ce. We give, work and build together, so the church can bless others.\n Prayer and the power of the Holy Spirit. We expect God to save, heal and deliver today.\n Unity. Like Azusa Street, the church is a family where every language and background belongs.\n AOG Sandton City Church · Welcome pack 3 \n Clearing things up",
+"text": "Nicholas Bhengu. \n Nicholas Bhekinkosi Hepworth Bhengu (1909–1985) is the father of the Back to God movement and the founder through whose ministry the Assemblies of God took root in townships and cities across South Africa.\n He preached Jesus Christ with simple, fearless faith. Thousands were saved and healed, and many turned away from crime as their lives were changed.\n He taught holiness and the fear of God, and he called believers to dignity, honest work and self-reliance, so that local churches could stand on their own feet and support their own pastors and buildings.\n \"Back to God\" was never a new denomination. It was a call: turn from sin and come back to the living God.\n What we carry from him\n The gospel first. Every town, city and nation needs to hear about Jesus.\n Holiness. A changed heart shows in a changed life, at home, at work and in the community.\n Dignity and self-relian",
 "id": "k84"
 },
 {
-"title": "Welcome pack · What the AOG is not.",
+"title": "Welcome pack · Nicholas Bhengu.",
 "url": "/welcome-pack",
-"text": "What the AOG is not. \n Not A one-man church\n We follow Jesus Christ, not a personality. Pastors and leaders serve the church, and they are accountable to God, to the Bible and to each other.\n Not A cult or secret society\n We are part of the worldwide Pentecostal family that grew from Azusa Street. What we believe is open, written down and taken from the Bible.\n Not A separate \"Back to God\" denomination\n \"Back to God\" began as the name of Nicholas Bhengu's crusades. It was a message, a call to return to God, and it still is.\n Not A political party\n We pray for our nation and serve our communities, but our mission is the gospel of Jesus Christ for everyone, whoever they vote for.\n Not Salvation by works or membership\n No one is saved by joining a church or doing enough good. We are saved by God's grace, through faith in Jesus (Ephesians 2:8–9).\n Not Only for perfect people\n Church is a hos",
+"text": "ce. We give, work and build together, so the church can bless others.\n Prayer and the power of the Holy Spirit. We expect God to save, heal and deliver today.\n Unity. Like Azusa Street, the church is a family where every language and background belongs.\n AOG Sandton City Church · Welcome pack 3 \n Clearing things up",
 "id": "k85"
 },
 {
 "title": "Welcome pack · What the AOG is not.",
 "url": "/welcome-pack",
-"text": "pital for the broken and a home for the searching. Come as you are; God does the changing.\n AOG Sandton City Church · Welcome pack 4 \n Our church",
+"text": "What the AOG is not. \n Not A one-man church\n We follow Jesus Christ, not a personality. Pastors and leaders serve the church, and they are accountable to God, to the Bible and to each other.\n Not A cult or secret society\n We are part of the worldwide Pentecostal family that grew from Azusa Street. What we believe is open, written down and taken from the Bible.\n Not A separate \"Back to God\" denomination\n \"Back to God\" began as the name of Nicholas Bhengu's crusades. It was a message, a call to return to God, and it still is.\n Not A political party\n We pray for our nation and serve our communities, but our mission is the gospel of Jesus Christ for everyone, whoever they vote for.\n Not Salvation by works or membership\n No one is saved by joining a church or doing enough good. We are saved by God's grace, through faith in Jesus (Ephesians 2:8–9).\n Not Only for perfect people\n Church is a hos",
 "id": "k86"
+},
+{
+"title": "Welcome pack · What the AOG is not.",
+"url": "/welcome-pack",
+"text": "pital for the broken and a home for the searching. Come as you are; God does the changing.\n AOG Sandton City Church · Welcome pack 4 \n Our church",
+"id": "k87"
 },
 {
 "title": "Welcome pack · The birth of AOG Sandton City Church.",
 "url": "/welcome-pack",
 "text": "The birth of AOG Sandton City Church. \n AOG Sandton City Church was born from a vision: a city church in the heart of Sandton, where people who live, study and work in the city can find Jesus, grow in faith and be sent out to serve.\n Today we meet at 17 Humber Street, Woodmead, with services through the week and a youth ministry that is close to our hearts.\n The full story of how we began is being written down and will be added here soon.\n AOG Sandton City Church · Welcome pack 5 \n In short",
-"id": "k87"
+"id": "k88"
 },
 {
 "title": "Welcome pack · What we believe.",
 "url": "/welcome-pack",
 "text": "What we believe. \n The Bible is God's Word, our guide for faith and life.\n Jesus Christ died and rose again; everyone who believes in Him is saved by grace.\n Water baptism by immersion, and baptism in the Holy Spirit , for every believer.\n Holiness : a life that honours God.\n Holy Communion , remembering the Lord's death until He comes.\n Divine healing and deliverance through the power of God.\n The Great Commission : go and make disciples of all nations (Matthew 28:19).\n The church is a family. We gather, pray, give and serve together.\n Join Become a member at aogsccyouth.com/join. A leader will walk with you.\n Devotions Read today's verse in your profile and pray with the church every day.\n Serve Find a ministry: worship, media, youth, children, hospitality and more.\n Ask SCC Service times, events, tickets and the church calendar, any time.\n 17 Humber Street, Woodmead, Sandton · aogsccy",
-"id": "k88"
+"id": "k89"
 }
 ];

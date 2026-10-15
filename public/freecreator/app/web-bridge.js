@@ -11,12 +11,41 @@ const DESKTOP_ONLY = "That's in the FreeCreator desktop app (Windows & Mac).";
 const me = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" }).then((r) => r.json()).catch(() => ({}));
 if (!me?.user) { location.replace("/freecreator?signin=1"); await new Promise(() => {}); }
 const uid = me.user.id;
+// Church workspace: FreeCreator is strictly for members of a registered church, and each church only sees its own work.
+const access = await fetch("/api/freecreator/access", { credentials: "same-origin", cache: "no-store" }).then((r) => r.json()).catch(() => ({}));
+if (!access.church) { location.replace("/freecreator?nochurch=1"); await new Promise(() => {}); }
+const church = access.church;
+// Phones: FreeCreator itself runs on a computer. A few allowed accounts can use their phone as an extra camera.
+if (matchMedia("(pointer: coarse) and (max-width: 900px)").matches) {
+  location.replace(access.mobile ? "/freecreator/app/camera.html" : "/freecreator?phone=1"); await new Promise(() => {});
+}
 document.documentElement.dataset.web = "1";
 
 // ---- Library: localStorage (words) + IndexedDB (media files), per account
-const KEY = `freecreator:${uid}:lib`;
+const KEY = `freecreator:${church.id}:${uid}:lib`;
 const DEFAULTS = { songs: [], shows: [], media: [], settings: { themeId: "classic", outputDisplay: null, stageDisplay: null, translation: "kjv", maxLines: 4, logoSrc: null, remotePin: null, customThemes: [], setupDone: false } };
 let db; try { db = { ...structuredClone(DEFAULTS), ...JSON.parse(localStorage.getItem(KEY) || "{}") }; db.settings = { ...DEFAULTS.settings, ...db.settings }; } catch { db = structuredClone(DEFAULTS); }
+// Songs and shows are shared with everyone in the church workspace (saved on the server); settings and media files stay on this computer.
+const SHARED = ["songs", "shows"];
+const H = { "Content-Type": "application/json", "x-scc-admin": "1" };
+let libAt = 0, here = [];
+async function pull(first = false) {
+  const r = await fetch(`/api/freecreator/lib?since=${libAt}`, { credentials: "same-origin", cache: "no-store" }).then((x) => x.json()).catch(() => null);
+  if (!r?.ok) return false;
+  here = r.here || []; window.__fcDrawBar?.();
+  let changed = false;
+  for (const it of r.items) {
+    if (!SHARED.includes(it.coll)) continue;
+    db[it.coll] = db[it.coll].filter((x) => x.id !== it.id);
+    if (!it.deleted && it.item) db[it.coll].push(it.item);
+    libAt = Math.max(libAt, it.at); changed = true;
+  }
+  if (first && !r.items.length) libAt = 0;
+  if (changed) { save(); if (!first) dispatchEvent(new Event("fc:lib-changed")); }
+  return true;
+}
+const push = (coll, item, deleted = false) => fetch("/api/freecreator/lib", { method: "POST", headers: H, credentials: "same-origin", body: JSON.stringify({ coll, id: item.id, item: deleted ? null : item, deleted }) })
+  .then((r) => r.json()).then((r) => { if (!r.ok) throw new Error(r.error); }).catch((e) => toast(`Not saved to your church library: ${e.message || "no connection"}. It's kept on this computer.`));
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { toast("This browser is out of space for your library. Remove some media or shows."); } };
 const newId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 function toast(msg) { import("./control/ui.js").then((m) => m.toast(msg, "info", 5000)).catch(() => alert(msg)); }
@@ -27,6 +56,15 @@ const urls = new Map();
 async function loadMedia() { for (const m of db.media) { const blob = await tx("readonly", (s) => s.get(m.id)).catch(() => null); if (blob) urls.set(m.id, URL.createObjectURL(blob)); } }
 await loadMedia().catch(() => {});
 window.__fcMediaUrl = (id) => urls.get(id) || "";
+{ // First load: the church's shared library. Anything only on this computer (from before sharing) is shared once.
+  const localOnly = { songs: [...db.songs], shows: [...db.shows] };
+  db.songs = []; db.shows = [];
+  if (await pull(true)) {
+    for (const c of SHARED) for (const it of localOnly[c]) if (!db[c].some((x) => x.id === it.id)) { db[c].push(it); push(c, it); }
+  } else { db.songs = localOnly.songs; db.shows = localOnly.shows; }
+  save();
+  setInterval(() => { if (!document.hidden) pull(); }, 6000);
+}
 
 // ---- Live state: this window is the source; output and stage windows listen
 const live = { listeners: new Set(), state: { themeId: db.settings.themeId, background: { type: "theme" }, blackout: false, clear: false, logo: false, item: {}, version: 0 } };
@@ -79,8 +117,8 @@ const jsonFrom = (t) => { if (!t) return null; const m = t.match(/[[{][\s\S]*[\]
 window.scc = {
   lib: {
     get: async (n) => structuredClone(db[n]),
-    upsert: async (n, item) => { const it = { ...item, id: item.id || newId(), updatedAt: Date.now() }; db[n] = db[n].filter((x) => x.id !== it.id).concat(it); save(); return it; },
-    remove: async (n, i) => { db[n] = db[n].filter((x) => x.id !== i); if (n === "media") { tx("readwrite", (s) => s.delete(i)).catch(() => {}); const u = urls.get(i); if (u) URL.revokeObjectURL(u); urls.delete(i); } save(); return true; },
+    upsert: async (n, item) => { const it = { ...item, id: item.id || newId(), updatedAt: Date.now() }; db[n] = db[n].filter((x) => x.id !== it.id).concat(it); save(); if (SHARED.includes(n)) push(n, it); return it; },
+    remove: async (n, i) => { db[n] = db[n].filter((x) => x.id !== i); if (SHARED.includes(n)) push(n, { id: i }, true); if (n === "media") { tx("readwrite", (s) => s.delete(i)).catch(() => {}); const u = urls.get(i); if (u) URL.revokeObjectURL(u); urls.delete(i); } save(); return true; },
     setSettings: async (p) => { db.settings = { ...db.settings, ...p }; save(); return structuredClone(db.settings); },
   },
   live: {
@@ -131,7 +169,7 @@ window.scc = {
       const pkg = JSON.parse(text); if (!pkg?.show) throw new Error("That isn't a FreeCreator show file.");
       for (const s of pkg.songs || []) if (!db.songs.some((x) => x.id === s.id)) db.songs.push(s);
       const show = { ...pkg.show, id: db.shows.some((x) => x.id === pkg.show.id) ? newId() : pkg.show.id };
-      db.shows.push(show); save(); return show;
+      db.shows.push(show); save(); push("shows", show); for (const sg of pkg.songs || []) push("songs", sg); return show;
     },
     fetchLan: async () => { throw new Error(DESKTOP_ONLY); },
   },
@@ -183,7 +221,11 @@ window.scc = {
 // A slim bar so people know where they are and can get back to the church app.
 const bar = document.createElement("div");
 bar.className = "fc-web-bar";
-bar.innerHTML = `<b>FreeCreator Online</b><span>Signed in as ${String(me.user.given_name || me.user.email).replace(/[<>&"]/g, "")} · your library is saved in this browser</span><a href="/freecreator">Help</a><a href="/me">Church app</a>`;
+const clean = (t) => String(t || "").replace(/[<>&"]/g, "");
+function drawBar() {
+  bar.innerHTML = `<b>FreeCreator Online</b><span>${clean(church.name)} · ${clean(me.user.given_name || me.user.email)}${here.length ? ` · also here: ${here.slice(0, 4).map(clean).join(", ")}${here.length > 4 ? ` +${here.length - 4}` : ""}` : ""} · songs and shows are shared with your church</span><a href="/freecreator">Help</a><a href="/me">Church app</a>`;
+}
+drawBar(); window.__fcDrawBar = drawBar;
 const style = document.createElement("style");
 style.textContent = `@font-face{font-family:"Jost";src:url("/fonts/Jost.woff") format("woff");font-weight:100 900;font-display:swap}html,body{overscroll-behavior:none}.fc-web-bar{position:fixed;left:0;right:0;bottom:0;z-index:9999;display:flex;gap:14px;align-items:center;height:30px;padding:0 14px;font:500 12.5px/1 "Jost",system-ui,sans-serif;background:rgba(10,10,14,.92);color:#cfcfe0;border-top:1px solid rgba(255,255,255,.08)}.fc-web-bar b{color:#fff}.fc-web-bar span{flex:1;opacity:.8}.fc-web-bar a{color:#ffd27a;text-decoration:none}body{padding-bottom:30px}`;
 document.head.append(style);

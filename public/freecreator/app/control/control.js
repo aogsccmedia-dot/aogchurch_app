@@ -857,3 +857,5 @@ start().catch((err) => {
 });
 
 export { renderLook, renderCenter, renderPreviews, scriptureItem, textItem, parseReference, formatReference };
+
+addEventListener("fc:lib-changed", async () => { await reload(["songs", "shows"]); renderAll(); });

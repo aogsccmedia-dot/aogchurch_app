@@ -3,6 +3,7 @@
 // Built for speed: one canvas compositor on a steady timer, overlay layers cached and only redrawn when they change.
 const me = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" }).then((r) => r.json()).catch(() => ({}));
 if (!me?.user) { location.replace("/freecreator?signin=1"); await new Promise(() => {}); }
+if (matchMedia("(pointer: coarse) and (max-width: 900px)").matches) { location.replace("/freecreator/app/camera.html"); await new Promise(() => {}); }
 const $ = (id) => document.getElementById(id);
 const KEY = `freecreator:${me.user.id}:studio`;
 const store = (() => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } })();
@@ -38,10 +39,51 @@ async function listDevices() {
   const label = (d, i, k) => `${d.label || `${k} ${i + 1}`}${/blackmagic|atem/i.test(d.label) ? " · ATEM" : /capture|hdmi|elgato|cam link|magewell|avermedia/i.test(d.label) ? " · HDMI" : ""}`;
   const fill = (sel, list, k, saved) => { sel.innerHTML = `<option value="">None</option>` + list.map((d, i) => `<option value="${d.deviceId}">${label(d, i, k).replace(/</g, "")}</option>`).join(""); if (saved && list.some((d) => d.deviceId === saved)) sel.value = saved; };
   fill($("srcA"), cams, "Camera", store.camA ?? cams[0]?.deviceId); fill($("srcB"), cams, "Camera", store.camB); fill($("srcMic"), mics, "Microphone", store.mic ?? mics[0]?.deviceId);
+  addPhoneOptions();
+}
+// ---- Phones as cameras (WebRTC straight from the phone; the server only passes the connection details)
+const phones = new Map();
+function addPhoneOptions() {
+  for (const sel of [$("srcA"), $("srcB")]) {
+    sel.querySelectorAll("option[data-phone]").forEach((o) => o.remove());
+    for (const [id, ph] of phones) sel.insertAdjacentHTML("beforeend", `<option data-phone value="phone:${id}">📱 ${ph.label.replace(/</g, "")}</option>`);
+  }
+  $("phoneList").innerHTML = [...phones.values()].map((ph) => `<div class="st-track playing"><span>📱 ${ph.label.replace(/</g, "")}</span><small>${ph.pc.connectionState}</small></div>`).join("");
+}
+let room = null, roomTimer = 0;
+$("phoneAdd").onclick = async () => {
+  if (!room) {
+    const r = await fetch("/api/freecreator/cam/room", { method: "POST", headers: H, credentials: "same-origin", body: "{}" }).then((x) => x.json()).catch(() => null);
+    if (!r?.code) return toast("Couldn't open a phone code. Try again.");
+    room = r.code; $("phoneCode").textContent = room; $("phoneCode").hidden = false; $("phoneAdd").textContent = "Waiting for phones…";
+    clearInterval(roomTimer); roomTimer = setInterval(checkPhones, 1500);
+  }
+};
+async function checkPhones() {
+  const r = await fetch(`/api/freecreator/cam/pending?code=${room}`, { credentials: "same-origin", cache: "no-store" }).then((x) => x.json()).catch(() => null);
+  for (const l of r?.links || []) {
+    if (phones.has(l.id)) continue;
+    const pc = new RTCPeerConnection({ bundlePolicy: "max-bundle", iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }] });
+    const ph = { label: l.label || "Phone", pc, stream: new MediaStream() };
+    phones.set(l.id, ph);
+    pc.ontrack = (e) => {
+      ph.stream.addTrack(e.track);
+      if (e.track.kind === "audio") { const src = AC.createMediaStreamSource(new MediaStream([e.track])), g = AC.createGain(); g.gain.value = 1; src.connect(g); g.connect(mix); g.connect(meter); ph.audio = g; }
+      addPhoneOptions();
+    };
+    pc.onconnectionstatechange = () => { if (pc.connectionState === "connected") toast(`${ph.label} connected`); if (pc.connectionState === "failed" || pc.connectionState === "closed") { phones.delete(l.id); addPhoneOptions(); } else addPhoneOptions(); };
+    await pc.setRemoteDescription({ type: "offer", sdp: l.offer });
+    await pc.setLocalDescription(await pc.createAnswer());
+    await new Promise((res) => { if (pc.iceGatheringState === "complete") res(); pc.addEventListener("icegatheringstatechange", () => pc.iceGatheringState === "complete" && res()); setTimeout(res, 3000); });
+    await fetch("/api/freecreator/cam/answer", { method: "POST", headers: H, credentials: "same-origin", body: JSON.stringify({ code: room, id: l.id, sdp: pc.localDescription.sdp }) }).catch(() => {});
+    addPhoneOptions();
+  }
 }
 async function useCam(slot, deviceId) {
-  streams[slot]?.getTracks().forEach((t) => t.stop()); streams[slot] = null; V[slot].srcObject = null;
+  if (!String(streams[slot]?.id || "").startsWith("phone")) streams[slot]?.getTracks().forEach((t) => { if (![...phones.values()].some((p) => p.stream.getTracks().includes(t))) t.stop(); });
+  streams[slot] = null; V[slot].srcObject = null;
   if (!deviceId) return;
+  if (deviceId.startsWith("phone:")) { const ph = phones.get(deviceId.slice(6)); if (!ph) return; V[slot].srcObject = new MediaStream(ph.stream.getVideoTracks()); await V[slot].play().catch(() => {}); return; }
   try {
     streams[slot] = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId }, width: { ideal: S.q.w }, height: { ideal: S.q.h }, frameRate: { ideal: S.q.fps } }, audio: false });
     V[slot].srcObject = streams[slot]; await V[slot].play().catch(() => {});

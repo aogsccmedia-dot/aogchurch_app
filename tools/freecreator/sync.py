@@ -43,6 +43,8 @@ idx = idx.replace("<title>SCC Presenter</title>", "<title>FreeCreator Online · 
 c = (OUT / "control" / "control.js").read_text()
 c = c.replace('if (!window.scc) await import("./mock.js");', 'if (!window.scc) await import("../web-bridge.js");')
 c = c.replace("const mediaUrl = (id) => `/media/${encodeURIComponent(id)}`;", "const mediaUrl = (id) => window.__fcMediaUrl?.(id) || \"\";")
+# Shared church library: when someone else in the church changes a song or show, show it here straight away.
+c += '\naddEventListener("fc:lib-changed", async () => { await reload(["songs", "shows"]); renderAll(); });\n'
 (OUT / "control" / "control.js").write_text(c)
 
 # Output / stage windows: live state from the control window

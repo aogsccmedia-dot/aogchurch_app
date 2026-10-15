@@ -1372,3 +1372,48 @@ describe("FreeCreator Studio", () => {
     assert.equal((await post("/api/freecreator/ai", { task: "lowerthirds", text: "Youth service" }, A(c))).status, 200);
   });
 });
+
+describe("FreeCreator church workspaces", () => {
+  test("strictly members; churches never see each other's library or cameras; phones only for allowed accounts", async () => {
+    const g = await makeEnv({ GOOGLE_CLIENT_ID: CLIENT_ID });
+    const G = async (sub: string, email: string, name: string) => cookieOf(await post("/api/auth/google", { credential: await googleToken({ sub, email, name }) }, {}, g));
+    const adm = await superCookie(g);
+    const stranger = await G("g-fs", "stranger@gmail.com", "Stranger");
+    // Not a member of any church: no access, no library, no AI.
+    const acc0 = await (await call("/api/freecreator/access", { headers: { cookie: stranger } }, g)).json() as { church: unknown };
+    assert.equal(acc0.church, null);
+    assert.equal((await call("/api/freecreator/lib", { headers: { cookie: stranger } }, g)).status, 403, "strictly members");
+    assert.equal((await post("/api/freecreator/ai", { task: "tidy", text: "x" }, A(stranger), g)).status, 403);
+    // Main admin is in Sandton City Church and can use phones.
+    const acc = await (await call("/api/freecreator/access", { headers: { cookie: adm } }, g)).json() as { church: { id: string }; mobile: boolean };
+    assert.equal(acc.church.id, "scc"); assert.equal(acc.mobile, true);
+    assert.equal((await post("/api/freecreator/lib", { coll: "songs", id: "s1", item: { title: "SCC secret setlist" } }, A(adm), g)).status, 200);
+    // Another church registers; until approved it gets nothing.
+    const pastor = await G("g-fp", "otherpastor@gmail.com", "Pastor");
+    const reg = await (await post("/api/freecreator/church/register", { name: "Grace Chapel", city: "Durban" }, A(pastor), g)).json() as { id: string; status: string };
+    assert.equal(reg.status, "pending");
+    assert.equal((await call("/api/freecreator/lib", { headers: { cookie: pastor } }, g)).status, 403, "pending churches can't use it yet");
+    assert.equal((await post(`/api/freecreator/churches/${reg.id}`, { status: "active" }, A(pastor), g)).status, 403, "only the main admin approves");
+    assert.equal((await post(`/api/freecreator/churches/${reg.id}`, { status: "active" }, A(adm), g)).status, 200);
+    // Approved: sees only its own (empty) library, never Sandton City Church's.
+    const lib = await (await call("/api/freecreator/lib", { headers: { cookie: pastor } }, g)).json() as { church: { id: string }; items: unknown[] };
+    assert.equal(lib.church.id, reg.id); assert.equal(lib.items.length, 0, "no cross-church data");
+    // The church adds its own members by hand; others still can't get in.
+    assert.equal((await post("/api/freecreator/church/members", { email: "helper@gmail.com" }, A(pastor), g)).status, 200);
+    const helper = await G("g-fh", "helper@gmail.com", "Helper");
+    await call("/api/freecreator/lib", { headers: { cookie: helper } }, g);
+    assert.equal((await post("/api/freecreator/lib", { coll: "songs", id: "g1", item: { title: "Grace song" } }, A(helper), g)).status, 200);
+    assert.equal((await post("/api/freecreator/church/members", { email: "x@gmail.com" }, A(helper), g)).status, 403, "plain members can't add people");
+    const mine = await (await call("/api/freecreator/lib", { headers: { cookie: pastor } }, g)).json() as { items: { id: string }[]; here: string[] };
+    assert.deepEqual(mine.items.map((i) => i.id), ["g1"]); assert.ok(mine.here.includes("Helper"), "sees who else is working");
+    const scc = await (await call("/api/freecreator/lib", { headers: { cookie: adm } }, g)).json() as { items: { id: string }[]; here: string[] };
+    assert.deepEqual(scc.items.map((i) => i.id), ["s1"]); assert.ok(!scc.here.includes("Helper"), "can't see other churches' activity");
+    // Phones: not allowed for ordinary accounts; and even when allowed, can't join another church's camera room.
+    const room = await (await post("/api/freecreator/cam/room", {}, A(adm), g)).json() as { code: string };
+    const sdp = "v=0\r\no=- 1 1 IN IP4 0.0.0.0\r\n";
+    assert.equal((await post("/api/freecreator/cam/offer", { code: room.code, sdp }, A(pastor), g)).status, 403, "phones are for allowed accounts only");
+    await g.DB.prepare("UPDATE settings SET value = ? WHERE key = 'freecreator_mobile'").bind(JSON.stringify(["philasandendunge@gmail.com", "otherpastor@gmail.com"])).run();
+    assert.equal((await post("/api/freecreator/cam/offer", { code: room.code, sdp }, A(pastor), g)).status, 404, "another church's room is invisible");
+    assert.equal((await post("/api/freecreator/cam/offer", { code: room.code, sdp }, A(adm), g)).status, 200);
+  });
+});

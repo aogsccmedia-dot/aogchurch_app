@@ -42,6 +42,7 @@ export function moreTabs(me) {
     ["/messages", "messageCircle", "Messages"],
     ["/go", "globe", "Go Ye (evangelism)"],
     ["/poster", "palette", "Poster maker"],
+    ["/freecreator", "monitor", "FreeCreator (presentation & live)"],
     ["/discipleship", "bookOpen", "Discipleship classes"],
     ["/vote", "vote", "Vote"],
     ["/store", "landmark", "Store"],
