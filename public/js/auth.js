@@ -90,16 +90,18 @@ function watchGoogleButton(el) {
 }
 
 /** Render a Google button into `el`. Returns false if Google sign-in isn't configured. */
-export async function googleButton(el, { text = "continue_with", width, round = false } = {}) {
+export async function googleButton(el, { text = "continue_with", width, round = false, card = false } = {}) {
   const me = await getMe();
   const clientId = me.google_client_id;
   if (!clientId || !el) { if (el) el.hidden = true; return false; }
   try { await loadGsi(); } catch { el.hidden = true; return false; }
   if (!gsiReady) { google.accounts.id.initialize({ client_id: clientId, callback: handleCredential, ux_mode: "popup", auto_select: false, itp_support: true }); gsiReady = true; }
   if (round) google.accounts.id.renderButton(el, { type: "icon", theme: "outline", size: "large", shape: "circle" });
+  else if (card) google.accounts.id.renderButton(el, { theme: "outline", size: "large", shape: "pill", text, logo_alignment: "center", width: Math.min(400, Math.max(240, el.clientWidth || 320)) });
   else google.accounts.id.renderButton(el, { theme: document.body.classList.contains("admin") ? "filled_black" : "outline", size: "large", shape: "pill", text, logo_alignment: "left", width: width || Math.min(360, el.clientWidth || 320) });
   el.hidden = false;
-  if (!round) { watchGoogleButton(el); emailLink(el); }
+  if (!round && !card) { watchGoogleButton(el); emailLink(el); }
+  if (card) watchGoogleButton(el);
   return true;
 }
 
@@ -115,7 +117,7 @@ function emailLink(el) {
 /** The sign-in card, for pages that show it in place (member Home). */
 export async function signInCard(host, opts = {}) {
   const { mountSignIn } = await import("./signin.js");
-  return mountSignIn(host, { google: (g) => googleButton(g, { round: true }), onDone: (r) => finishSignIn(r), ...opts });
+  return mountSignIn(host, { google: (g) => googleButton(g, { card: true, text: g.dataset.text || "signin_with" }), onDone: (r) => finishSignIn(r), ...opts });
 }
 
 export async function signOut() {

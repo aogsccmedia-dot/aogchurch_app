@@ -2307,3 +2307,8 @@ html.signed-in .ask-thread, .ask-thread { height: clamp(300px, calc(100dvh - 340
 .vg-steps figure { aspect-ratio: auto; place-items: center; }
 .vg-steps img { width: auto; height: auto; max-width: 100%; max-height: 440px; }
 html.signed-in .ask-page .ask-thread { border: 0 !important; box-shadow: none !important; background: transparent !important; }
+/* Sign-in card: a full-size Google button */
+.si-social { display: block; }
+.si-g { width: 100%; height: auto; min-height: 44px; min-width: 0; border-radius: 999px; overflow: visible; display: flex; justify-content: center; }
+.si-g:empty { height: 44px; background: #fff; border: 1px solid rgba(22, 21, 27, .12); }
+.si-g > div, .si-g iframe { margin: 0 auto !important; }

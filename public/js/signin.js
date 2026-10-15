@@ -44,7 +44,7 @@ export function mountSignIn(host, { google, onDone, mode = "login", note = "" } 
         ${go("Sign In")}
       </form>
       <div class="si-or"><span>OR</span></div>
-      <div class="si-social"><span>Sign in with</span><div class="si-g" data-g></div></div>
+      <div class="si-social"><div class="si-g" data-g data-text="signin_with"></div></div>
       <p class="si-swap">Don't have an account? <button type="button" class="si-link" data-to="signup">Sign up</button></p>
       <button type="button" class="si-visit" data-to="visitor">${icon("user")}<span><b>Just visiting?</b> Continue as a visitor</span></button>`,
     visitor: () => `
@@ -70,7 +70,7 @@ export function mountSignIn(host, { google, onDone, mode = "login", note = "" } 
         ${go("Sign Up")}
       </form>
       <div class="si-or"><span>OR</span></div>
-      <div class="si-social"><span>Sign up with</span><div class="si-g" data-g></div></div>
+      <div class="si-social"><div class="si-g" data-g data-text="signup_with"></div></div>
       <p class="si-swap">Already have an account? <button type="button" class="si-link" data-to="login">Sign in</button></p>`,
     forgot: () => `
       <p class="si-kicker">Forgot password</p><h2 class="si-h">Let's get you back in</h2>
