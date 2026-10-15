@@ -9,6 +9,7 @@ import { getSession, requireAdmin } from "../lib/auth.ts";
 import { rateLimit } from "../lib/ratelimit.ts";
 import { uuid } from "../lib/crypto.ts";
 import { saDay, streakFrom, wordFor } from "../lib/word.ts";
+import { artBackground, artPlan } from "../lib/word-art.ts";
 
 const needUser = async (env: Env, req: Request) => {
   const s = await getSession(env, req);
@@ -30,6 +31,16 @@ export function faithRoutes(router: Router, env: Env): void {
     const today = saDay();
     const s = await getSession(env, req);
     return json({ ok: true, word: wordFor(today), ...(await wordState(env, s?.user.id ?? null, today)) });
+  });
+  // The AI's art direction for today's word, and its painted background.
+  router.get("/api/word/art", async () => json({ ok: true, plan: await artPlan(env) }, 200, { "Cache-Control": "public, max-age=600" }));
+  router.get("/api/word/art-bg", async (req) => {
+    const d = new URL(req.url).searchParams.get("d") || "";
+    const today = saDay(), tomorrow = saDay(new Date(Date.now() + 86400_000));
+    if (d !== today && d !== tomorrow) throw new HttpError(404, "Not found.");
+    const img = await artBackground(env, d);
+    if (!img) return new Response("Not ready", { status: 404, headers: { "Cache-Control": "no-store" } });
+    return new Response(img, { headers: { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=86400, immutable" } });
   });
   router.post("/api/word/today", async (req) => {
     const s = await needUser(env, req);

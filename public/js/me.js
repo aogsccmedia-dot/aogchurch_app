@@ -88,8 +88,8 @@ async function wordThumb() {
   if (thumbDone) return; thumbDone = true;
   try {
     const { word } = await fetch("/api/word/today", { cache: "no-store" }).then((r) => r.json());
-    const { wordArt } = await import("./word-art.js");
-    const blob = await wordArt(word); const slot = $("me-word-art");
+    const [{ wordArt }, plan] = await Promise.all([import("./word-art.js"), fetch("/api/word/art").then((r) => r.json()).then((d) => d.plan).catch(() => ({}))]);
+    const blob = await wordArt(word, plan || {}); const slot = $("me-word-art");
     if (blob && slot) slot.innerHTML = `<img src="${URL.createObjectURL(blob)}" alt="">`;
   } catch { /* keep the icon */ }
 }

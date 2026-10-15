@@ -1,3 +1,4 @@
+import { prepareWordArt } from "./lib/word-art.ts";
 /**
  * AOG Sandton City Church — Cloudflare Worker entry.
  *
@@ -101,6 +102,7 @@ export default {
       await processPrayerWeekly(env, now).catch((e) => console.error("weekly prayer email failed", e));
       await processElections(env, now).catch((e) => console.error("elections failed", e));
       await processDailyVerse(env, now).catch((e) => console.error("daily verse push failed", e));
+      await prepareWordArt(env, now).catch((e) => console.error("word art failed", e));
       await processWhatsNew(env).catch((e) => console.error("what's new email failed", e));
       await retrieve(env, "service times", 1).catch(() => {});   // keep Ask SCC's church knowledge ready, so the first question is fast
 

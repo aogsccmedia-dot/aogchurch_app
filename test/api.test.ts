@@ -1307,3 +1307,24 @@ describe("what's new email", () => {
     assert.equal(out.filter((m) => m.to === "aogsccmedia@gmail.com").length, 0);
   });
 });
+
+describe("word art", () => {
+  test("the AI's art plan is checked: real verse words, safe palette, known scene; falls back without AI", async () => {
+    const { artPlan } = await import("../src/lib/word-art.ts");
+    const { wordFor } = await import("../src/lib/word.ts");
+    const day = "2026-10-15", w = wordFor(day), word = w.text.split(/\s+/)[2].replace(/[^A-Za-z']/g, "");
+    const store = new Map<string, string>();
+    const kv = { get: async (k: string) => store.get(k) ?? null, put: async (k: string, v: string) => { store.set(k, v); } };
+    const fake = (resp: unknown) => ({ DB: env.DB, FILES_KV: kv, AI: { run: async () => ({ response: resp }) } }) as unknown as Env;
+    const good = await artPlan(fake(JSON.stringify({ highlight: word, tagline: "Made new", palette: ["#111111", "#5a3fd0", "#f3b4d6", "#ffd27a"], scene: "sunrise" })), day);
+    assert.equal(good.highlight, word); assert.equal(good.tagline, "Made new"); assert.equal(good.scene, "sunrise"); assert.equal(good.ai, true);
+    assert.equal(good.bg, `/api/word/art-bg?d=${day}`);
+    store.clear();
+    const bad = await artPlan(fake({ highlight: "words not in the verse at all", tagline: "visit https://spam.example", palette: ["red", "blue"], scene: "explosions" }), "2026-10-15");
+    assert.notEqual(bad.highlight, "words not in the verse at all"); assert.equal(bad.tagline, null); assert.equal(bad.palette.length, 4); assert.ok(bad.palette.every((c: string) => /^#[0-9a-f]{6}$/i.test(c)));
+    assert.notEqual(bad.scene, "explosions");
+    const none = await artPlan({ DB: env.DB } as unknown as Env, "2026-10-16");
+    assert.equal(none.ai, false); assert.equal(none.bg, null);
+    const r = await call("/api/word/art"); assert.equal(r.status, 200);
+  });
+});
