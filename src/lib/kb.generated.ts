@@ -303,7 +303,7 @@ export const KB: { id: string; title: string; url: string; text: string }[] = [
 {
 "title": "How to use the app · Read today's verse",
 "url": "/help",
-"text": "Read today's verse\n Tap Devotions at the top.\n Read the verse, think about the question, and pray.\n Tap I've read it & prayed to keep your streak going with the church family.\n Back to the list \n Step 8",
+"text": "Read today's verse\n Tap Devotions at the top.\n Read the verse, think about the question, and pray.\n Tap I've read it & prayed .\n Back to the list \n Step 8",
 "id": "k50"
 },
 {

@@ -1,5 +1,5 @@
 /**
- * Daily Word (verse of the day + streaks) and the Prayer Wall (shared requests, "I prayed", answered prayers).
+ * Daily Word (verse of the day + who read today) and the Prayer Wall (shared requests, "I prayed", answered prayers).
  * Reading is open to everyone; checking in, posting and praying need a Google sign-in.
  * Prayer Wall posts only appear after a leader approves them (safeguarding for young people).
  */

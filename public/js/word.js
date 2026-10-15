@@ -1,17 +1,10 @@
-// Daily Word: today's verse, a question, a prayer prompt, "I've read it & prayed", streak and community count.
+// Daily Word: today's verse, a question, a prayer prompt, "I've read it & prayed" and how many read today.
 import { api, esc, toast } from "./site.js";
 import { openSignIn, whenSignedIn } from "./auth.js";
 import { icon } from "./icons.js";
 import { STYLES, STYLE_NAMES, saveArt, shareArt, wordArt } from "./word-art.js";
 
-const DOW = ["S", "M", "T", "W", "T", "F", "S"];
 
-function dots(last7) {
-  return `<div class="word-week" aria-label="Last 7 days">${last7.map((d) => {
-    const day = DOW[new Date(d.day + "T12:00:00Z").getUTCDay()];
-    return `<span class="${d.done ? "on" : ""}" title="${esc(d.day)}"><i></i>${day}</span>`;
-  }).join("")}</div>`;
-}
 
 // Today's Word is always shown as art (an image), never as plain text. The words stay in the image's alt text for screen readers.
 // The AI sets the day's look (/api/word/art); "Shuffle" walks through every style, from clean and minimal to full colour.
@@ -61,9 +54,9 @@ function render(el, data) {
   const compact = el.dataset.word === "compact";
   const status = me
     ? me.done
-      ? `<div class="word-done">${icon("check")} Done for today <span class="streak">${icon("flame")} ${me.streak}-day streak</span></div>`
-      : `<button class="btn btn-green" type="button" data-word-done>${icon("bookOpen")} I've read it &amp; prayed</button>${me.streak ? `<span class="streak">${icon("flame")} ${me.streak}-day streak, keep it going!</span>` : ""}`
-    : `<button class="btn btn-green" type="button" data-word-signin>${icon("bookOpen")} Sign in to start your streak</button>`;
+      ? `<div class="word-done">${icon("check")} Read &amp; prayed today</div>`
+      : `<button class="btn btn-green" type="button" data-word-done>${icon("bookOpen")} I've read it &amp; prayed</button>`
+    : `<button class="btn btn-green" type="button" data-word-signin>${icon("bookOpen")} Sign in to join in</button>`;
   el.innerHTML = `<article class="word-card ${compact ? "compact" : ""}">
     <div class="word-main">
       <p class="eyebrow">Today's Word · Day ${w.number} of ${w.of}</p>
@@ -73,7 +66,6 @@ function render(el, data) {
     </div>
     <aside class="word-side">
       <div class="word-actions">${status}</div>
-      ${me ? dots(me.last7) : ""}
       <p class="word-community">${icon("users")} ${readers ? `<b>${readers}</b> ${readers === 1 ? "person has" : "people have"} read today` : "Be the first to read today"}</p>
       <div class="word-art-actions"><button class="btn btn-gold btn-sm" type="button" data-art-share>${icon("share")} Share image</button><button class="btn btn-ghost btn-sm" type="button" data-art-save>${icon("download")} Save</button>${shuffleBtn}</div>
     </aside>
@@ -84,7 +76,7 @@ function render(el, data) {
     try {
       const r = await api("/api/word/today", { method: "POST" });
       render(el, { ...data, ...r });
-      toast(r.me.streak > 1 ? `🔥 ${r.me.streak} days in a row. Amazing!` : "Day one done. See you tomorrow! 🙌");
+      toast("Amen 🙏 See you tomorrow.");
     } catch (err) { toast(err.message); e.currentTarget.disabled = false; }
   });
   paintArt(el, w);
