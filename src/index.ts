@@ -1,3 +1,4 @@
+import { isSeoPath, seoResponse } from "./lib/seo.ts";
 import { guardVisitor } from "./lib/visitors.ts";
 import { prepareWordArt } from "./lib/word-art.ts";
 /**
@@ -52,7 +53,10 @@ export default {
       return Response.redirect(url.toString(), 301);
     }
 
-    if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(req);
+    if (!url.pathname.startsWith("/api/")) {
+      if ((req.method === "GET" || req.method === "HEAD") && isSeoPath(url.pathname)) { try { return await seoResponse(req, env); } catch (e) { console.error("seo", e); } }
+      return env.ASSETS.fetch(req);
+    }
 
     if (req.method !== "GET" && req.method !== "HEAD" && !CROSS_SITE_OK.has(url.pathname)) {
       const origin = req.headers.get("origin");

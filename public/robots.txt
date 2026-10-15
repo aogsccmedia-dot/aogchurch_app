@@ -1,4 +1,51 @@
+# AOG Sandton City Church · aogsccyouth.com
+# Search engines and AI assistants are welcome to read the public website.
+# A plain summary for AI assistants: https://aogsccyouth.com/llms.txt (full text: /llms-full.txt)
+
 User-agent: *
+Allow: /
 Disallow: /admin/
 Disallow: /api/
+Disallow: /me
+Disallow: /messages
+Disallow: /assistant
+Disallow: /settings
+Disallow: /vote
+Disallow: /poster
+Disallow: /ticket
+Disallow: /membership
+Disallow: /reminders
+Disallow: /rsvp
+Disallow: /followup
+Disallow: /freecreator/app/
+Allow: /api/media/
+
+# AI search and assistant crawlers: same rules, named so it's clear they're welcome.
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: Bingbot
+User-agent: DuckAssistBot
+User-agent: CCBot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /me
+Disallow: /messages
+Disallow: /assistant
+Disallow: /settings
+Disallow: /vote
+Disallow: /poster
+Disallow: /ticket
+Disallow: /membership
+Disallow: /freecreator/app/
+Allow: /api/media/
+
 Sitemap: https://aogsccyouth.com/sitemap.xml

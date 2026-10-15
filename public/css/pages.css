@@ -2324,3 +2324,13 @@ html.signed-in .ask-page .ask-thread { border: 0 !important; box-shadow: none !i
 #msg-role.is-typing { color: #3fae6d; font-style: italic; }
 .msg-who b .vbadge, #msg-name .vbadge, .pick-leader b .vbadge { margin-left: 4px; vertical-align: -2px; }
 @media (prefers-reduced-motion: reduce) { .msg-b { animation: none; } }
+/* Visit: questions people ask (also what search engines and AI assistants read) */
+.faq { margin-top: 34px; }
+.faq h2 { margin: 0 0 12px; }
+.faq-item { border-bottom: 1px solid var(--line); padding: 14px 2px; }
+.faq-item summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 12px; font-weight: 500; font-size: 16.5px; }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: "+"; color: var(--gold); font-size: 20px; line-height: 1; }
+.faq-item[open] summary::after { content: "–"; }
+.faq-item p { margin: 8px 0 0; color: var(--text-2); line-height: 1.55; }
+.ssr-events { margin: 0; padding-left: 18px; display: grid; gap: 8px; }

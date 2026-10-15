@@ -1533,3 +1533,23 @@ describe("Ask SCC and prayer", () => {
     assert.ok(r.reply.actions.some((a) => a.href.startsWith("/messages?to=") || a.href === "/prayer"), "handed to a leader");
   });
 });
+
+describe("Search and AI readiness", () => {
+  test("llms.txt has live services, address and events; schema.org data is well-formed", async () => {
+    const seo = await import("../src/lib/seo.ts");
+    const txt = await seo.llms(env, false);
+    assert.match(txt, /^# AOG Sandton City Church/);
+    assert.match(txt, /17 Humber Street, Woodmead, Sandton/);
+    assert.match(txt, /Sundays \d\d:\d\d/, "live service times");
+    assert.match(txt, /llms-full\.txt/);
+    const full = await seo.llms(env, true);
+    assert.ok(full.length > txt.length && /What we believe|beliefs/i.test(full));
+    assert.ok(!/\/(me|admin|messages)\b/.test(full.split("## Public website text")[1] || ""), "no private pages");
+    const f = await seo.facts(env);
+    const sv = seo.servicesLd(env, f);
+    assert.ok(sv.length && sv.every((x) => x.eventSchedule.byDay.startsWith("https://schema.org/") && /^\d\d:\d\d:00$/.test(x.eventSchedule.startTime)));
+    const faq = seo.faqLd(f);
+    assert.equal(faq["@type"], "FAQPage"); assert.ok(faq.mainEntity.length >= 5);
+    assert.ok(seo.isSeoPath("/events") && seo.isSeoPath("/llms.txt") && !seo.isSeoPath("/me"));
+  });
+});

@@ -86,6 +86,7 @@ def head(title, desc, canonical=None, noindex=False, extra=""):
   <link rel="icon" href="/assets/logo-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="alternate" type="text/plain" title="Church summary for AI assistants" href="/llms.txt">
   <link rel="preconnect" href="https://accounts.google.com">
   <link rel="stylesheet" href="/css/base.css?v={ver('css/base.css')}">
   <link rel="stylesheet" href="/css/pages.css?v={ver('css/pages.css')}">
@@ -324,9 +325,9 @@ def main():
     adm.write_text(a)
     pri = {"/": "1.0", "/events": "0.9", "/about": "0.8", "/visit": "0.8", "/join": "0.8"}
     urls = [o["canonical"] for o in PAGES.values() if o.get("canonical")]
-    (ROOT / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    (ROOT / "sitemap-pages.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         + "".join(f"  <url><loc>{SITE}{u}</loc><changefreq>weekly</changefreq><priority>{pri.get(u, '0.5')}</priority></url>\n" for u in urls) + "</urlset>\n")
-    print("wrote sitemap.xml")
+    print("wrote sitemap-pages.xml (the live /sitemap.xml adds event pages)")
     # Ask SCC's knowledge base follows the website's own words.
     import runpy; runpy.run_path(str(HERE / "kb.py"), run_name="__main__")
 
