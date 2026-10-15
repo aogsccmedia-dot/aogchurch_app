@@ -373,14 +373,23 @@ export function insightsRoutes(router: Router, env: Env): void {
   }));
 
   // ---- service sessions
-  // Names for the MC picker: church members and the team (names only).
+  // Names for the MC picker: each church member (and team member) once, even if they joined more than once.
   router.get("/api/admin/sessions/people", guard(async () => {
     const { results } = await env.DB.prepare(
-      `SELECT DISTINCT name FROM (
-         SELECT trim(COALESCE(NULLIF(preferred_name, ''), first_name) || ' ' || COALESCE(last_name, '')) AS name FROM members WHERE status NOT IN ('revoked', 'inactive')
-         UNION SELECT trim(COALESCE(u.name, '')) FROM admin_roles r JOIN users u ON u.id = r.user_id)
-       WHERE name != '' ORDER BY name COLLATE NOCASE LIMIT 2000`).all<{ name: string }>();
-    return json({ ok: true, people: results.map((r) => r.name) });
+      `SELECT name, key FROM (
+         SELECT trim(COALESCE(NULLIF(trim(preferred_name), ''), trim(first_name)) || ' ' || trim(COALESCE(last_name, ''))) AS name,
+                COALESCE(lower(trim(email)), user_id, id) AS key, created_at
+           FROM members WHERE status NOT IN ('revoked', 'inactive')
+         UNION ALL
+         SELECT trim(COALESCE(u.name, '')), lower(u.email), r.created_at FROM admin_roles r JOIN users u ON u.id = r.user_id)
+       WHERE name != '' ORDER BY created_at DESC`).all<{ name: string; key: string }>();
+    const byPerson = new Set<string>(), byName = new Map<string, string>();
+    for (const r of results) {
+      const clean = r.name.replace(/\s+/g, " ").trim(), k = clean.toLowerCase();
+      if (byPerson.has(r.key) || byName.has(k)) continue;   // one entry per person, and no repeated names
+      byPerson.add(r.key); byName.set(k, clean);
+    }
+    return json({ ok: true, people: [...byName.values()].sort((x, y) => x.localeCompare(y, "en", { sensitivity: "base" })) });
   }));
 
   router.get("/api/admin/sessions", guard(async (req) => {

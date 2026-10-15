@@ -71,6 +71,8 @@ function paint(me, d, fromCache) {
         ${new Date(r.starts_at) > new Date() ? `<button class="btn btn-sm btn-ghost" data-cancel="${esc(r.ref_code)}">Can't make it</button>` : ""}</div>
     </article>`).join("")
     : `<div class="slide empty-slide"><b>No tickets yet</b><p class="muted-text">When you get a ticket, it shows here with its QR code.</p><a class="btn btn-sm btn-gold btn-glow" href="#upcoming">${icon("ticket")} Get Ticket</a></div>`;
+  // Team members (any admin role) get a one-tap shortcut to record this week's service.
+  $("me-rec-pill").hidden = !me.is_admin;
   // Tickets sit next to the welcome pack, only when they've booked something.
   const pill = $("me-tix-pill");
   pill.hidden = !upcoming.length;

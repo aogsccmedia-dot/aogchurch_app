@@ -90,6 +90,10 @@ export const SAMPLES: Sample[] = [
     render: (s) => T.presenterBetaOpen({ site: s }, { name: "Thandi", slot: 3, key: "SCC-ABCD-EFGH" }) },
   { key: "admin_letter_reminder", group: "Admin", when: "Saturday morning, if no letter is scheduled for Sunday.",
     render: (s) => T.adminLetterReminder({ site: s }) },
-  { key: "admin_code", group: "Admin", when: "Your 6-digit admin sign-in code.",
-    render: (s) => T.adminCode({ site: s }, "482913") },
+  { key: "account_code", group: "Welcome", when: "Forgot password, or proving an email the church already knows.",
+    render: (s) => T.accountCode({ site: s }, "482913") },
+  { key: "whats_new_leader", group: "Welcome", when: "One-time update to the team: record your weekly service.",
+    render: (s) => T.whatsNew({ site: s }, { name: "Thabo", leader: true }) },
+  { key: "whats_new_member", group: "Welcome", when: "One-time update to members: what's new in the app.",
+    render: (s) => T.whatsNew({ site: s }, { name: "Naledi", leader: false }) },
 ];

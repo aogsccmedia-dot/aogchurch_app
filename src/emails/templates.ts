@@ -7,20 +7,19 @@ export interface Brand { site: string }
 export const esc = (s: unknown) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 
-// Same palette as the website: white with washed-out baby blue, lilac and baby pink, the black-and-white logo and our gold.
+// Minimal black and white. The only colour is the logo (with its gold seal) and any photos.
 const C = {
-  page: "#f5f4fb", card: "#ffffff", ink: "#1c1a22", body: "#4a4656", muted: "#777386",
-  gold: "#c8963e", goldText: "#8a5c14", goldSoft: "#f6ecd9", night: "#111016", line: "#e9e7f1",
-  blue: "#dceafb", lilac: "#e9e0fb", pink: "#fbe3ee", foot: "#faf9fd",
+  page: "#f4f4f4", card: "#ffffff", ink: "#111111", body: "#3d3d3d", muted: "#7a7a7a",
+  gold: "#111111", goldText: "#111111", goldSoft: "#f2f2f2", night: "#111111", line: "#e6e6e6",
+  blue: "#f4f4f4", lilac: "#f2f2f2", pink: "#f4f4f4", foot: "#fafafa",
 };
-const PASTEL = `linear-gradient(90deg, ${"#cfe2fb"} 0%, ${"#e2d5fb"} 50%, ${"#f9d5e5"} 100%)`;
 // Same font as the website: Jost everywhere (falls back to Helvetica where web fonts are blocked).
 const SANS = "'Jost', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 const SERIF = "'Jost', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 
 export function button(href: string, label: string): string {
-  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:28px 0 8px"><tr><td style="border-radius:999px;background:${C.gold};box-shadow:0 6px 18px rgba(200,150,62,.35)">
-    <a href="${esc(href)}" style="display:inline-block;padding:15px 28px;font:600 15px/1 ${SANS};color:#1a1206;text-decoration:none;border-radius:999px;letter-spacing:.02em">${esc(label)}&nbsp;&rarr;</a>
+  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:28px 0 8px"><tr><td style="border-radius:4px;background:${C.ink}">
+    <a href="${esc(href)}" style="display:inline-block;padding:15px 28px;font:600 15px/1 ${SANS};color:#ffffff;text-decoration:none;border-radius:4px;letter-spacing:.02em">${esc(label)}&nbsp;&rarr;</a>
   </td></tr></table>`;
 }
 
@@ -45,9 +44,9 @@ export function layout(b: Brand, o: { preheader: string; eyebrow?: string; headi
 <style>@import url('https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,400;0,500;0,600;1,400&display=swap');</style></head>
 <body style="margin:0;padding:0;background:${C.page}">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${esc(o.preheader)}&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${C.page}" style="background:${C.page};background-image:linear-gradient(160deg, ${C.blue} 0%, ${C.lilac} 45%, ${C.pink} 100%)"><tr><td align="center" style="padding:32px 12px">
-  <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background:${C.card};border-radius:22px;overflow:hidden;border:1px solid ${C.line};box-shadow:0 18px 50px rgba(60,50,110,.10)">
-    <tr><td style="height:6px;line-height:6px;font-size:0;background:${C.lilac};background-image:${PASTEL}">&nbsp;</td></tr>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${C.page}" style="background:${C.page}"><tr><td align="center" style="padding:32px 12px">
+  <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background:${C.card};border-radius:6px;overflow:hidden;border:1px solid ${C.line}">
+    <tr><td style="height:3px;line-height:3px;font-size:0;background:${C.ink}">&nbsp;</td></tr>
     <tr><td align="center" style="padding:30px 24px 6px;background:${C.card}">
       <a href="${esc(b.site)}" style="text-decoration:none"><img src="${esc(b.site)}/assets/logo-192.png" width="64" height="64" alt="AOG Sandton City Church" style="display:block;margin:0 auto 12px;border-radius:50%;border:0;background:${C.night}"></a>
       <p style="margin:0;font:600 11px/1 ${SANS};letter-spacing:.32em;text-transform:uppercase;color:${C.ink}">AOG Sandton City Church</p>
@@ -55,7 +54,7 @@ export function layout(b: Brand, o: { preheader: string; eyebrow?: string; headi
     </td></tr>
     ${hero}
     <tr><td style="padding:30px 40px 10px">
-      ${o.eyebrow ? `<p style="margin:0 0 12px"><span style="display:inline-block;padding:6px 12px;border-radius:999px;background:${C.lilac};font:600 11px/1 ${SANS};letter-spacing:.18em;text-transform:uppercase;color:#4b3f7a">${esc(o.eyebrow)}</span></p>` : ""}
+      ${o.eyebrow ? `<p style="margin:0 0 12px"><span style="display:inline-block;font:600 11px/1 ${SANS};letter-spacing:.22em;text-transform:uppercase;color:${C.muted}">${esc(o.eyebrow)}</span></p>` : ""}
       <h1 style="margin:0 0 20px;font:400 30px/1.2 ${SERIF};color:${C.ink}">${esc(o.heading)}</h1>
       ${o.content}
     </td></tr>
@@ -165,7 +164,7 @@ export function eventConfirmation(b: Brand, o: { name: string; status: string; r
   calendarUrl: string; eventUrl: string; price?: string | null; cover?: string | null; outlookUrl?: string | null; icsUrl?: string | null; approved?: boolean; tickets?: { count: number; url: string; pdfUrl?: string } | null }) {
   const wait = o.status === "waitlist";
   const ok = !wait && o.approved;
-  const cal = (href: string, label: string) => `<a href="${esc(href)}" style="display:inline-block;margin:0 8px 8px 0;padding:10px 14px;border-radius:999px;background:#f1edfb;font:600 13px/1 ${SANS};color:${C.ink};text-decoration:none">${esc(label)}</a>`;
+  const cal = (href: string, label: string) => `<a href="${esc(href)}" style="display:inline-block;margin:0 8px 8px 0;padding:10px 14px;border-radius:999px;background:#f4f4f4;font:600 13px/1 ${SANS};color:${C.ink};text-decoration:none">${esc(label)}</a>`;
   return {
     subject: wait ? `You're on the waitlist for ${o.title}` : ok ? `Congratulations — you're confirmed for ${o.title} 🎉` : `You're registered: ${o.title}`,
     html: layout(b, {
@@ -179,12 +178,12 @@ export function eventConfirmation(b: Brand, o: { name: string; status: string; r
           <span style="font:500 19px/1.3 ${SERIF};color:${C.ink}">${esc(o.title)}</span><br>${esc(o.when)}${o.location ? `<br>${esc(o.location)}` : ""}
           ${o.price ? `<br><span style="color:${C.goldText};font-weight:600">${esc(o.price)}</span>` : ""}<br><span style="color:${C.muted};font-size:13px">Ref ${esc(o.ref)}</span></td></tr></table>` +
         (o.message ? p(esc(o.message)) : "") +
-        (o.tickets ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 16px"><tr><td style="padding:16px 18px;border-radius:14px;background:#14110e">
-            <p style="margin:0 0 4px;font:600 11px/1 ${SANS};letter-spacing:.2em;text-transform:uppercase;color:#f6d28b">🎟 Your ${o.tickets.count === 1 ? "ticket" : `${o.tickets.count} tickets`}</p>
-            <p style="margin:0 0 14px;font:15px/1.6 ${SANS};color:#efe7da">${o.tickets.count === 1 ? "Your ticket has" : "Your tickets have"} been made just for you: one page per person, each with its own QR code. Save the PDF to your phone and show it at the door (or print it). Each ticket can be scanned once, so please don't share it.</p>
-            ${o.tickets.pdfUrl ? `<a href="${esc(o.tickets.pdfUrl)}" style="display:inline-block;margin:0 8px 8px 0;padding:13px 20px;border-radius:9px;background:#d6a650;font:600 15px/1 ${SANS};color:#1a1206;text-decoration:none">⬇ Download my ${o.tickets.count === 1 ? "ticket" : "tickets"} (PDF)</a>` : ""}
-            <a href="${esc(o.tickets.url)}" style="display:inline-block;margin:0 0 8px;padding:12px 18px;border-radius:9px;border:1px solid #6b5a3e;font:600 14px/1 ${SANS};color:#f6d28b;text-decoration:none">Show on my phone</a>
-            <p style="margin:6px 0 0;font:12.5px/1.5 ${SANS};color:#b9b0a3">The PDF is also attached to this email.</p></td></tr></table>` : "") +
+        (o.tickets ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 16px"><tr><td style="padding:16px 18px;border-radius:14px;background:#111111">
+            <p style="margin:0 0 4px;font:600 11px/1 ${SANS};letter-spacing:.2em;text-transform:uppercase;color:#ffffff">🎟 Your ${o.tickets.count === 1 ? "ticket" : `${o.tickets.count} tickets`}</p>
+            <p style="margin:0 0 14px;font:15px/1.6 ${SANS};color:#e8e8e8">${o.tickets.count === 1 ? "Your ticket has" : "Your tickets have"} been made just for you: one page per person, each with its own QR code. Save the PDF to your phone and show it at the door (or print it). Each ticket can be scanned once, so please don't share it.</p>
+            ${o.tickets.pdfUrl ? `<a href="${esc(o.tickets.pdfUrl)}" style="display:inline-block;margin:0 8px 8px 0;padding:13px 20px;border-radius:9px;background:#ffffff;font:600 15px/1 ${SANS};color:#1a1206;text-decoration:none">⬇ Download my ${o.tickets.count === 1 ? "ticket" : "tickets"} (PDF)</a>` : ""}
+            <a href="${esc(o.tickets.url)}" style="display:inline-block;margin:0 0 8px;padding:12px 18px;border-radius:9px;border:1px solid #5a5a5a;font:600 14px/1 ${SANS};color:#ffffff;text-decoration:none">Show on my phone</a>
+            <p style="margin:6px 0 0;font:12.5px/1.5 ${SANS};color:#a8a8a8">The PDF is also attached to this email.</p></td></tr></table>` : "") +
         (wait ? "" : `<p style="margin:18px 0 8px;font:600 11px/1 ${SANS};letter-spacing:.2em;text-transform:uppercase;color:${C.goldText}">Add it to your calendar</p>
           <p style="margin:0 0 6px">${cal(o.calendarUrl, "Google")}${o.icsUrl ? cal(o.icsUrl, "Apple / iPhone") : ""}${o.outlookUrl ? cal(o.outlookUrl, "Outlook") : ""}</p>
           <p style="margin:0 0 16px;font:13px/1.6 ${SANS};color:${C.muted}">A calendar invite (.ics) is also attached to this email.</p>`) +
@@ -354,7 +353,7 @@ const since = (iso: string) => new Date(iso).toLocaleDateString("en-ZA", { month
 
 function twoButtons(yes: { href: string; label: string }, no: { href: string; label: string }) {
   return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:26px 0 8px"><tr>
-    <td style="border-radius:999px;background:${C.gold}"><a href="${esc(yes.href)}" style="display:inline-block;padding:14px 24px;font:600 15px/1 ${SANS};color:#1a1206;text-decoration:none;border-radius:999px">${esc(yes.label)}</a></td>
+    <td style="border-radius:999px;background:${C.gold}"><a href="${esc(yes.href)}" style="display:inline-block;padding:14px 24px;font:600 15px/1 ${SANS};color:#ffffff;text-decoration:none;border-radius:999px">${esc(yes.label)}</a></td>
     <td width="12"></td>
     <td style="border-radius:10px;border:1px solid ${C.line};background:#ffffff"><a href="${esc(no.href)}" style="display:inline-block;padding:13px 20px;font:600 14px/1 ${SANS};color:${C.body};text-decoration:none;border-radius:10px">${esc(no.label)}</a></td>
   </tr></table>`;
@@ -478,9 +477,9 @@ export function memberVerified(b: Brand, o: { name: string; ref: string; leader?
       content: p("Our leaders have verified your membership. We're so glad you're here, and we can't wait to grow, serve and worship together.") +
         (o.leader ? p(`<strong>${esc(o.leader)}</strong> from our leadership team will be your leader and will be in touch this week to welcome you personally. They're here to walk with you, pray with you and help you find your place.`) : "") +
         `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 18px">
-          <tr><td style="padding:12px 16px;background:#eef5ec;border-radius:12px;font:15px/1.6 ${SANS};color:${C.ink}">✓ &nbsp;Your profile shows your events, tickets and membership</td></tr><tr><td height="8"></td></tr>
-          <tr><td style="padding:12px 16px;background:#f1edfb;border-radius:12px;font:15px/1.6 ${SANS};color:${C.ink}">✓ &nbsp;You can raise a concern confidentially if anything isn't right</td></tr><tr><td height="8"></td></tr>
-          <tr><td style="padding:12px 16px;background:#eaf7ed;border-radius:12px;font:15px/1.6 ${SANS};color:${C.ink}">✓ &nbsp;Every four months we'll check in so our family list stays current</td></tr></table>` +
+          <tr><td style="padding:12px 16px;background:#f4f4f4;border-radius:6px;font:15px/1.6 ${SANS};color:${C.ink}">✓ &nbsp;Your profile shows your events, tickets and membership</td></tr><tr><td height="8"></td></tr>
+          <tr><td style="padding:12px 16px;background:#f4f4f4;border-radius:6px;font:15px/1.6 ${SANS};color:${C.ink}">✓ &nbsp;You can raise a concern confidentially if anything isn't right</td></tr><tr><td height="8"></td></tr>
+          <tr><td style="padding:12px 16px;background:#f4f4f4;border-radius:6px;font:15px/1.6 ${SANS};color:${C.ink}">✓ &nbsp;Every four months we'll check in so our family list stays current</td></tr></table>` +
         scripture("So in Christ Jesus you are all children of God through faith.", "Galatians 3:26") +
         p(`Your member reference is <strong style="letter-spacing:.06em">${esc(o.ref)}</strong>.`) + button(b.site + "/me?welcome=1", "Open my profile"),
     }),
@@ -488,7 +487,7 @@ export function memberVerified(b: Brand, o: { name: string; ref: string; leader?
   };
 }
 
-const box = (html: string) => `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 18px"><tr><td style="padding:16px 18px;border-radius:14px;background:#f1edfb;font:15px/1.7 ${SANS};color:${C.ink}">${html}</td></tr></table>`;
+const box = (html: string) => `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 18px"><tr><td style="padding:16px 18px;border-radius:6px;background:#f4f4f4;font:15px/1.7 ${SANS};color:${C.ink}">${html}</td></tr></table>`;
 const bullets = (items: string[]) => items.map((x) => `• ${esc(x)}`).join("<br>");
 const MEMBER_CAN = ["Your profile, tickets and QR codes", "Events and Get Ticket", "Devotions and the prayer wall", "Ask SCC, the church chat", "Voting (for confirmed members)"];
 const SIGN_IN = `<strong>How to sign in</strong><br>Sign in on aogsccyouth.com as you always do (Google, or email and password). Your <strong>Admin</strong> tab appears at the top of your profile. No extra codes, no switching.`;
@@ -847,5 +846,40 @@ export function newMessage(b: Brand, o: { to: string; from: string; preview: str
         p(`<span style="font-size:13px">You'll get one email per conversation while you're away, not one per message.</span>`),
     }),
     text: `${o.from} sent you a message:\n\n"${o.preview}"\n\nOpen and reply: ${o.url}` + textFooter(b),
+  };
+}
+
+/** One-off "what's new in the church app" letter. Leaders get the service-recording part first. */
+export function whatsNew(b: Brand, o: { name: string | null; leader: boolean }) {
+  const hi = o.name ? `Hi ${esc(o.name)},` : "Hi there,";
+  const all = [
+    "Sign in your way: one tap with Google, or with your email and a password",
+    "Go Ye: our map of where we share the gospel, with tips and a simple pamphlet to share",
+    "Ask SCC: ask anything about the church, the Bible or life, any time",
+    "Message a leader: talk to your leader privately from the app",
+    "Today's verse every morning as a gentle phone notification (if you allow it)",
+    "Your Home: welcome pack, service times, what's coming up and your tickets in one place",
+  ];
+  const leaderBox = box(`<strong>Record your weekly service in a minute</strong><br>
+      Open <strong>Home → Record a service</strong> after your department's service and add the topic, the MC, the word of the day,
+      attendance, first-time visitors and the money made. The poster is optional, and salvations, baptisms and the rest are under “More details”.
+      Every report and total updates as soon as you save.`);
+  return {
+    subject: o.leader ? "New: record your weekly service from your phone" : "What's new in the Sandton City Church app",
+    html: layout(b, {
+      preheader: o.leader ? "Record your department's weekly service in a minute, plus everything new in the app." : "A quick tour of what you can now do in the church app.",
+      eyebrow: "What's new",
+      heading: o.leader ? "Your service, recorded in a minute" : "There's more in the app now",
+      content: p(hi) +
+        p(o.leader ? "Thank you for leading. We've made the church app simpler for you and for everyone in your department." : "We've been busy making the church app simpler and more useful for you. Here's what you can now do:") +
+        (o.leader ? leaderBox + p("<strong>New for everyone:</strong>") : "") +
+        box(bullets(all)) +
+        button(o.leader ? `${b.site}/admin/#services:new` : `${b.site}/me`, o.leader ? "Record this week's service" : "Open the app") +
+        (o.leader ? p(`Or just <a href="${esc(b.site)}/me" style="color:${C.ink}">open the app</a> and look around.`) : ""),
+      footerNote: "You're receiving this one-time update because you're part of the AOG Sandton City Church family.",
+    }),
+    text: `${o.name ? `Hi ${o.name},` : "Hi there,"}\n\n` +
+      (o.leader ? `Record your department's weekly service in a minute: open Home → Record a service and add the topic, MC, word of the day, attendance, first-time visitors and money made. Reports update as soon as you save.\n${b.site}/admin/#services:new\n\nNew for everyone:\n` : "Here's what you can now do in the church app:\n") +
+      all.map((x) => `• ${x}`).join("\n") + `\n\n${b.site}/me` + textFooter(b),
   };
 }

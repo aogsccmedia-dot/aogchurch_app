@@ -4,6 +4,7 @@
  * Static pages in /public are served by Workers Static Assets. Requests under
  * /api/* run this Worker first (see run_worker_first in wrangler.jsonc).
  */
+import { processWhatsNew } from "./lib/whats-new.ts";
 import type { Env } from "./env.ts";
 import { adminEmail, siteUrl } from "./env.ts";
 import { HttpError, Router, errorResponse, json } from "./lib/http.ts";
@@ -100,6 +101,7 @@ export default {
       await processPrayerWeekly(env, now).catch((e) => console.error("weekly prayer email failed", e));
       await processElections(env, now).catch((e) => console.error("elections failed", e));
       await processDailyVerse(env, now).catch((e) => console.error("daily verse push failed", e));
+      await processWhatsNew(env).catch((e) => console.error("what's new email failed", e));
       await retrieve(env, "service times", 1).catch(() => {});   // keep Ask SCC's church knowledge ready, so the first question is fast
 
       const h = now.getUTCHours(), m = now.getUTCMinutes();

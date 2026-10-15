@@ -179,6 +179,13 @@ export function initInsights(ctx) {
       : `<div class="empty">No services recorded yet.</div>`;
   }
   $("#svc-filter").addEventListener("change", drawServices);
+  // Shortcut from Home and the dashboard: /admin/#services:new opens the record form straight away.
+  detailRoutes.services = async (arg) => {
+    showView("services", "services", "services");
+    await loaders.services();
+    history.replaceState(null, "", "#services");
+    if (arg === "new") openSession(null, SVC.services.find((w) => w.active && weekday(w) && w.next_date === SVC.today)?.id || SVC.services.find((w) => w.active && weekday(w))?.id, null);
+  };
   $("#svc-new").addEventListener("click", () => openSession(null, SVC.services.find((w) => w.active && weekday(w))?.id, null));
   $("[data-view=services]").addEventListener("click", (e) => {
     const rv = e.target.closest("[data-rsvps]");

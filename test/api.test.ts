@@ -1292,3 +1292,18 @@ describe("Ask SCC, youth tickets, event updates, prayer list and access requests
     assert.equal((db().prepare("SELECT opted_out FROM prayer_weekly WHERE email = 'asker@example.com'").get() as { opted_out: number }).opted_out, 1);
   });
 });
+
+describe("what's new email", () => {
+  test("goes once to each member who allows email and to the team; never to the main admin", async () => {
+    const { processWhatsNew } = await import("../src/lib/whats-new.ts");
+    const e = await makeEnv();
+    e.DB._db.prepare("INSERT OR IGNORE INTO whats_new_mail (email, name, leader) VALUES ('leader@example.com', 'Thabo', 1), ('member@example.com', 'Naledi', 0), ('aogsccmedia@gmail.com', 'Admin', 1)").run();
+    const before = e.EMAIL.outbox.length;
+    await processWhatsNew(e); await processWhatsNew(e);
+    const out = e.EMAIL.outbox.slice(before) as { to: string; subject: string }[];
+    assert.equal(out.filter((m) => m.to === "leader@example.com").length, 1);
+    assert.match(out.find((m) => m.to === "leader@example.com")!.subject, /record your weekly service/i);
+    assert.equal(out.filter((m) => m.to === "member@example.com").length, 1);
+    assert.equal(out.filter((m) => m.to === "aogsccmedia@gmail.com").length, 0);
+  });
+});

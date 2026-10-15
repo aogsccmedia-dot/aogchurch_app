@@ -55,8 +55,28 @@ async function apiRaw(path, { method = "GET", body, form } = {}) {
   try { data = await res.json(); } catch { /* ignore */ }
   if (res.status === 401 && !path.startsWith("/api/auth/")) { showLogin({ resume: true }); throw new Error("Please sign in again to carry on."); }
   if (!res.ok || data.ok === false) throw Object.assign(new Error(data.error || `Error ${res.status}`), { details: data.details });
+  if (method !== "GET" && FIGURES.test(path)) figuresChanged();
   return data;
 }
+
+// Reports update themselves: when a service record, Friday, ledger entry or event money changes, every open report,
+// dashboard and chart reloads its numbers (also in the admin's other open tabs and windows).
+const FIGURES = /^\/api\/admin\/(sessions|fridays|ledger|services|events\/[^/]+\/income)/;
+let figuresTimer = 0;
+const figuresBus = (() => { try { return new BroadcastChannel("scc-figures"); } catch { return null; } })();
+function refreshFigures() {
+  clearTimeout(figuresTimer);
+  figuresTimer = setTimeout(() => {
+    const t = document.body.dataset.view;
+    if (!me || !t || !loaders[t] || document.querySelector("dialog[open]")) return;
+    Promise.resolve().then(() => loaders[t]()).catch(() => {});
+  }, 600);
+}
+function figuresChanged() { figuresBus?.postMessage("changed"); refreshFigures(); }
+figuresBus?.addEventListener("message", refreshFigures);
+// Coming back to the tab after a while: fetch the latest numbers.
+let hiddenAt = 0;
+document.addEventListener("visibilitychange", () => { if (document.hidden) hiddenAt = Date.now(); else if (hiddenAt && Date.now() - hiddenAt > 60_000) refreshFigures(); });
 function toast(msg) {
   let t = $(".toast");
   if (!t) { t = document.createElement("div"); t.className = "toast"; document.body.append(t); }
