@@ -29,7 +29,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preconnect" href="https://accounts.google.com">
   <link rel="stylesheet" href="/css/base.css?v=eae68f236b">
-  <link rel="stylesheet" href="/css/pages.css?v=803045b142">
+  <link rel="stylesheet" href="/css/pages.css?v=1b568da40d">
   <script src="/js/switch-boot.js?v=4afbe33104"></script>
   <script type="speculationrules">{"prerender": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/admin/*"}}, {"not": {"href_matches": "/api/*"}}]}, "eagerness": "moderate"}]}</script>
 </head>
@@ -73,19 +73,11 @@
 
   <main id="main" class="wrap">
     <div id="me-loading" class="me-loading" role="status"><span class="spinner" aria-hidden="true"></span><p>Loading your profile…</p></div>
-    <div id="me-signin" class="signin-wrap" hidden>
-      <section class="signin-card" aria-labelledby="si-title">
-        <img class="si-logo" src="/assets/logo-192.png" alt="" width="72" height="72">
-        <h1 id="si-title">Welcome home</h1>
-        <p>Sign in or sign up with your Google account. One tap, no passwords.</p>
-        <div id="me-google" class="google-slot"></div>
-        <ul class="si-perks">
-          <li><span><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg></span>Your tickets and church events in one place</li>
-          <li><span><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span>Today's verse, Ask SCC and the welcome pack</li>
-          <li><span><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>Join the church, vote and serve</li>
-        </ul>
-        <p class="si-fine">New here? Signing in with Google creates your account. See our <a href="/privacy">privacy notice</a>.</p>
-      </section>
+    <div id="me-signin" class="si-scene" hidden>
+      <div class="si-stage">
+        <section class="si-card" id="me-card" aria-label="Sign in"></section>
+      </div>
+      <p class="si-fine si-scene-fine">By signing in you agree to our <a href="/privacy">privacy notice</a>.</p>
     </div>
     <div class="me-home" id="me-view" hidden>
       <header class="me-hello">
@@ -165,8 +157,8 @@
   <link rel="modulepreload" href="/js/switcher.js">
   <link rel="modulepreload" href="/js/otp.js">
   <script type="module" src="/js/site.js?v=46e05eedb0"></script>
-  <script type="module" src="/js/auth.js?v=0d639d2d04"></script>
-  <script type="module" src="/js/me.js?v=b6e924dabf"></script>
+  <script type="module" src="/js/auth.js?v=14f4156eec"></script>
+  <script type="module" src="/js/me.js?v=6f57555486"></script>
   <script type="module" src="/js/programme.js?v=ae3e73b8c1"></script>
 </body>
 </html>

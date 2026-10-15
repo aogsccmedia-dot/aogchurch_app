@@ -1,8 +1,6 @@
 import { veilCarry, veilHide, veilShow } from "./switcher.js";
-import { codeScreen } from "./admin-code.js";   // also wires data-switch buttons (member ⇄ admin)
-// Sign in with Google (Google Identity Services) + the admin's emailed verification code.
+// Sign in with Google (Google Identity Services) or email + password (signin.js). No codes for normal sign-ins.
 import { api, esc, toast } from "./site.js";
-import { busy, otpField } from "./otp.js";
 import { cacheMe, cachedMe, renderPortalNav } from "./portal.js";
 
 // Draw the portal bar from the last known sign-in straight away (no jump), then confirm with the server.
@@ -31,19 +29,25 @@ let gsiReady = false;
 /** Register a callback for when someone finishes signing in on this page. */
 export function whenSignedIn(cb) { onSignedIn.push(cb); }
 
-// Google has confirmed the account: from here on a calm "preparing" screen stays up until the person's
-// page is fully ready, so the old "Sign in with Google" button never shows through.
-async function handleCredential(resp) {
+/** A page can take over what happens after sign-in (the admin page opens its dashboard in place). */
+let customDone = null;
+export function onSignInDone(fn) { customDone = fn; }
+
+// The account is confirmed (Google or password): from here on a calm "preparing" screen stays up until the person's
+// page is fully ready, so the sign-in card never shows through.
+export async function finishSignIn(result) {
   document.querySelectorAll(".gsi-waiting").forEach((el) => el.classList.remove("gsi-waiting"));
   const here = location.pathname.replace(/\.html$/, "");
   const onMe = here === "/me" || here === "/assistant", midTask = /^\/(join|event|membership|ticket|presenter)$/.test(here);
   veilShow(onMe ? "Preparing your member page…" : "Signing you in…");
   try {
-    const r = await api("/api/auth/google", { method: "POST", body: { credential: resp.credential } });
-    if (r.needs_code) { veilHide(); await adminCodeDialog(r.challenge, r.sent_to, r.resend_in); return; }
+    await (typeof result === "function" ? result() : result);
     const me = await getMe(true);
-    cacheMe(me); renderPortalNav(me);
-    renderHeaderUser(me);
+    cacheMe(me);
+    if (customDone) { veilHide(); await customDone(me); return; }
+    renderPortalNav(me); renderHeaderUser(me);
+    document.getElementById("signin-dialog")?.close();
+    if (me.admin_account && !midTask) { const l = "Opening your dashboard…"; veilShow(l); veilCarry(l); location.href = "/admin/"; return; }
     if (!onMe && !midTask) {
       // Members (and the team) land on their Home: tickets, what's coming up and what to know. New people go to the join form.
       const label = me.member || me.is_admin ? "Getting things ready…" : "Setting up your sign-up…";
@@ -55,8 +59,9 @@ async function handleCredential(resp) {
     await Promise.all(onSignedIn.map((cb) => Promise.resolve().then(() => cb(me)).catch(() => {})));
     veilHide();
     toast(`Welcome${me.user?.given_name ? ", " + me.user.given_name : ""}!`);
-  } catch (e) { veilHide(); toast(e.message); }
+  } catch (e) { veilHide(); toast(e.message); throw e; }
 }
+const handleCredential = (resp) => finishSignIn(() => api("/api/auth/google", { method: "POST", body: { credential: resp.credential } })).catch(() => {});
 
 // While Google's window is open, the button says so (instead of looking like nothing happened).
 function watchGoogleButton(el) {
@@ -69,61 +74,32 @@ function watchGoogleButton(el) {
 }
 
 /** Render a Google button into `el`. Returns false if Google sign-in isn't configured. */
-export async function googleButton(el, { text = "continue_with", width } = {}) {
+export async function googleButton(el, { text = "continue_with", width, round = false } = {}) {
   const me = await getMe();
   const clientId = me.google_client_id;
   if (!clientId || !el) { if (el) el.hidden = true; return false; }
   try { await loadGsi(); } catch { el.hidden = true; return false; }
   if (!gsiReady) { google.accounts.id.initialize({ client_id: clientId, callback: handleCredential, ux_mode: "popup", auto_select: false, itp_support: true }); gsiReady = true; }
-  google.accounts.id.renderButton(el, { theme: document.body.classList.contains("admin") ? "filled_black" : "outline", size: "large", shape: "pill", text, logo_alignment: "left", width: width || Math.min(360, el.clientWidth || 320) });
+  if (round) google.accounts.id.renderButton(el, { type: "icon", theme: "outline", size: "large", shape: "circle" });
+  else google.accounts.id.renderButton(el, { theme: document.body.classList.contains("admin") ? "filled_black" : "outline", size: "large", shape: "pill", text, logo_alignment: "left", width: width || Math.min(360, el.clientWidth || 320) });
   el.hidden = false;
-  watchGoogleButton(el);
+  if (!round) { watchGoogleButton(el); emailLink(el); }
   return true;
 }
 
-/** Modal that asks the main admin for the 6-digit emailed code. Opens instantly; the email is sent in the background. */
-export function adminCodeDialog(challenge, sentTo, resendIn = 30) {
-  return new Promise((resolve) => {
-    let dlg = document.getElementById("code-dialog");
-    if (!dlg) { dlg = document.createElement("dialog"); dlg.id = "code-dialog"; dlg.className = "sheet"; document.body.append(dlg); }
-    dlg.innerHTML = `<form method="dialog" class="code-form">
-      <p class="eyebrow gold">Main admin · one more step</p>
-      <h3>Enter your code</h3>
-      <p class="code-status" data-status aria-live="polite"></p>
-      <input class="input" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" required aria-label="6-digit code">
-      <p class="muted-text code-hint">It checks itself as soon as all 6 digits are in. Any code from the last 10 minutes works.</p>
-      <div class="notice err" data-err hidden></div>
-      <div class="code-actions">
-        <button type="button" class="btn" data-paste>Paste code</button>
-        <button type="button" class="btn btn-ghost" data-resend disabled>Resend in 30s</button>
-      </div>
-      <button type="submit" class="btn btn-gold code-go">Verify &amp; open dashboard</button>
-      <button type="button" class="btn btn-ghost code-later" data-later>Not now</button></form>`;
-    const form = dlg.querySelector("form"), err = dlg.querySelector("[data-err]");
-    const screen = codeScreen({ challenge, sentTo, statusEl: dlg.querySelector("[data-status]"), resendBtn: dlg.querySelector("[data-resend]"), pasteBtn: dlg.querySelector("[data-paste]"), input: form.code, resendIn });
-    otpField(form.code, () => form.requestSubmit());
-    let busyNow = false;
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (busyNow || form.code.value.replace(/\D/g, "").length !== 6) return;
-      busyNow = true; err.hidden = true;
-      const stop = busy("Checking your code…");
-      try {
-        await api("/api/auth/admin/verify", { method: "POST", body: { challenge: screen.challenge, code: form.code.value } });
-        screen.stop(); dlg.close(); resolve(true);
-        veilShow("Opening your dashboard…"); veilCarry("Opening your dashboard…");
-        location.href = "/admin/";
-      } catch (e2) { err.textContent = e2.message; err.hidden = false; form.code.value = ""; form.code.dispatchEvent(new Event("input")); form.code.focus(); }
-      finally { stop(); busyNow = false; }
-    });
-    // Don't lose the code screen by accident (Escape or a stray tap); "Not now" closes it on purpose.
-    dlg.addEventListener("cancel", (e) => e.preventDefault());
-    dlg.querySelector("[data-later]").addEventListener("click", () => { screen.stop(); dlg.close(); resolve(false); });
-    dlg.showModal();
-    form.code.focus();
-    // Get the dashboard ready while they fetch the code, so it opens instantly.
-    const l = document.createElement("link"); l.rel = "prefetch"; l.href = "/admin/"; document.head.append(l);
-  });
+/** Under every standalone Google button: a quiet way to use email + password instead. */
+function emailLink(el) {
+  if (el.closest(".si-card") || el.nextElementSibling?.classList.contains("si-alt")) return;
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "si-alt"; b.textContent = "Use email and password instead";
+  b.addEventListener("click", () => openSignIn());
+  el.after(b);
+}
+
+/** The sign-in card, for pages that show it in place (member Home). */
+export async function signInCard(host, opts = {}) {
+  const { mountSignIn } = await import("./signin.js");
+  return mountSignIn(host, { google: (g) => googleButton(g, { round: true }), onDone: (r) => finishSignIn(r), ...opts });
 }
 
 export async function signOut() {
@@ -138,7 +114,7 @@ export function renderHeaderUser(me) {
   const slot = document.querySelector("[data-user-slot]");
   if (!slot) return;
   if (!me?.user) {
-    slot.innerHTML = me?.google_client_id ? `<button class="btn btn-ghost btn-sm" data-signin>Sign in</button>` : "";
+    slot.innerHTML = `<button class="btn btn-ghost btn-sm" data-signin>Sign in</button>`;
     slot.querySelector("[data-signin]")?.addEventListener("click", openSignIn);
     return;
   }
@@ -165,23 +141,19 @@ export function renderHeaderUser(me) {
   });
 }
 
-export async function openSignIn() {
+export async function openSignIn(mode = "login") {
   let dlg = document.getElementById("signin-dialog");
   if (!dlg) {
     dlg = document.createElement("dialog");
     dlg.id = "signin-dialog"; dlg.className = "sheet";
-    dlg.innerHTML = `<div class="signin-card"><button class="close" type="button" data-close aria-label="Close">✕</button>
-      <img class="si-logo" src="/assets/logo-192.png" alt="" width="72" height="72">
-      <h3>Welcome home</h3><p>Sign in or sign up with your Google account. One tap, no passwords.</p>
-      <div class="gbtn"></div>
-      <p class="si-fine">New here? Signing in with Google creates your account.</p></div>`;
+    dlg.innerHTML = `<div class="si-pop"><button class="close" type="button" data-close aria-label="Close">✕</button><section class="si-card"></section></div>`;
     document.body.append(dlg);
     dlg.querySelector("[data-close]").addEventListener("click", () => dlg.close());
     dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
-    whenSignedIn(() => dlg.close());
   }
-  dlg.showModal();
-  await googleButton(dlg.querySelector(".gbtn"), { text: "signin_with", width: 300 });
+  const card = await signInCard(dlg.querySelector(".si-card"), { mode: typeof mode === "string" ? mode : "login" });
+  card.show(typeof mode === "string" ? mode : "login");
+  if (!dlg.open) dlg.showModal();
 }
 
 document.addEventListener("click", (e) => { if (e.target.closest?.("[data-app-signout]")) { e.preventDefault(); signOut(); } });

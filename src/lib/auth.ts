@@ -120,13 +120,17 @@ export async function upsertUser(env: Env, g: { sub?: string; email: string; nam
   const existing = await env.DB.prepare("SELECT id FROM users WHERE email = ? OR (google_sub IS NOT NULL AND google_sub = ?)")
     .bind(g.email, g.sub ?? "").first<{ id: string }>();
   const id = existing?.id ?? uuid();
+  if (existing && g.sub) {
+    // Google proves who owns this address: a password set earlier without proof is removed (it may not be theirs).
+    await env.DB.prepare("UPDATE users SET password_hash = CASE WHEN email_verified_at IS NULL THEN NULL ELSE password_hash END, email_verified_at = COALESCE(email_verified_at, ?) WHERE id = ?").bind(new Date().toISOString(), existing.id).run();
+  }
   if (existing) {
     await env.DB.prepare(`UPDATE users SET google_sub = COALESCE(?, google_sub), name = COALESCE(?, name), given_name = COALESCE(?, given_name),
       family_name = COALESCE(?, family_name), picture = COALESCE(?, picture), last_login_at = ? WHERE id = ?`)
       .bind(g.sub ?? null, g.name ?? null, g.given_name ?? null, g.family_name ?? null, g.picture ?? null, now, id).run();
   } else {
-    await env.DB.prepare("INSERT INTO users (id, google_sub, email, name, given_name, family_name, picture, last_login_at) VALUES (?,?,?,?,?,?,?,?)")
-      .bind(id, g.sub ?? null, g.email, g.name ?? null, g.given_name ?? null, g.family_name ?? null, g.picture ?? null, now).run();
+    await env.DB.prepare("INSERT INTO users (id, google_sub, email, name, given_name, family_name, picture, last_login_at, email_verified_at) VALUES (?,?,?,?,?,?,?,?,?)")
+      .bind(id, g.sub ?? null, g.email, g.name ?? null, g.given_name ?? null, g.family_name ?? null, g.picture ?? null, now, g.sub ? now : null).run();
   }
   return (await env.DB.prepare("SELECT id, email, name, given_name, family_name, picture FROM users WHERE id = ?").bind(id).first<User>())!;
 }
@@ -161,15 +165,8 @@ export async function getSession(env: Env, req: Request): Promise<Session | null
   const { kind, admin_until, ...user } = row;
   // The main (super) admin account still needs the emailed code after Google: its powers only come with a
   // verified admin session, which lapses after 12 quiet hours and renews while in use.
-  if (isAdminEmail(env, user.email)) {
-    if (kind !== "admin") return { user, kind: "user" };
-    if (admin_until) {
-      const left = new Date(admin_until).getTime() - now;
-      if (left <= 0) return { user, kind: "user" };
-      if (left < (ADMIN_HOURS / 2) * 3600_000) await env.DB.prepare("UPDATE sessions SET admin_until = ? WHERE token_hash = ?").bind(new Date(now + ADMIN_HOURS * 3600_000).toISOString(), hash).run();
-    }
-    return { user, kind: "admin", role: "super" };
-  }
+  // The main admin account: its normal sign-in (Google, or email and password) opens the full admin portal.
+  if (isAdminEmail(env, user.email)) { void kind; void admin_until; return { user, kind: "admin", role: "super" }; }
   // Everyone else: one account. Admins and youth leaders get exactly the parts the main admin ticked for them,
   // on their normal sign-in, with no switching and no codes. Remove the role and it's a member's sign-in again.
   const r = await env.DB.prepare("SELECT role, perms FROM admin_roles WHERE user_id = ?").bind(user.id).first<{ role: string; perms: string | null }>();

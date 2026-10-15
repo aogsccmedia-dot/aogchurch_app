@@ -1,5 +1,5 @@
-import { busy, otpField } from "./otp.js";
-import { codeScreen } from "./admin-code.js";
+import { busy } from "./otp.js";
+import { dressScene, mountSignIn } from "./signin.js";
 import { AVAILABILITY, LABELS, MINISTRIES } from "./options.js";
 import { FIELD_TYPES, renderField } from "./forms.js";
 import { icon } from "./icons.js";
@@ -53,7 +53,7 @@ async function apiRaw(path, { method = "GET", body, form } = {}) {
   catch { throw new Error("No connection. Please check your internet and try again."); }
   let data = {};
   try { data = await res.json(); } catch { /* ignore */ }
-  if (res.status === 401 && !path.startsWith("/api/auth/")) { showLogin({ resume: true }); throw new Error("Your admin session timed out. Enter the code we've emailed you to carry on."); }
+  if (res.status === 401 && !path.startsWith("/api/auth/")) { showLogin({ resume: true }); throw new Error("Please sign in again to carry on."); }
   if (!res.ok || data.ok === false) throw Object.assign(new Error(data.error || `Error ${res.status}`), { details: data.details });
   return data;
 }
@@ -64,89 +64,39 @@ function toast(msg) {
 }
 const safe = (fn) => async (...a) => { try { await fn(...a); } catch (e) { toast(e.message); } };
 
-// ================================================================ sign in
-let challenge = null;
-const loginErr = (m) => { $("#login-error").textContent = m; $("#login-error").hidden = !m; };
-
-let codeUi = null;
-function showCodeStep(r) {
-  challenge = r.challenge;
-  $("#code-request").hidden = true; $("#admin-google").hidden = true; $("#signed-in-admin").hidden = true;
-  $("#code-verify").hidden = false;
-  codeUi?.stop();
-  codeUi = codeScreen({ challenge, sentTo: r.sent_to, statusEl: $("#code-sent"), resendBtn: $("#code-resend"), pasteBtn: $("#code-paste"), input: $("#code-verify").code,
-    onChallenge: (c) => { challenge = c; }, resendIn: r.resend_in ?? 30 });
-  otpField($("#code-verify").code, () => $("#code-verify").requestSubmit());
-  $("#code-verify").code.focus();
+// ================================================================ sign in (email + password or Google; no codes)
+let gsi = null;
+function adminGoogle(el, cid) {
+  if (!cid) return false;
+  gsi ??= new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "https://accounts.google.com/gsi/client"; sc.async = true; sc.onload = ok; sc.onerror = no; document.head.append(sc); })
+    .then(() => google.accounts.id.initialize({ client_id: cid, ux_mode: "popup", itp_support: true, callback: async (resp) => {
+      const done = busy("Signing you in…");
+      try { await api("/api/auth/google", { method: "POST", body: { credential: resp.credential } }); await afterLogin(); }
+      catch (e) { const er = $("#admin-card .si-err"); if (er) { er.textContent = e.message; er.hidden = false; } else toast(e.message); }
+      finally { done(); }
+    } }));
+  return gsi.then(() => { google.accounts.id.renderButton(el, { type: "icon", theme: "outline", size: "large", shape: "circle" }); return true; }).catch(() => false);
 }
-
-let autoCodeSent = false;
-async function showLogin({ resume = false } = {}) {
+async function afterLogin() {
+  const me2 = await fetch("/api/auth/me", { cache: "no-store" }).then((x) => x.json()).catch(() => ({}));
+  if (!me2.is_admin) throw new Error("That account isn't on the church team. Ask the main church admin to add you under Team & roles.");
+  cacheMe(me2);
+  $("#login-view").hidden = true; boot();
+}
+async function showLogin() {
   if (!$("#login-view").hidden) return;   // already showing
   $("#app-view").hidden = true; $("#login-view").hidden = false;
   document.body.dataset.view = "login";
-  const { google_client_id: cid, user } = await fetch("/api/auth/me").then((r) => r.json()).catch(() => ({}));
   const meInfo = await fetch("/api/auth/me").then((r) => r.json()).catch(() => ({}));
-  const viaSwitch = new URLSearchParams(location.search).has("switch") || arrivedBySwitch("admin");
-  if (viaSwitch) history.replaceState(null, "", location.pathname + location.hash);
-  if (user && user.email && !meInfo.admin_account) {
-    // Admins and youth leaders don't need a code: if they're here, their account has no team role (any more).
-    $("#signed-in-admin").hidden = false;
-    $("#send-code").hidden = true;
-    $("#signed-in-as").innerHTML = `Signed in as ${esc(user.email)}. This account isn't on the church team. If you think it should be, ask the main admin. <a href="/assistant" style="color:var(--gold-2)">Go to Ask SCC</a>`;
-  } else if (user && user.email && meInfo.can_admin) {
-    // Already signed in with Google on the website → just need the emailed code.
-    $("#signed-in-admin").hidden = false;
-    $("#signed-in-as").textContent = `Signed in as ${user.email}.`;
-    if (!autoCodeSent) {   // signed in already: switching over, opening /admin, or admin time ran out
-      // Still signed in (switching over, or admin time ran out): email the code straight away and show the boxes.
-      // No Google pop-up needed, which matters in the installed iPhone app.
-      autoCodeSent = true;
-      try {
-        const r = await api("/api/auth/admin/request-code", { method: "POST", body: {} }); showCodeStep(r);
-        $("#code-sent").textContent = resume || !viaSwitch
-          ? `Welcome back. For your security, we emailed a 6-digit code to ${r.sent_to}. Enter it to carry on where you left off.`
-          : `For your security, we emailed a 6-digit code to ${r.sent_to}. Enter it to open your admin workspace.`;
-      } catch (e) { loginErr(e.message); }
-    }
-  }
+  if (new URLSearchParams(location.search).has("switch") || arrivedBySwitch("admin")) history.replaceState(null, "", location.pathname + location.hash);
+  const note = meInfo.user?.email && !meInfo.is_admin
+    ? `Signed in as ${esc(meInfo.user.email)}, which isn't on the church team. Sign in with a team account, or <a href="/me">go to your Home</a>.`
+    : "For the church team. Sign in to open the dashboard.";
+  mountSignIn($("#admin-card"), { note, google: (el) => adminGoogle(el, meInfo.google_client_id), onDone: afterLogin });
+  dressScene($("#login-view"));
   switchReady();
-  if (cid) {
-    const s = document.createElement("script");
-    s.src = "https://accounts.google.com/gsi/client"; s.async = true;
-    s.onload = () => {
-      google.accounts.id.initialize({ client_id: cid, ux_mode: "popup", callback: safe(async (resp) => {
-        loginErr("");
-        const done = busy("Signing you in and emailing your code…");
-        try {
-          const r = await api("/api/auth/google", { method: "POST", body: { credential: resp.credential } });
-          if (r.needs_code) { showCodeStep(r); return; }   // only the main admin account
-          const me2 = await fetch("/api/auth/me").then((x) => x.json()).catch(() => ({}));
-          if (me2.is_admin) { $("#login-view").hidden = true; boot(); return; }
-          loginErr("That Google account isn't on the church team. Ask the main church admin to add you under Team & roles.");
-        } finally { done(); }
-      }) });
-      google.accounts.id.renderButton($("#admin-google"), { theme: "filled_black", size: "large", shape: "pill", text: "continue_with", width: 300 });
-      $("#admin-google").hidden = false;
-    };
-    document.head.append(s);
-  } else {
-    $("#code-request").hidden = false;
-  }
 }
 
-$("#send-code").addEventListener("click", safe(async () => { loginErr(""); const done = busy("Emailing your code…"); try { showCodeStep(await api("/api/auth/admin/request-code", { method: "POST", body: {} })); } finally { done(); } }));
-$("#code-request").addEventListener("submit", safe(async (e) => {
-  e.preventDefault(); loginErr("");
-  showCodeStep(await api("/api/auth/admin/request-code", { method: "POST", body: { email: e.target.email.value } }));
-}));
-$("#code-verify").addEventListener("submit", async (e) => {
-  e.preventDefault(); loginErr("");
-  const done = busy("Checking your code…");
-  try { await api("/api/auth/admin/verify", { method: "POST", body: { challenge, code: e.target.code.value } }); codeUi?.stop(); boot(); }
-  catch (err) { loginErr(err.message); e.target.code.value = ""; e.target.code.dispatchEvent(new Event("input")); e.target.code.focus(); }
-  finally { done(); }
-});
 $("#logout").addEventListener("click", async () => { cacheMe(null); await api("/api/auth/logout", { method: "POST" }).catch(() => {}); location.href = "/"; });
 
 async function boot() {

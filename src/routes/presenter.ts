@@ -98,18 +98,7 @@ export function presenterRoutes(router: Router, env: Env): void {
     return json({ ok: true, user }, 200, { "Set-Cookie": await createSession(env, req, user.id, "user") });
   });
 
-  router.post("/api/auth/password/login", async (req) => {
-    await rateLimit(env, "pwlogin", clientIp(req), 10, 900);
-    const b = await readJson<{ email?: string; password?: string }>(req);
-    const email = clip(b.email, 254).toLowerCase();
-    const row = await env.DB.prepare("SELECT id, password_hash, email_verified_at FROM users WHERE email = ?").bind(email).first<{ id: string; password_hash: string | null; email_verified_at: string | null }>();
-    const ok = !!row?.password_hash && await verifyPassword(String(b.password || ""), row.password_hash);
-    if (!ok || !row) throw new HttpError(401, "That email and password don't match. You can reset your password below.");
-    if (!row.email_verified_at) throw new HttpError(403, "Please confirm your email first.");
-    await env.DB.prepare("UPDATE users SET last_login_at = ? WHERE id = ?").bind(new Date().toISOString(), row.id).run();
-    const user = await env.DB.prepare("SELECT id, email, name, given_name, family_name, picture FROM users WHERE id = ?").bind(row.id).first();
-    return json({ ok: true, user }, 200, { "Set-Cookie": await createSession(env, req, row.id, "user") });
-  });
+  // Sign-in with a password is shared with the whole site: /api/auth/password/login in routes/auth.ts.
 
   // ---------------- beta status, joining and downloads
   router.get("/api/presenter/status", async (req) => {

@@ -8,33 +8,17 @@
   <meta name="theme-color" content="#f7f7fb">
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="stylesheet" href="/css/base.css?v=eae68f236b">
-  <link rel="stylesheet" href="/css/pages.css?v=803045b142">
+  <link rel="stylesheet" href="/css/pages.css?v=1b568da40d">
   <link rel="stylesheet" href="/css/admin.css?v=9242316952">
   <script src="/js/switch-boot.js?v=4afbe33104"></script>
 </head>
 <body class="admin">
   <!-- Sign in -->
-  <main id="login-view" class="login" hidden>
-    <div class="login-card">
-      <img src="/assets/logo-192.png" alt="" width="72" height="72">
-      <div><p class="eyebrow gold">AOG Sandton City Church</p><h1>Admin sign in</h1>
-        <p class="muted">For the church team. Sign in with Google. Admins and youth leaders go straight in; the main admin account also gets an emailed code.</p></div>
-      <div id="signed-in-admin" class="form-grid" hidden><p class="muted" id="signed-in-as"></p><button class="btn btn-gold" type="button" id="send-code">Email me a code</button></div>
-      <div id="admin-google" class="google-slot" hidden></div>
-      <form id="code-request" class="form-grid" hidden>
-        <div class="field"><label for="l-email">Admin email</label><input class="input" id="l-email" name="email" type="email" autocomplete="username" required></div>
-        <button class="btn btn-gold" type="submit">Email me a code</button>
-      </form>
-      <form id="code-verify" class="form-grid code-form" hidden>
-        <p class="code-status" id="code-sent" aria-live="polite"></p>
-        <input class="input" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" required aria-label="6-digit code">
-        <p class="muted code-hint">It checks itself as soon as all 6 digits are in. Any code from the last 10 minutes works.</p>
-        <div class="code-actions"><button type="button" class="btn" id="code-paste">Paste code</button><button type="button" class="btn btn-ghost" id="code-resend" disabled>Resend in 30s</button></div>
-        <button class="btn btn-gold" type="submit">Verify &amp; continue</button>
-      </form>
-      <div class="notice err" id="login-error" hidden></div>
-      <a href="/" class="muted-link">← Back to the website</a>
+  <main id="login-view" class="si-scene si-admin" hidden>
+    <div class="si-stage">
+      <section class="si-card" id="admin-card" aria-label="Admin sign in"></section>
     </div>
+    <a href="/" class="muted-link si-scene-fine">← Back to the website</a>
   </main>
 
   <!-- App -->
@@ -506,6 +490,6 @@
   <dialog class="drawer" id="rsvp-drawer"><div class="drawer-body" id="rsvp-body"></div></dialog>
   <dialog class="drawer" id="services-drawer"><div class="drawer-body" id="services-body"></div></dialog>
   <dialog class="drawer" id="member-drawer"><div class="drawer-body" id="member-body"></div></dialog>
-  <script type="module" src="/js/admin.js?v=2b88c9d4a7"></script>
+  <script type="module" src="/js/admin.js?v=dedcf5e2ec"></script>
 </body>
 </html>

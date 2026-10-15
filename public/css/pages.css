@@ -1998,3 +1998,99 @@ body.in-thread .app-fade { display: none !important; }
 .app-role { white-space: nowrap; }
 @media (max-width: 420px) { .app-brand b { display: none; } .app-role { font-size: 10px; padding: 3px 8px; } .app-me { gap: 6px; } .app-me .btn-sm { padding: 0 12px; } }
 .search-sheet input::-webkit-search-cancel-button { display: none; }
+
+/* ---- Sign in v2: Login / Sign up card (email + password or Google), colourful and steady ---- */
+.si-scene { position: relative; isolation: isolate; overflow: hidden; display: grid; place-items: center; align-content: center; gap: 14px;
+  min-height: calc(100dvh - 150px); margin: 0 calc(-1 * var(--gutter)); padding: 22px var(--gutter) 30px; overscroll-behavior: none;
+  background:
+    radial-gradient(60% 45% at 8% 6%, #ffe6b5 0, transparent 70%),
+    radial-gradient(50% 40% at 96% 10%, #e4dcff 0, transparent 72%),
+    radial-gradient(55% 45% at 92% 96%, #ccf2e1 0, transparent 70%),
+    radial-gradient(50% 40% at 4% 94%, #ffd8df 0, transparent 70%), #fbfaff; }
+.si-stage { position: relative; z-index: 1; width: 100%; display: grid; place-items: center; }
+.si-dust { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.si-scene-fine { position: relative; z-index: 1; margin: 0; text-align: center; }
+
+.si-card { width: min(410px, 100%); display: grid; gap: 14px; text-align: left; padding: 28px 24px 22px; border-radius: 32px; color: #16151b;
+  background: #fff; border: 1px solid rgba(22, 21, 27, .06); box-shadow: 0 30px 70px -36px rgba(50, 36, 110, .45), 0 2px 6px rgba(50, 36, 110, .05);
+  transition: background-color .25s ease; animation: none !important; transform: none !important; touch-action: manipulation; }
+.si-card[data-mode="signup"] { background: #e3f6e9; }
+.si-card[data-mode="forgot"] { background: #efeaff; }
+.si-card[data-mode="code"] { background: #fff1db; }
+.si-kicker { margin: 0; text-align: center; font-size: 15px; font-weight: 600; letter-spacing: .01em; color: #16151b; }
+.si-h { margin: 8px 0 2px; font-size: 30px; line-height: 1.1; font-weight: 700; letter-spacing: -.01em; }
+.si-note, .si-hint { margin: -4px 0 0; font-size: 14px; line-height: 1.5; color: #55515f; }
+.si-hint { margin-top: -10px; font-size: 13px; }
+.si-form { display: grid; gap: 18px; margin-top: 4px; }
+.si-field { display: grid; gap: 2px; }
+.si-lab { font-size: 13px; font-weight: 500; color: #6d6878; }
+.si-line { display: flex; align-items: center; gap: 8px; border-bottom: 1.5px solid rgba(22, 21, 27, .2); transition: border-color .15s ease; }
+.si-line:focus-within { border-bottom-color: #16151b; }
+.si-line input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 16px; color: #16151b; padding: 10px 0 9px; border-radius: 0; }
+.si-line input::placeholder { color: transparent; }
+.si-line > .i, .si-eye .i { width: 19px; height: 19px; color: #8a8594; flex: none; }
+.si-line:focus-within > .i { color: #16151b; }
+.si-eye { flex: none; width: 36px; height: 36px; margin-right: -8px; display: grid; place-items: center; border: 0; background: none; border-radius: 50%; cursor: pointer; }
+.si-eye:focus-visible { outline: 2px solid #9b7ce6; }
+.si-link { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: #16151b; cursor: pointer; }
+.si-link:hover { text-decoration: underline; }
+.si-forgot { justify-self: end; margin-top: -8px; font-size: 13.5px; font-weight: 500; color: #4a4656; }
+.si-err { margin: 0; padding: 10px 12px; border-radius: 12px; background: #fff0f2; color: #9b2c44; font-size: 14px; line-height: 1.45; }
+.si-go { position: relative; width: 100%; height: 56px; padding: 0 62px; border: 0; border-radius: 999px; background: #16151b; color: #fff;
+  font: inherit; font-size: 17px; font-weight: 600; letter-spacing: .01em; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.si-go:hover { background: #26242e; } .si-go:focus-visible { outline: 3px solid #9b7ce6; outline-offset: 3px; }
+.si-knob { position: absolute; right: 6px; top: 6px; width: 44px; height: 44px; border-radius: 50%; background: #fff;
+  display: grid; grid-template-columns: repeat(3, 4px); gap: 4px; place-content: center; }
+.si-knob i { width: 4px; height: 4px; border-radius: 50%; background: #16151b; }
+.si-go[aria-busy="true"] { cursor: progress; }
+.si-go[aria-busy="true"] .si-knob i { animation: si-dots 1s ease-in-out infinite; }
+.si-go[aria-busy="true"] .si-knob i:nth-child(2n) { animation-delay: .15s; } .si-go[aria-busy="true"] .si-knob i:nth-child(3n) { animation-delay: .3s; }
+@keyframes si-dots { 50% { opacity: .2; } }
+.si-or { display: flex; align-items: center; gap: 12px; margin: 4px 0 0; font-size: 12px; font-weight: 600; letter-spacing: .12em; color: #8a8594; }
+.si-or::before, .si-or::after { content: ""; flex: 1; height: 1px; background: rgba(22, 21, 27, .14); }
+.si-social { display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 14px; color: #4a4656; }
+.si-g { width: 44px; height: 44px; min-width: 44px; display: grid; place-items: center; border-radius: 50%; overflow: hidden; }
+.si-g:empty { background: #fff; border: 1px solid rgba(22, 21, 27, .12); }
+.si-swap { margin: 2px 0 0; text-align: center; font-size: 14px; color: #55515f; }
+.si-card .otp { margin: 2px 0; }
+.si-alt { display: block; margin: 10px auto 0; border: 0; background: none; font: inherit; font-size: 13.5px; color: var(--text-2); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+/* The sign-in pop-up */
+#signin-dialog { padding: 0; border: 0; background: transparent; width: min(420px, calc(100% - 24px)); max-height: calc(100dvh - 24px); overflow: auto; }
+#signin-dialog .si-pop { position: relative; }
+#signin-dialog .si-card { width: 100%; }
+#signin-dialog .close { position: absolute; z-index: 2; top: 14px; right: 14px; width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(22, 21, 27, .06); display: grid; place-items: center; cursor: pointer; font-size: 14px; }
+
+/* Big screens: photos on the left, the card on the right, and the faint drifting specks */
+@media (min-width: 900px) {
+  .si-scene { min-height: calc(100dvh - 120px); padding-block: 40px; }
+  .si-stage { max-width: 1060px; grid-template-columns: minmax(0, 1fr) 410px; gap: clamp(36px, 6vw, 84px); }
+  .si-stage:not(:has(.si-art)) { grid-template-columns: 410px; }
+  .si-card { padding: 34px 32px 26px; }
+}
+.si-art { position: relative; width: 100%; height: 540px; }
+.si-ph { position: absolute; margin: 0; width: 46%; max-width: 250px; aspect-ratio: 4 / 5; border-radius: 28px; overflow: hidden; background: #eee;
+  border: 6px solid #fff; box-shadow: 0 30px 60px -30px rgba(50, 36, 110, .5); }
+.si-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.si-ph figcaption { position: absolute; left: 12px; bottom: 12px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #16151b; }
+.si-ph-1 { left: 2%; top: 4%; rotate: -9deg; } .si-ph-1 figcaption { background: #ffd98f; }
+.si-ph-2 { left: 34%; top: 0; rotate: 5deg; z-index: 2; } .si-ph-2 figcaption { background: #d9ceff; }
+.si-ph-3 { left: 18%; top: 40%; rotate: -2deg; z-index: 3; } .si-ph-3 figcaption { background: #bfeed8; }
+.si-art-line { position: absolute; right: 2%; bottom: 4%; margin: 0; text-align: right; font-size: 15px; color: #55515f; line-height: 1.35; }
+.si-art-line b { display: block; font-size: 30px; font-weight: 700; color: #16151b; letter-spacing: -.01em;
+  background: linear-gradient(90deg, #c8963e, #9b7ce6 55%, #2fa98a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@media (prefers-reduced-motion: reduce) { .si-card { transition: none; } .si-go[aria-busy="true"] .si-knob i { animation: none; } }
+/* Phones: just the card, nothing busy */
+@media (max-width: 899px) {
+  .si-scene { min-height: calc(100dvh - 140px); align-content: start; padding-top: 18px; }
+  .si-card { padding: 24px 20px 20px; border-radius: 28px; }
+  .si-h { font-size: 27px; }
+}
+.si-admin { min-height: 100dvh; margin: 0; }
+/* Sign-in scene fills the whole width; tidy photo layout */
+html:has(body.si-open) { overflow-x: clip; }
+.si-scene:not(.si-admin) { width: 100vw; margin-inline: calc(50% - 50vw); padding-inline: max(var(--gutter), calc(50vw - 560px)); }
+.si-ph-1 figcaption { bottom: auto; top: 12px; }
+.si-ph-3 { left: 6%; top: 42%; }
+.si-art { height: 580px; }
+.si-art-line { right: 0; bottom: 36px; }

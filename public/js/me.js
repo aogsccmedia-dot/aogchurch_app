@@ -1,6 +1,6 @@
 import { icon } from "./icons.js";
 import { api, cachedGet, esc, freshGet, toast } from "./site.js";
-import { getMe, googleButton, whenSignedIn } from "./auth.js";
+import { getMe, signInCard, whenSignedIn } from "./auth.js";
 import { switchReady } from "./switcher.js";
 import { cachedMe, helloOnce, renderTabs, roleName, toolsFor } from "./portal.js";
 import { faceInner } from "./faces.js";
@@ -29,12 +29,13 @@ async function render() {
   if (!me.user || !d) {
     $("me-signin").hidden = false; $("me-view").hidden = true;
     switchReady();
-    const ok = await googleButton($("me-google"), { text: "signin_with" });
-    if (!ok) $("me-google").outerHTML = `<p class="muted-text">Google sign-in is being set up. In the meantime, <a href="/join" style="color:var(--gold-2)">join here</a>.</p>`;
+    document.body.classList.add("si-open");
+    await signInCard($("me-card"));
+    import("./signin.js").then((m) => m.dressScene($("me-signin")));
     return;
   }
   if (me.admin_account) { location.href = "/admin/"; return; }   // the main admin isn't a member: their home is the admin portal
-  $("me-signin").hidden = true; $("me-view").hidden = false;
+  $("me-signin").hidden = true; $("me-view").hidden = false; document.body.classList.remove("si-open");
   paint(me, d, false);
 }
 

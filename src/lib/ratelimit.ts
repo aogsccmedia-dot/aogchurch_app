@@ -25,3 +25,11 @@ export async function rateLimit(env: Env, scope: string, ip: string, limit: numb
 export async function ipHash(ip: string): Promise<string> {
   return (await sha256Hex("aogscc-youth:" + ip)).slice(0, 32);
 }
+
+/** Has this bucket already gone over its limit in the current window? (Checks without counting.) */
+export async function overLimit(env: Env, scope: string, ip: string, limit: number, windowSec: number): Promise<boolean> {
+  const bucket = `${scope}:${(await sha256Hex(ip)).slice(0, 24)}`;
+  const now = Math.floor(Date.now() / 1000);
+  const row = await env.DB.prepare("SELECT count FROM rate_limits WHERE bucket = ? AND window_start = ?").bind(bucket, now - (now % windowSec)).first<{ count: number }>();
+  return !!row && row.count >= limit;
+}

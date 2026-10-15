@@ -46,20 +46,24 @@ function joinForm(over: Record<string, string> = {}) {
   return fd;
 }
 
-async function adminCookie(): Promise<string> {
-  const r1 = await post("/api/auth/admin/request-code", { email: "aogsccmedia@gmail.com" });
-  const { challenge } = await r1.json() as { challenge: string };
-  const r2 = await post("/api/auth/admin/verify", { challenge, code: lastCode() });
-  assert.equal(r2.status, 200);
-  return cookieOf(r2);
+const ADMIN_PW = "Sandton-Youth-2026!";
+/** The main admin signs in with email + password (the first time proves the email once with a code). */
+async function adminCookie(e: Env = env): Promise<string> {
+  const li = await post("/api/auth/password/login", { email: "aogsccmedia@gmail.com", password: ADMIN_PW }, {}, e);
+  if (li.status === 200) return cookieOf(li);
+  const su = await (await post("/api/auth/password/signup", { name: "SCC Media", email: "aogsccmedia@gmail.com", password: ADMIN_PW }, {}, e)).json() as { needs_code: boolean; challenge: string };
+  assert.equal(su.needs_code, true, "the admin email must be proven once");
+  const code = /(\d{6})/.exec((e as typeof env).EMAIL.outbox.at(-1)!.text!)![1];
+  const r = await post("/api/auth/password/confirm", { challenge: su.challenge, code }, {}, e);
+  assert.equal(r.status, 200);
+  return cookieOf(r);
 }
 const A = (cookie: string) => ({ cookie, "x-scc-admin": "1" });
-/** The main admin: Google, then the emailed code (only this account needs the code). */
+/** The main admin through Google: straight in, no codes. */
 async function superCookie(g: Env & { EMAIL: { outbox: { text?: string }[] } }, sub = "g-admin"): Promise<string> {
   const a = await post("/api/auth/google", { credential: await googleToken({ sub, email: "aogsccmedia@gmail.com", name: "SCC Media" }) }, {}, g);
-  const { challenge } = await a.json() as { challenge: string };
-  const code = /code is (\d{6})/.exec(g.EMAIL.outbox.at(-1)!.text!)![1];
-  return cookieOf(await post("/api/auth/admin/verify", { challenge, code }, { cookie: cookieOf(a) }, g));
+  assert.equal(a.status, 200);
+  return cookieOf(a);
 }
 
 before(async () => {
@@ -144,31 +148,61 @@ describe("weekly letter subscriptions", () => {
 });
 
 describe("accounts & admin access", () => {
-  test("admin cannot be reached without the emailed code", async () => {
+  test("admin needs a real sign-in; no codes for the main admin, codes only to prove an email or reset a password", async () => {
     assert.equal((await call("/api/admin/stats")).status, 401);
-    const r = await post("/api/auth/admin/request-code", { email: "aogsccmedia@gmail.com" });
-    const { challenge } = await r.json() as { challenge: string };
-    assert.match(mails("aogsccmedia@gmail.com").at(-1)!.subject, /sign-in code/);
-    const bad = await post("/api/auth/admin/verify", { challenge, code: "000000" === lastCode() ? "111111" : "000000" });
-    assert.equal(bad.status, 400);
-    const good = await post("/api/auth/admin/verify", { challenge, code: lastCode() });
-    assert.equal(good.status, 200);
-    assert.match(good.headers.get("set-cookie")!, /HttpOnly; SameSite=Lax/);
-    const reuse = await post("/api/auth/admin/verify", { challenge, code: lastCode() });
-    assert.equal(reuse.status, 400, "codes are single-use");
-    assert.equal((await call("/api/admin/stats", { headers: { cookie: cookieOf(good) } })).status, 200);
-  });
-  test("other emails never receive admin codes", async () => {
+    const c = await adminCookie();
+    assert.match(mails("aogsccmedia@gmail.com").at(-1)!.subject, /verification code/);
+    assert.equal((await call("/api/admin/stats", { headers: { cookie: c } })).status, 200);
     const before = env.EMAIL.outbox.length;
-    const r = await post("/api/auth/admin/request-code", { email: "someone@else.com" });
-    assert.equal(r.status, 200);
-    assert.equal(env.EMAIL.outbox.length, before);
+    const again = await post("/api/auth/password/login", { email: "AOGSCCmedia@gmail.com", password: ADMIN_PW });
+    assert.equal(again.status, 200);
+    assert.equal(env.EMAIL.outbox.length, before, "no code on a normal sign-in");
+    assert.equal((await post("/api/auth/password/login", { email: "aogsccmedia@gmail.com", password: "wrong-password" })).status, 401);
+    assert.equal((await post("/api/auth/admin/request-code", { email: "aogsccmedia@gmail.com" })).status, 404, "the old admin code is gone");
+  });
+  test("email + password: sign up, sign in, forgot password, and no taking over known emails", async () => {
+    const e = await makeEnv();
+    assert.equal((await post("/api/auth/password/signup", { name: "Zola", email: "zola@example.com", password: "short" }, {}, e)).status, 422);
+    assert.equal((await post("/api/auth/password/signup", { name: "Zola", email: "zola@example.com", password: "password" }, {}, e)).status, 422);
+    const su = await post("/api/auth/password/signup", { name: "Zola Mokoena", email: "Zola@Example.com", password: "praise-him-always" }, {}, e);
+    assert.equal(su.status, 200);
+    const me = await (await call("/api/auth/me", { headers: { cookie: cookieOf(su) } }, e)).json() as { user: { email: string; given_name: string }; is_admin: boolean };
+    assert.equal(me.user.email, "zola@example.com"); assert.equal(me.user.given_name, "Zola"); assert.equal(me.is_admin, false);
+    assert.equal((await post("/api/auth/password/signup", { name: "Zola", email: "zola@example.com", password: "another-pass-1" }, {}, e)).status, 409);
+    assert.equal((await post("/api/auth/password/login", { email: "zola@example.com", password: "praise-him-always" }, {}, e)).status, 200);
+    // Forgot password: same answer for unknown emails, a code for real ones.
+    const n = e.EMAIL.outbox.length;
+    assert.equal((await post("/api/auth/password/forgot", { email: "nobody@example.com" }, {}, e)).status, 200);
+    assert.equal(e.EMAIL.outbox.length, n, "no email to strangers");
+    const f = await (await post("/api/auth/password/forgot", { email: "zola@example.com" }, {}, e)).json() as { challenge: string };
+    const code = /(\d{6})/.exec(e.EMAIL.outbox.at(-1)!.text!)![1];
+    assert.equal((await post("/api/auth/password/confirm", { challenge: f.challenge, code, password: "123" }, {}, e)).status, 422);
+    assert.equal((await post("/api/auth/password/confirm", { challenge: f.challenge, code, password: "a-brand-new-one" }, {}, e)).status, 200);
+    assert.equal((await post("/api/auth/password/login", { email: "zola@example.com", password: "praise-him-always" }, {}, e)).status, 401);
+    assert.equal((await post("/api/auth/password/login", { email: "zola@example.com", password: "a-brand-new-one" }, {}, e)).status, 200);
+    // An email the church already knows (a newsletter subscriber) must be proven before an account is made.
+    e.DB._db.prepare("INSERT INTO subscribers (id, email, status, token) VALUES ('s-k', 'known@example.com', 'active', 'tok-k')").run();
+    const k = await (await post("/api/auth/password/signup", { name: "Known", email: "known@example.com", password: "my-own-pass-1" }, {}, e)).json() as { needs_code: boolean };
+    assert.equal(k.needs_code, true);
+    assert.equal(e.DB._db.prepare("SELECT COUNT(*) AS n FROM users WHERE email = 'known@example.com'").get().n, 0);
+  });
+  test("signing in with Google removes a password set on an unproven email", async () => {
+    const g = await makeEnv({ GOOGLE_CLIENT_ID: CLIENT_ID });
+    assert.equal((await post("/api/auth/password/signup", { name: "Not Me", email: "real@gmail.com", password: "squatter-pass-1" }, {}, g)).status, 200);
+    assert.equal((await post("/api/auth/google", { credential: await googleToken({ sub: "g-real", email: "real@gmail.com", name: "Real Person" }) }, {}, g)).status, 200);
+    assert.equal((await post("/api/auth/password/login", { email: "real@gmail.com", password: "squatter-pass-1" }, {}, g)).status, 401);
+    // A Google account can add a password, after proving the email with a code.
+    const add = await (await post("/api/auth/password/signup", { name: "Real Person", email: "real@gmail.com", password: "my-real-pass-1" }, {}, g)).json() as { needs_code: boolean; challenge: string };
+    assert.equal(add.needs_code, true);
+    const code = /(\d{6})/.exec(g.EMAIL.outbox.at(-1)!.text!)![1];
+    assert.equal((await post("/api/auth/password/confirm", { challenge: add.challenge, code }, {}, g)).status, 200);
+    assert.equal((await post("/api/auth/password/login", { email: "real@gmail.com", password: "my-real-pass-1" }, {}, g)).status, 200);
   });
   test("admin writes need the CSRF header", async () => {
     const cookie = await adminCookie();
     assert.equal((await post("/api/admin/events", { title: "X", starts_at: "2030-01-01T10:00:00Z" }, { cookie })).status, 403);
   });
-  test("Google sign-in: members get a session; only the main admin must still enter a code", async () => {
+  test("Google sign-in: members get a session; the main admin goes straight in", async () => {
     const g = await makeEnv({ GOOGLE_CLIENT_ID: CLIENT_ID });
     const tok = await googleToken({ sub: "g-1", email: "lindiwe@gmail.com", name: "Lindiwe Khumalo", given_name: "Lindiwe", family_name: "Khumalo" });
     const r = await post("/api/auth/google", { credential: tok }, {}, g);
@@ -182,15 +216,9 @@ describe("accounts & admin access", () => {
     assert.equal((await post("/api/auth/google", { credential: wrongAud }, {}, g)).status, 401);
 
     const adminTok = await googleToken({ sub: "g-admin", email: "aogsccmedia@gmail.com", name: "SCC Media" });
-    const a = await post("/api/auth/google", { credential: adminTok }, {}, g);
-    const aj = await a.json() as { needs_code: boolean; challenge: string };
-    assert.equal(aj.needs_code, true);
-    assert.equal((await call("/api/admin/stats", { headers: { cookie: cookieOf(a) } }, g)).status, 401, "Google alone is not enough for the main admin");
-    assert.equal((await post("/api/auth/admin/request-code", { email: "aogsccmedia@gmail.com" }, {}, g)).status, 403);
-    const code = /code is (\d{6})/.exec(g.EMAIL.outbox.at(-1)!.text!)![1];
-    const v = await post("/api/auth/admin/verify", { challenge: aj.challenge, code }, { cookie: cookieOf(a) }, g);
+    const v = await post("/api/auth/google", { credential: adminTok }, {}, g);
     assert.equal(v.status, 200);
-    assert.equal((await call("/api/admin/stats", { headers: { cookie: cookieOf(v) } }, g)).status, 200);
+    assert.equal((await call("/api/admin/stats", { headers: { cookie: cookieOf(v) } }, g)).status, 200, "the main admin goes straight in");
     // The admin never has to fill in the join form.
     const j = await call("/api/join", { method: "POST", body: joinForm({ email: "aogsccmedia@gmail.com" }), headers: { cookie: cookieOf(v) } }, g);
     assert.equal(j.status, 400);
@@ -748,19 +776,12 @@ describe("door, insights, weekly services and the board report", () => {
     assert.equal(env.DB._db.prepare("SELECT checked_in_at IS NOT NULL AS used FROM tickets WHERE code = ?").get(codes[0].code).used, 1);
   });
 
-  test("the main admin's admin powers renew while in use, lapse after 12 quiet hours, and come back with the emailed code", async () => {
+  test("the main admin stays signed in as admin without any codes", async () => {
     const c = await adminCookie();
     const { createHash } = await import("node:crypto");
     const hash = createHash("sha256").update(c.split("=")[1]).digest("hex");
-    const row = () => env.DB._db.prepare("SELECT admin_until FROM sessions WHERE token_hash = ?").get(hash) as { admin_until: string };
-    env.DB._db.prepare("UPDATE sessions SET admin_until = ? WHERE token_hash = ?").run(new Date(Date.now() + 3600_000).toISOString(), hash);
-    assert.equal((await call("/api/admin/stats", { headers: { cookie: c } })).status, 200);
-    assert.ok(new Date(row().admin_until).getTime() - Date.now() > 11 * 3600_000, "renewed while in use");
     env.DB._db.prepare("UPDATE sessions SET admin_until = ? WHERE token_hash = ?").run(new Date(Date.now() - 1000).toISOString(), hash);
-    assert.equal((await call("/api/admin/stats", { headers: { cookie: c } })).status, 401);
-    const r = await (await post("/api/auth/admin/request-code", {}, { cookie: c })).json() as { challenge: string };
-    const v = await post("/api/auth/admin/verify", { challenge: r.challenge, code: lastCode() }, { cookie: c });
-    assert.equal((await call("/api/admin/stats", { headers: { cookie: cookieOf(v) } })).status, 200);
+    assert.equal((await call("/api/admin/stats", { headers: { cookie: c } })).status, 200);
   });
 
   test("event insights: sold, came, no-shows, money incl. other income", async () => {
