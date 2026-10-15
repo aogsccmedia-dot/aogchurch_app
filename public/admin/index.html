@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#f7f7fb">
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="stylesheet" href="/css/base.css?v=eae68f236b">
-  <link rel="stylesheet" href="/css/pages.css?v=779af5230e">
+  <link rel="stylesheet" href="/css/pages.css?v=9c03cb34ae">
   <link rel="stylesheet" href="/css/admin.css?v=a472163a88">
   <script src="/js/switch-boot.js?v=4afbe33104"></script>
 </head>
@@ -25,9 +25,11 @@
         <div class="field"><label for="l-email">Admin email</label><input class="input" id="l-email" name="email" type="email" autocomplete="username" required></div>
         <button class="btn btn-gold" type="submit">Email me a code</button>
       </form>
-      <form id="code-verify" class="form-grid" hidden>
-        <p class="muted" id="code-sent"></p>
-        <input class="input" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
+      <form id="code-verify" class="form-grid code-form" hidden>
+        <p class="code-status" id="code-sent" aria-live="polite"></p>
+        <input class="input" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" required aria-label="6-digit code">
+        <p class="muted code-hint">It checks itself as soon as all 6 digits are in. Any code from the last 10 minutes works.</p>
+        <div class="code-actions"><button type="button" class="btn" id="code-paste">Paste code</button><button type="button" class="btn btn-ghost" id="code-resend" disabled>Resend in 30s</button></div>
         <button class="btn btn-gold" type="submit">Verify &amp; continue</button>
       </form>
       <div class="notice err" id="login-error" hidden></div>
@@ -471,6 +473,6 @@
   <dialog class="drawer" id="rsvp-drawer"><div class="drawer-body" id="rsvp-body"></div></dialog>
   <dialog class="drawer" id="services-drawer"><div class="drawer-body" id="services-body"></div></dialog>
   <dialog class="drawer" id="member-drawer"><div class="drawer-body" id="member-body"></div></dialog>
-  <script type="module" src="/js/admin.js?v=aeb9f860d6"></script>
+  <script type="module" src="/js/admin.js?v=22cfe805d2"></script>
 </body>
 </html>

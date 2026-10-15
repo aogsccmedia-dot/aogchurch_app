@@ -1,4 +1,5 @@
 import { busy, otpField } from "./otp.js";
+import { codeScreen } from "./admin-code.js";
 import { AVAILABILITY, LABELS, MINISTRIES } from "./options.js";
 import { FIELD_TYPES, renderField } from "./forms.js";
 import { icon } from "./icons.js";
@@ -67,11 +68,14 @@ const safe = (fn) => async (...a) => { try { await fn(...a); } catch (e) { toast
 let challenge = null;
 const loginErr = (m) => { $("#login-error").textContent = m; $("#login-error").hidden = !m; };
 
+let codeUi = null;
 function showCodeStep(r) {
   challenge = r.challenge;
   $("#code-request").hidden = true; $("#admin-google").hidden = true; $("#signed-in-admin").hidden = true;
   $("#code-verify").hidden = false;
-  $("#code-sent").textContent = `We emailed a 6-digit code to ${r.sent_to}. It expires in 10 minutes.`;
+  codeUi?.stop();
+  codeUi = codeScreen({ challenge, sentTo: r.sent_to, statusEl: $("#code-sent"), resendBtn: $("#code-resend"), pasteBtn: $("#code-paste"), input: $("#code-verify").code,
+    onChallenge: (c) => { challenge = c; }, resendIn: r.resend_in ?? 30 });
   otpField($("#code-verify").code, () => $("#code-verify").requestSubmit());
   $("#code-verify").code.focus();
 }
@@ -139,7 +143,7 @@ $("#code-request").addEventListener("submit", safe(async (e) => {
 $("#code-verify").addEventListener("submit", async (e) => {
   e.preventDefault(); loginErr("");
   const done = busy("Checking your code…");
-  try { await api("/api/auth/admin/verify", { method: "POST", body: { challenge, code: e.target.code.value } }); boot(); }
+  try { await api("/api/auth/admin/verify", { method: "POST", body: { challenge, code: e.target.code.value } }); codeUi?.stop(); boot(); }
   catch (err) { loginErr(err.message); e.target.code.value = ""; e.target.code.dispatchEvent(new Event("input")); e.target.code.focus(); }
   finally { done(); }
 });

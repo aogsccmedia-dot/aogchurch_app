@@ -7,7 +7,7 @@ import { remindersOn, setReminders } from "../lib/reminders.ts";
 import { HttpError, Router, clientIp, json, readJson } from "../lib/http.ts";
 import { rateLimit } from "../lib/ratelimit.ts";
 import {
-  clearSessionCookie, consumeLoginCode, createLoginCode, createSession, destroySession, getSession,
+  clearSessionCookie, consumeAdminCode, consumeLoginCode, createLoginCode, createSession, destroySession, getSession,
   canAdmin, isAdminEmail, upsertUser, verifyGoogleToken,
 } from "../lib/auth.ts";
 import { sendMail } from "../lib/email.ts";
@@ -16,15 +16,35 @@ import * as T from "../emails/templates.ts";
 import { promoteWaitlist } from "../lib/registrations.ts";
 
 type Ctx = { waitUntil(p: Promise<unknown>): void } | undefined;
-/** Create the admin's code and email it. With `ctx`, the email goes out in the background so the code screen opens instantly. */
+const RESEND_SECONDS = 30;
+const mask = (email: string) => email.replace(/^(.)(.*)(.@.*)$/, (_m, a, mid, c) => a + "•".repeat(Math.min(6, mid.length)) + c);
+
+/** Email the code, trying twice, and record whether it went out (the code screen shows this). */
+async function deliverCode(env: Env, id: string, email: string, code: string): Promise<boolean> {
+  for (let i = 0; i < 2; i++) {
+    const ok = await sendMail(env, { to: email, ...T.adminCode({ site: siteUrl(env) }, code), template: "admin_code" }).catch(() => false);
+    if (ok) { await env.DB.prepare("UPDATE login_codes SET delivery = 'sent', sent_at = ? WHERE id = ?").bind(new Date().toISOString(), id).run(); return true; }
+    if (i === 0) await new Promise((r) => setTimeout(r, 1500));
+  }
+  await env.DB.prepare("UPDATE login_codes SET delivery = 'failed' WHERE id = ?").bind(id).run();
+  console.error("admin code email failed twice");
+  return false;
+}
+
+/** Create the admin's code and email it. With `ctx`, the email goes out in the background so the code screen opens instantly.
+ *  Asking again within 30 seconds reuses the code just sent (no flood of emails). */
 async function sendAdminCode(env: Env, userId: string | null, to?: string, ctx?: Ctx) {
   const email = (to || adminEmail(env)).toLowerCase();
-  const { id, code } = await createLoginCode(env, email, userId);
-  const mail = sendMail(env, { to: email, ...T.adminCode({ site: siteUrl(env) }, code), template: "admin_code" });
-  if (typeof ctx?.waitUntil === "function") ctx.waitUntil(mail.then((ok) => { if (!ok) console.error("admin code email failed"); }).catch((e) => console.error("admin code email failed", e)));
+  const recent = await env.DB.prepare("SELECT id, delivery, created_at FROM login_codes WHERE email = ? AND consumed_at IS NULL AND expires_at > ? ORDER BY created_at DESC LIMIT 1")
+    .bind(email, new Date().toISOString()).first<{ id: string; delivery: string | null; created_at: string }>();
+  const age = recent ? (Date.now() - Date.parse(recent.created_at.endsWith("Z") ? recent.created_at : recent.created_at + "Z")) / 1000 : Infinity;
+  if (recent && age < RESEND_SECONDS && recent.delivery !== "failed") return { challenge: recent.id, sent_to: mask(email), resend_in: Math.ceil(RESEND_SECONDS - age), reused: true };
+  const { id, code } = await createLoginCode(env, email, userId, { keepRecent: true });
+  await env.DB.prepare("UPDATE login_codes SET delivery = 'pending' WHERE id = ?").bind(id).run();
+  const mail = deliverCode(env, id, email, code);
+  if (typeof ctx?.waitUntil === "function") ctx.waitUntil(mail);
   else if (!(await mail) && env.ENVIRONMENT !== "development") throw new HttpError(503, "We couldn't send the verification email. Check that Email Sending is enabled for the domain.");
-  const masked = email.replace(/^(.)(.*)(.@.*)$/, (_m, a, mid, c) => a + "•".repeat(Math.min(6, mid.length)) + c);
-  return { challenge: id, sent_to: masked };
+  return { challenge: id, sent_to: mask(email), resend_in: RESEND_SECONDS };
 }
 
 export function authRoutes(router: Router, env: Env): void {
@@ -62,26 +82,35 @@ export function authRoutes(router: Router, env: Env): void {
    * sign in with Google first (this endpoint then only re-sends). Before Google is set up
    * it lets the admin bootstrap with the email code alone.
    */
-  router.post("/api/auth/admin/request-code", async (req) => {
-    await rateLimit(env, "admincode", clientIp(req), 5, 900);
+  router.post("/api/auth/admin/request-code", async (req, _p, ctx) => {
+    await rateLimit(env, "admincode", clientIp(req), 10, 900);
     const { email } = await readJson<{ email?: string }>(req);
     const s = await getSession(env, req);
     const viaGoogle = s && await canAdmin(env, s.user);
     if (env.GOOGLE_CLIENT_ID && !viaGoogle) throw new HttpError(403, "Please sign in with Google using an account that has admin access.");
-    if (s && viaGoogle && !isAdminEmail(env, s.user.email)) return json({ ok: true, ...(await sendAdminCode(env, s.user.id, s.user.email)) });
+    if (s && viaGoogle && !isAdminEmail(env, s.user.email)) return json({ ok: true, ...(await sendAdminCode(env, s.user.id, s.user.email, ctx)) });
     if (!viaGoogle && (!email || !isAdminEmail(env, email))) {
       // Same answer for any other address so the admin email can't be probed.
       return json({ ok: true, challenge: crypto.randomUUID(), sent_to: "your inbox" });
     }
     const user = s?.user ?? await upsertUser(env, { email: adminEmail(env) });
-    return json({ ok: true, ...(await sendAdminCode(env, user.id)) });
+    return json({ ok: true, ...(await sendAdminCode(env, user.id, undefined, ctx)) });
+  });
+
+  // The code screen asks whether the email went out (pending → sent / failed).
+  router.get("/api/auth/admin/code-status", async (req) => {
+    const c = new URL(req.url).searchParams.get("c") || "";
+    const row = await env.DB.prepare("SELECT delivery, created_at, expires_at, consumed_at FROM login_codes WHERE id = ?").bind(c).first<{ delivery: string | null; created_at: string; expires_at: string; consumed_at: string | null }>();
+    if (!row) return json({ ok: true, delivery: "unknown" }, 200, { "Cache-Control": "no-store" });
+    const age = (Date.now() - Date.parse(row.created_at.endsWith("Z") ? row.created_at : row.created_at + "Z")) / 1000;
+    return json({ ok: true, delivery: row.delivery || "sent", expires_at: row.expires_at, used: !!row.consumed_at, resend_in: Math.max(0, Math.ceil(RESEND_SECONDS - age)) }, 200, { "Cache-Control": "no-store" });
   });
 
   router.post("/api/auth/admin/verify", async (req) => {
     await rateLimit(env, "adminverify", clientIp(req), 12, 900);
     const { challenge, code } = await readJson<{ challenge?: string; code?: string }>(req);
     if (!challenge || !code) throw new HttpError(400, "Enter the 6-digit code from your email.");
-    const r = await consumeLoginCode(env, challenge, code);
+    const r = await consumeAdminCode(env, challenge, code);
     const user = await upsertUser(env, { email: r.email });
     if (!(await canAdmin(env, user))) throw new HttpError(403, "This account doesn't have admin access.");
     await destroySession(env, req);

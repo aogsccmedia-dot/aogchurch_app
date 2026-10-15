@@ -1884,3 +1884,19 @@ a.pam-page { display: block; }
 #signin-dialog .close { position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: #fff; display: grid; place-items: center; cursor: pointer; }
 /* The admin code step */
 #code-dialog .code-form .input[name=code] { font-size: 30px; letter-spacing: .45em; text-align: center; font-variant-numeric: tabular-nums; padding: 14px 10px; }
+/* Main admin code screen */
+.code-form { display: grid; gap: 12px; }
+.code-status { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0; padding: 12px 14px; border-radius: 14px; background: #f4f0ff; color: #3c3954; font-size: 14.5px; line-height: 1.45; }
+.code-status.ok { background: #eefaf2; color: #1f5a37; } .code-status.err { background: #fff0f2; color: #9b2c44; }
+.code-status .spinner { width: 15px; height: 15px; border-width: 2px; flex: none; }
+.code-form .input[name=code] { font-size: 30px; letter-spacing: .45em; text-align: center; font-variant-numeric: tabular-nums; padding: 14px 10px; }
+.code-hint { margin: 0; font-size: 13px; }
+.code-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.code-actions .btn { width: 100%; justify-content: center; }
+.code-actions .btn[disabled] { opacity: .6; }
+.code-form .code-go { width: 100%; justify-content: center; min-height: 48px; font-size: 16px; }
+.code-form .code-later { justify-self: center; }
+#code-dialog { width: min(440px, calc(100% - 24px)); border: 0; border-radius: 26px; padding: 24px 20px 18px; }
+#code-dialog::backdrop { background: rgba(20, 18, 34, .5); }
+#code-dialog h3 { font-size: 26px; font-weight: 600; margin: 0; }
+.code-status { display: block; } .code-status .spinner { display: inline-block; vertical-align: -2px; margin-right: 6px; }

@@ -1,4 +1,5 @@
-import { veilCarry, veilHide, veilShow } from "./switcher.js";   // also wires data-switch buttons (member ⇄ admin)
+import { veilCarry, veilHide, veilShow } from "./switcher.js";
+import { codeScreen } from "./admin-code.js";   // also wires data-switch buttons (member ⇄ admin)
 // Sign in with Google (Google Identity Services) + the admin's emailed verification code.
 import { api, esc, toast } from "./site.js";
 import { busy, otpField } from "./otp.js";
@@ -39,7 +40,7 @@ async function handleCredential(resp) {
   veilShow(onMe ? "Preparing your member page…" : "Signing you in…");
   try {
     const r = await api("/api/auth/google", { method: "POST", body: { credential: resp.credential } });
-    if (r.needs_code) { veilHide(); await adminCodeDialog(r.challenge, r.sent_to); return; }
+    if (r.needs_code) { veilHide(); await adminCodeDialog(r.challenge, r.sent_to, r.resend_in); return; }
     const me = await getMe(true);
     cacheMe(me); renderPortalNav(me);
     renderHeaderUser(me);
@@ -80,45 +81,44 @@ export async function googleButton(el, { text = "continue_with", width } = {}) {
   return true;
 }
 
-/** Modal that asks the admin for the 6-digit emailed code. */
-export function adminCodeDialog(challenge, sentTo) {
+/** Modal that asks the main admin for the 6-digit emailed code. Opens instantly; the email is sent in the background. */
+export function adminCodeDialog(challenge, sentTo, resendIn = 30) {
   return new Promise((resolve) => {
     let dlg = document.getElementById("code-dialog");
-    if (!dlg) {
-      dlg = document.createElement("dialog");
-      dlg.id = "code-dialog"; dlg.className = "sheet";
-      document.body.append(dlg);
-    }
+    if (!dlg) { dlg = document.createElement("dialog"); dlg.id = "code-dialog"; dlg.className = "sheet"; document.body.append(dlg); }
     dlg.innerHTML = `<form method="dialog" class="code-form">
-      <p class="eyebrow gold">Admin verification</p>
-      <h3>Check your email</h3>
-      <p class="muted-text">We've sent a 6-digit code to <b>${esc(sentTo)}</b>. Type or paste it: it checks itself as soon as all 6 digits are in. If it hasn't arrived in a minute, tap Resend.</p>
-      <input class="input" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
-      <div class="notice err" data-status hidden></div>
-      <div style="display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap">
-        <button type="button" class="btn btn-ghost" data-resend>Resend code</button>
-        <button type="submit" class="btn btn-gold">Verify &amp; open dashboard</button>
-      </div></form>`;
-    const form = dlg.querySelector("form");
+      <p class="eyebrow gold">Main admin · one more step</p>
+      <h3>Enter your code</h3>
+      <p class="code-status" data-status aria-live="polite"></p>
+      <input class="input" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" required aria-label="6-digit code">
+      <p class="muted-text code-hint">It checks itself as soon as all 6 digits are in. Any code from the last 10 minutes works.</p>
+      <div class="notice err" data-err hidden></div>
+      <div class="code-actions">
+        <button type="button" class="btn" data-paste>Paste code</button>
+        <button type="button" class="btn btn-ghost" data-resend disabled>Resend in 30s</button>
+      </div>
+      <button type="submit" class="btn btn-gold code-go">Verify &amp; open dashboard</button>
+      <button type="button" class="btn btn-ghost code-later" data-later>Not now</button></form>`;
+    const form = dlg.querySelector("form"), err = dlg.querySelector("[data-err]");
+    const screen = codeScreen({ challenge, sentTo, statusEl: dlg.querySelector("[data-status]"), resendBtn: dlg.querySelector("[data-resend]"), pasteBtn: dlg.querySelector("[data-paste]"), input: form.code, resendIn });
     otpField(form.code, () => form.requestSubmit());
-    const status = dlg.querySelector("[data-status]");
-    let ch = challenge;
+    let busyNow = false;
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      status.hidden = true;
+      if (busyNow || form.code.value.replace(/\D/g, "").length !== 6) return;
+      busyNow = true; err.hidden = true;
       const stop = busy("Checking your code…");
       try {
-        await api("/api/auth/admin/verify", { method: "POST", body: { challenge: ch, code: form.code.value } });
-        dlg.close(); resolve(true);
+        await api("/api/auth/admin/verify", { method: "POST", body: { challenge: screen.challenge, code: form.code.value } });
+        screen.stop(); dlg.close(); resolve(true);
         veilShow("Opening your dashboard…"); veilCarry("Opening your dashboard…");
         location.href = "/admin/";
-      } catch (err) { status.textContent = err.message; status.hidden = false; form.code.value = ""; form.code.dispatchEvent(new Event("input")); form.code.focus(); }
-      finally { stop(); }
+      } catch (e2) { err.textContent = e2.message; err.hidden = false; form.code.value = ""; form.code.dispatchEvent(new Event("input")); form.code.focus(); }
+      finally { stop(); busyNow = false; }
     });
-    dlg.querySelector("[data-resend]").addEventListener("click", async () => {
-      try { const r = await api("/api/auth/admin/request-code", { method: "POST", body: {} }); ch = r.challenge; toast("New code sent"); }
-      catch (err) { status.textContent = err.message; status.hidden = false; }
-    });
+    // Don't lose the code screen by accident (Escape or a stray tap); "Not now" closes it on purpose.
+    dlg.addEventListener("cancel", (e) => e.preventDefault());
+    dlg.querySelector("[data-later]").addEventListener("click", () => { screen.stop(); dlg.close(); resolve(false); });
     dlg.showModal();
     form.code.focus();
     // Get the dashboard ready while they fetch the code, so it opens instantly.

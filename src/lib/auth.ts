@@ -219,15 +219,42 @@ export function sixDigitCode(): string {
   return String(u[0] % 1_000_000).padStart(6, "0");
 }
 
-export async function createLoginCode(env: Env, email: string, userId: string | null): Promise<{ id: string; code: string }> {
+export async function createLoginCode(env: Env, email: string, userId: string | null, opts: { keepRecent?: boolean } = {}): Promise<{ id: string; code: string }> {
   const id = uuid();
   const code = sixDigitCode();
+  // Admin codes: earlier codes stay valid until they expire, so whichever email arrives first works.
+  const retire = opts.keepRecent
+    ? env.DB.prepare("UPDATE login_codes SET consumed_at = ? WHERE email = ? AND consumed_at IS NULL AND expires_at < ?").bind(new Date().toISOString(), email, new Date().toISOString())
+    : env.DB.prepare("UPDATE login_codes SET consumed_at = ? WHERE email = ? AND consumed_at IS NULL").bind(new Date().toISOString(), email);
   await env.DB.batch([
-    env.DB.prepare("UPDATE login_codes SET consumed_at = ? WHERE email = ? AND consumed_at IS NULL").bind(new Date().toISOString(), email),
+    retire,
     env.DB.prepare("INSERT INTO login_codes (id, user_id, email, code_hash, expires_at) VALUES (?,?,?,?,?)")
       .bind(id, userId, email, await sha256Hex(`${id}:${code}`), new Date(Date.now() + CODE_MINUTES * 60_000).toISOString()),
   ]);
   return { id, code };
+}
+
+/** Admin code check: the code may match this challenge or any other code emailed to the same address in the last 10 minutes. */
+export async function consumeAdminCode(env: Env, id: string, code: string): Promise<{ email: string; user_id: string | null }> {
+  const clean = code.replace(/\D/g, "");
+  if (clean.length !== 6) throw new HttpError(400, "Enter the 6-digit code from your email.");
+  const first = await env.DB.prepare("SELECT email FROM login_codes WHERE id = ?").bind(id).first<{ email: string }>();
+  if (!first) throw new HttpError(400, "That code has expired. Tap Resend for a new one.");
+  const now = new Date().toISOString();
+  const { results } = await env.DB.prepare("SELECT id, email, user_id, code_hash, attempts FROM login_codes WHERE email = ? AND consumed_at IS NULL AND expires_at > ? ORDER BY created_at DESC LIMIT 5")
+    .bind(first.email, now).all<{ id: string; email: string; user_id: string | null; code_hash: string; attempts: number }>();
+  if (!results.length) throw new HttpError(400, "That code has expired. Tap Resend for a new one.");
+  const tries = results.reduce((n, r) => Math.max(n, r.attempts), 0);
+  if (tries >= MAX_ATTEMPTS * 2) throw new HttpError(429, "Too many attempts. Tap Resend for a new code.");
+  for (const r of results) {
+    if ((await sha256Hex(`${r.id}:${clean}`)) === r.code_hash) {
+      await env.DB.prepare("UPDATE login_codes SET consumed_at = ? WHERE email = ? AND consumed_at IS NULL").bind(now, r.email).run();
+      return { email: r.email, user_id: r.user_id };
+    }
+  }
+  await env.DB.prepare("UPDATE login_codes SET attempts = attempts + 1 WHERE email = ? AND consumed_at IS NULL").bind(first.email).run();
+  const left = MAX_ATTEMPTS * 2 - tries - 1;
+  throw new HttpError(400, left > 0 ? `That code isn't right. ${left} attempt${left === 1 ? "" : "s"} left.` : "Too many attempts. Tap Resend for a new code.");
 }
 
 export async function consumeLoginCode(env: Env, id: string, code: string): Promise<{ email: string; user_id: string | null }> {
