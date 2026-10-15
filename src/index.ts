@@ -14,6 +14,7 @@ import { adminRoutes } from "./routes/admin.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { faithRoutes } from "./routes/faith.ts";
 import { posterRoutes } from "./routes/poster.ts";
+import { freecreatorRoutes } from "./routes/freecreator.ts";
 import { ticketRoutes } from "./routes/tickets.ts";
 import { programmeRoutes } from "./routes/programme.ts";
 import { insightsRoutes } from "./routes/insights.ts";
@@ -64,6 +65,7 @@ export default {
       adminRoutes(router, env);
       faithRoutes(router, env);
       posterRoutes(router, env);
+      freecreatorRoutes(router, env);
       ticketRoutes(router, env);
       programmeRoutes(router, env);
       insightsRoutes(router, env);

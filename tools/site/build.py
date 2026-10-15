@@ -271,6 +271,7 @@ PAGES = {
     "go": dict(title="Go Ye" + T, body="portal", desc="The evangelism team in the app: log the people you meet, see the map and tips.", noindex=True, scripts=["site.js", "auth.js", "go.js"]),
     "store": dict(title="Store" + T, crumb="Store", desc="AOG Store: books written by members of AOG Sandton City Church. Coming soon.", canonical="/store", scripts=["site.js", "auth.js", "store.js"]),
     "vote": dict(title="Vote" + T, body="portal", desc="Members' voting at AOG Sandton City Church.", noindex=True, scripts=["site.js", "auth.js", "vote.js"]),
+    "freecreator": dict(title="FreeCreator Online" + T, crumb="FreeCreator Online", desc="FreeCreator Online: free church presentation software in your browser. Songs, scripture, sermon slides and a projector window. Sign in to use it.", canonical="/freecreator", scripts=["site.js", "auth.js", "freecreator.js"]),
     "tools": dict(title="Tools" + T, crumb="Tools", desc="Free tools from AOG Sandton City Church: FreeCreator for Windows and Mac, and the church app.", canonical="/tools", scripts=["site.js", "auth.js"]),
     "app": dict(title="Get the app" + T, crumb="Get the app", desc="Add Sandton City Church to your phone's home screen — iPhone, Android or computer.", canonical="/app", scripts=["site.js", "auth.js"]),
     "ticket": dict(title="Your ticket" + T, desc="Your digital ticket for an event at Sandton City Church.", noindex=True, scripts=["site.js", "auth.js", "ticket.js"]),

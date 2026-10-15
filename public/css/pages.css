@@ -2202,3 +2202,21 @@ html:has(body.si-open) { overflow-x: clip; }
 .t-polaroid i { background: #fdf4f8; box-shadow: inset 8px 6px 0 14px #fff, inset 0 0 0 1px #eee; }
 .t-bold i { background: #0c0a14; box-shadow: inset 0 -14px 0 -6px #ffd27a; }
 .t-clean i { background: #faf8f4; border: 1px solid #e5e0d6; }
+
+/* ---- FreeCreator Online ---- */
+.fc-page { padding-top: 24px; padding-bottom: 120px; display: grid; gap: 34px; }
+.fc-hero { display: grid; gap: 14px; justify-items: start; max-width: 760px; }
+.fc-hero h1 { margin: 0; font-size: clamp(32px, 5vw, 52px); line-height: 1.05; }
+.fc-hero .lede { margin: 0; }
+.fc-signin { width: 100%; }
+.fc-how h2 { margin: 0 0 14px; }
+.fc-steps { list-style: none; counter-reset: fc; margin: 0 0 22px; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.fc-steps li { counter-increment: fc; display: grid; gap: 4px; padding: 16px; border-radius: 18px; background: var(--bg-2); border: 1px solid var(--line); }
+.fc-steps li::before { content: counter(fc); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #16151b; color: #fff; font-weight: 700; font-size: 14px; }
+.fc-steps span { color: var(--text-2); font-size: 14.5px; line-height: 1.5; }
+.fc-two { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.fc-two > div { padding: 18px; border-radius: 18px; background: var(--bg-2); border: 1px solid var(--line); }
+.fc-two h3 { margin: 0 0 8px; } .fc-two ul { margin: 0; padding-left: 18px; color: var(--text-2); line-height: 1.6; }
+.fc-art { position: relative; display: grid; place-items: center; background: linear-gradient(135deg, #1b1340, #5a3fd0); color: #fff; }
+.fc-art .i { width: 64px; height: 64px; }
+.fc-art span { position: absolute; bottom: 14px; padding: 4px 12px; border-radius: 999px; background: #ffd27a; color: #1b1340; font-weight: 700; font-size: 13px; }

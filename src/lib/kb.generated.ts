@@ -405,127 +405,133 @@ export const KB: { id: string; title: string; url: string; text: string }[] = [
 {
 "title": "Tools (FreeCreator)",
 "url": "/tools",
-"text": "FreeCreator\n Built by AOG Sandton City Church\n Songs, scripture and media on your projector, with stage screen, phone remote and livestream output. Free and open source.\n Reserve a beta place \n Phone",
+"text": "FreeCreator\n Built by AOG Sandton City Church\n Songs, scripture and media on your projector, with stage screen, phone remote and livestream output. Free and open source.\n Reserve a beta place \n Online \n New In your browser · sign in to use",
 "id": "k67"
+},
+{
+"title": "Tools (FreeCreator) · FreeCreator Online",
+"url": "/tools",
+"text": "FreeCreator Online\n Built by AOG Sandton City Church\n The same FreeCreator, right in your browser: songs, scripture, sermon slides, themes and a projector window. Nothing to install.\n Sign in & open \n Phone",
+"id": "k68"
 },
 {
 "title": "Tools (FreeCreator) · The church app",
 "url": "/tools",
 "text": "The church app\n Events, tickets, prayer and the weekly letter on your home screen.\n Get the app",
-"id": "k68"
+"id": "k69"
 },
 {
 "title": "Store · Books by our brethren.",
 "url": "/store",
 "text": "Books by our brethren. \n Every book here is written by someone from our church family. Buying one supports them and the ministry.",
-"id": "k69"
+"id": "k70"
 },
 {
 "title": "Store · The shelves are empty, for now.",
 "url": "/store",
 "text": "The shelves are empty, for now.\n The first books are on their way. Check back soon, or ask in Ask SCC and we'll let you know.\n Ask SCC \n Written a book? Members can have their book listed here. Speak to the church office. \n Support the writers Your purchase goes to the author and the ministry. \n Easy and safe Pay by EFT like event tickets, with your order in your profile.",
-"id": "k70"
+"id": "k71"
 },
 {
 "title": "Raising a concern · When something isn't right",
 "url": "/complaints",
 "text": "When something isn't right\n We're not perfect, and we'd rather hear about it than have you carry it alone. Here's how to raise a complaint and what you can expect from us.\n Last updated 9 October 2026",
-"id": "k71"
+"id": "k72"
 },
 {
 "title": "Raising a concern · Who can raise a complaint",
 "url": "/complaints",
 "text": "Who can raise a complaint\n Approved members can raise a complaint online from Settings . Anyone else, including visitors and parents, can speak to a pastor or use the contact form , and we'll treat it the same way.",
-"id": "k72"
+"id": "k73"
 },
 {
 "title": "Raising a concern · How to raise it",
 "url": "/complaints",
 "text": "How to raise it\n Sign in and open Settings → Concerns & complaints .\n Choose what it's about, describe what happened, and (if you like) what would help put it right.\n Tick Keep this confidential if only the pastors should see it.\n You'll get an email with your reference number straight away.",
-"id": "k73"
+"id": "k74"
 },
 {
 "title": "Raising a concern · What you can expect",
 "url": "/complaints",
 "text": "What you can expect\n Acknowledgement straight away by email, with your reference.\n A response within 7 working days , either an answer or an update on how we're looking into it.\n Updates by email, and the status on your profile: Received → Being looked into → Resolved .\n Fair treatment: we'll listen to everyone involved, and nobody will be treated differently for raising a concern in good faith.",
-"id": "k74"
+"id": "k75"
 },
 {
 "title": "Raising a concern · Confidentiality",
 "url": "/complaints",
 "text": "Confidentiality\n Complaints are only seen by the leaders who handle them. Confidential complaints are restricted to the pastors. We'll only share details when it's needed to resolve the matter, or when the law requires it (for example, to protect a child).",
-"id": "k75"
+"id": "k76"
 },
 {
 "title": "Raising a concern · Safeguarding and urgent matters",
 "url": "/complaints",
 "text": "Safeguarding and urgent matters\n If a complaint is about the safety of a child or vulnerable person, we act immediately and follow our code of conduct , including reporting to the authorities where required. If anyone is in danger right now, call 10111 or 112 first.",
-"id": "k76"
+"id": "k77"
 },
 {
 "title": "Raising a concern · If you're not satisfied",
 "url": "/complaints",
 "text": "If you're not satisfied\n Reply to our response and ask for it to be reviewed by the senior pastor. For privacy complaints you may also contact the Information Regulator (inforeg.org.za).",
-"id": "k77"
+"id": "k78"
 },
 {
 "title": "Raising a concern · Records",
 "url": "/complaints",
 "text": "Records\n We keep complaint records securely for up to five years, so we can learn from them and show we've handled them properly. See our data protection page.\n Ask us a question",
-"id": "k78"
+"id": "k79"
 },
 {
 "title": "Welcome pack · Welcome to the family.",
 "url": "/welcome-pack",
 "text": "Welcome to the family. \n You are part of a story that began with a prayer meeting in Los Angeles more than a century ago, travelled to South Africa, and now lives on in Sandton. This pack tells that story, who we are, and what we're not.\n Welcome pack \n AOG Sandton City Church · 17 Humber Street, Woodmead, Sandton · aogsccyouth.com\n Our roots · 1906 to today",
-"id": "k79"
-},
-{
-"title": "Welcome pack · From Azusa Street to South Africa.",
-"url": "/welcome-pack",
-"text": "From Azusa Street to South Africa. \n 1906 Azusa Street, Los Angeles A revival led by William J. Seymour begins at 312 Azusa Street. People of every race pray together and are filled with the Holy Spirit. Within two years the message reaches more than fifty nations.\n 1908 Missionaries reach South Africa Charles Chawner (Canada), Henry and Anna Turney and Hannah James (England) begin ministry in Zululand and around Pretoria. This is the start of the Assemblies of God in South Africa.\n 1914 The Assemblies of God is formed Pentecostal believers meet in Hot Springs, Arkansas (USA) and form the Assemblies of God. In 1917 the South African work joins, and the name is registered in Pretoria.\n 1929 A young man meets Jesus Nicholas Bhengu, born in 1909 at Entumeni near Eshowe, gives his life to Christ in Kimberley through two travelling evangelists.\n 1938 Bhengu joins the AOG After ministering wit",
 "id": "k80"
 },
 {
 "title": "Welcome pack · From Azusa Street to South Africa.",
 "url": "/welcome-pack",
-"text": "h the Emmanuel Mission in Nelspruit, Bhengu and his companions join the Assemblies of God. His ministry grows from Benoni.\n 1940s \"Back to God\" A crusade in Port Elizabeth sees about a thousand people saved in a few weeks. Bhengu calls the message \"Back to God\", and it spreads to East London and city after city.\n 1950s A nation hears the gospel The Back to God Crusade plants churches across Southern Africa. In 1959 TIME magazine calls Bhengu \"the black Billy Graham\".\n 1990 · today Assemblies of God Back to God The churches born from his ministry become the Assemblies of God Movement, today known as the Assemblies of God Back to God. Bhengu went to be with the Lord in 1985.\n AOG Sandton City Church · Welcome pack 2 \n Our founding father",
+"text": "From Azusa Street to South Africa. \n 1906 Azusa Street, Los Angeles A revival led by William J. Seymour begins at 312 Azusa Street. People of every race pray together and are filled with the Holy Spirit. Within two years the message reaches more than fifty nations.\n 1908 Missionaries reach South Africa Charles Chawner (Canada), Henry and Anna Turney and Hannah James (England) begin ministry in Zululand and around Pretoria. This is the start of the Assemblies of God in South Africa.\n 1914 The Assemblies of God is formed Pentecostal believers meet in Hot Springs, Arkansas (USA) and form the Assemblies of God. In 1917 the South African work joins, and the name is registered in Pretoria.\n 1929 A young man meets Jesus Nicholas Bhengu, born in 1909 at Entumeni near Eshowe, gives his life to Christ in Kimberley through two travelling evangelists.\n 1938 Bhengu joins the AOG After ministering wit",
 "id": "k81"
 },
 {
-"title": "Welcome pack · Nicholas Bhengu.",
+"title": "Welcome pack · From Azusa Street to South Africa.",
 "url": "/welcome-pack",
-"text": "Nicholas Bhengu. \n Nicholas Bhekinkosi Hepworth Bhengu (1909–1985) is the father of the Back to God movement and the founder through whose ministry the Assemblies of God took root in townships and cities across South Africa.\n He preached Jesus Christ with simple, fearless faith. Thousands were saved and healed, and many turned away from crime as their lives were changed.\n He taught holiness and the fear of God, and he called believers to dignity, honest work and self-reliance, so that local churches could stand on their own feet and support their own pastors and buildings.\n \"Back to God\" was never a new denomination. It was a call: turn from sin and come back to the living God.\n What we carry from him\n The gospel first. Every town, city and nation needs to hear about Jesus.\n Holiness. A changed heart shows in a changed life, at home, at work and in the community.\n Dignity and self-relian",
+"text": "h the Emmanuel Mission in Nelspruit, Bhengu and his companions join the Assemblies of God. His ministry grows from Benoni.\n 1940s \"Back to God\" A crusade in Port Elizabeth sees about a thousand people saved in a few weeks. Bhengu calls the message \"Back to God\", and it spreads to East London and city after city.\n 1950s A nation hears the gospel The Back to God Crusade plants churches across Southern Africa. In 1959 TIME magazine calls Bhengu \"the black Billy Graham\".\n 1990 · today Assemblies of God Back to God The churches born from his ministry become the Assemblies of God Movement, today known as the Assemblies of God Back to God. Bhengu went to be with the Lord in 1985.\n AOG Sandton City Church · Welcome pack 2 \n Our founding father",
 "id": "k82"
 },
 {
 "title": "Welcome pack · Nicholas Bhengu.",
 "url": "/welcome-pack",
-"text": "ce. We give, work and build together, so the church can bless others.\n Prayer and the power of the Holy Spirit. We expect God to save, heal and deliver today.\n Unity. Like Azusa Street, the church is a family where every language and background belongs.\n AOG Sandton City Church · Welcome pack 3 \n Clearing things up",
+"text": "Nicholas Bhengu. \n Nicholas Bhekinkosi Hepworth Bhengu (1909–1985) is the father of the Back to God movement and the founder through whose ministry the Assemblies of God took root in townships and cities across South Africa.\n He preached Jesus Christ with simple, fearless faith. Thousands were saved and healed, and many turned away from crime as their lives were changed.\n He taught holiness and the fear of God, and he called believers to dignity, honest work and self-reliance, so that local churches could stand on their own feet and support their own pastors and buildings.\n \"Back to God\" was never a new denomination. It was a call: turn from sin and come back to the living God.\n What we carry from him\n The gospel first. Every town, city and nation needs to hear about Jesus.\n Holiness. A changed heart shows in a changed life, at home, at work and in the community.\n Dignity and self-relian",
 "id": "k83"
 },
 {
-"title": "Welcome pack · What the AOG is not.",
+"title": "Welcome pack · Nicholas Bhengu.",
 "url": "/welcome-pack",
-"text": "What the AOG is not. \n Not A one-man church\n We follow Jesus Christ, not a personality. Pastors and leaders serve the church, and they are accountable to God, to the Bible and to each other.\n Not A cult or secret society\n We are part of the worldwide Pentecostal family that grew from Azusa Street. What we believe is open, written down and taken from the Bible.\n Not A separate \"Back to God\" denomination\n \"Back to God\" began as the name of Nicholas Bhengu's crusades. It was a message, a call to return to God, and it still is.\n Not A political party\n We pray for our nation and serve our communities, but our mission is the gospel of Jesus Christ for everyone, whoever they vote for.\n Not Salvation by works or membership\n No one is saved by joining a church or doing enough good. We are saved by God's grace, through faith in Jesus (Ephesians 2:8–9).\n Not Only for perfect people\n Church is a hos",
+"text": "ce. We give, work and build together, so the church can bless others.\n Prayer and the power of the Holy Spirit. We expect God to save, heal and deliver today.\n Unity. Like Azusa Street, the church is a family where every language and background belongs.\n AOG Sandton City Church · Welcome pack 3 \n Clearing things up",
 "id": "k84"
 },
 {
 "title": "Welcome pack · What the AOG is not.",
 "url": "/welcome-pack",
-"text": "pital for the broken and a home for the searching. Come as you are; God does the changing.\n AOG Sandton City Church · Welcome pack 4 \n Our church",
+"text": "What the AOG is not. \n Not A one-man church\n We follow Jesus Christ, not a personality. Pastors and leaders serve the church, and they are accountable to God, to the Bible and to each other.\n Not A cult or secret society\n We are part of the worldwide Pentecostal family that grew from Azusa Street. What we believe is open, written down and taken from the Bible.\n Not A separate \"Back to God\" denomination\n \"Back to God\" began as the name of Nicholas Bhengu's crusades. It was a message, a call to return to God, and it still is.\n Not A political party\n We pray for our nation and serve our communities, but our mission is the gospel of Jesus Christ for everyone, whoever they vote for.\n Not Salvation by works or membership\n No one is saved by joining a church or doing enough good. We are saved by God's grace, through faith in Jesus (Ephesians 2:8–9).\n Not Only for perfect people\n Church is a hos",
 "id": "k85"
+},
+{
+"title": "Welcome pack · What the AOG is not.",
+"url": "/welcome-pack",
+"text": "pital for the broken and a home for the searching. Come as you are; God does the changing.\n AOG Sandton City Church · Welcome pack 4 \n Our church",
+"id": "k86"
 },
 {
 "title": "Welcome pack · The birth of AOG Sandton City Church.",
 "url": "/welcome-pack",
 "text": "The birth of AOG Sandton City Church. \n AOG Sandton City Church was born from a vision: a city church in the heart of Sandton, where people who live, study and work in the city can find Jesus, grow in faith and be sent out to serve.\n Today we meet at 17 Humber Street, Woodmead, with services through the week and a youth ministry that is close to our hearts.\n The full story of how we began is being written down and will be added here soon.\n AOG Sandton City Church · Welcome pack 5 \n In short",
-"id": "k86"
+"id": "k87"
 },
 {
 "title": "Welcome pack · What we believe.",
 "url": "/welcome-pack",
 "text": "What we believe. \n The Bible is God's Word, our guide for faith and life.\n Jesus Christ died and rose again; everyone who believes in Him is saved by grace.\n Water baptism by immersion, and baptism in the Holy Spirit , for every believer.\n Holiness : a life that honours God.\n Holy Communion , remembering the Lord's death until He comes.\n Divine healing and deliverance through the power of God.\n The Great Commission : go and make disciples of all nations (Matthew 28:19).\n The church is a family. We gather, pray, give and serve together.\n Join Become a member at aogsccyouth.com/join. A leader will walk with you.\n Devotions Read today's verse in your profile and pray with the church every day.\n Serve Find a ministry: worship, media, youth, children, hospitality and more.\n Ask SCC Service times, events, tickets and the church calendar, any time.\n 17 Humber Street, Woodmead, Sandton · aogsccy",
-"id": "k87"
+"id": "k88"
 }
 ];

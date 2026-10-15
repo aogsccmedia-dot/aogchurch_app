@@ -1348,3 +1348,16 @@ describe("poster maker", () => {
     assert.ok(r.services.length && r.services.every((s) => s.day >= 1 && s.day <= 5), "weekday services only");
   });
 });
+
+describe("FreeCreator Online", () => {
+  test("scripture and AI are for signed-in people only; bad references are refused", async () => {
+    assert.equal((await call("/api/freecreator/bible?ref=John%203:16")).status, 401);
+    assert.equal((await post("/api/freecreator/ai", { task: "tidy", text: "x" }, { "x-scc-admin": "1" })).status, 401);
+    const c = await adminCookie();
+    assert.equal((await call("/api/freecreator/bible?ref=hello", { headers: { cookie: c } })).status, 422);
+    assert.equal((await call("/api/freecreator/bible?ref=John%203:16&tr=niv", { headers: { cookie: c } })).status, 422, "public-domain translations only");
+    assert.equal((await post("/api/freecreator/ai", { task: "hack", text: "x" }, A(c))).status, 422);
+    const ai = await (await post("/api/freecreator/ai", { task: "tidy", text: "Amazing grace" }, A(c))).json() as { ok: boolean };
+    assert.equal(ai.ok, false, "without AI the app uses its built-in rules");
+  });
+});
