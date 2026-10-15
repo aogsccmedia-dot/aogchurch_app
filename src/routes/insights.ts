@@ -96,8 +96,12 @@ function readService(body: Record<string, unknown>) {
   return { title, day, start_time, end_time, note: String(body.note ?? "").trim().slice(0, 200) || null, ministry_group, frequency, active: body.active === false || body.active === "0" ? 0 : 1, reminders: body.reminders === true || body.reminders === "1" || body.reminders === "on" ? 1 : 0 };
 }
 
-/** Parse a service-session form (multipart). Money comes in as Rands ("1250.50"), stored as cents. */
-function readSession(fd: FormData, service: ServiceRow) {
+/**
+ * Parse a service-session form (multipart). Every field is required except the poster.
+ * The "how it went" numbers and money are required once the service date has arrived (a coming service can be
+ * planned ahead with its topic, people and poster). Money is Rands as a plain number ("1250.50"), stored as cents.
+ */
+function readSession(fd: FormData, service: ServiceRow, today = saToday()) {
   const errors: Record<string, string> = {};
   const get = (k: string) => String(fd.get(k) ?? "").trim();
   const date = get("date");
@@ -107,22 +111,24 @@ function readSession(fd: FormData, service: ServiceRow) {
   const cancel_reason = cancelled ? get("cancel_reason").slice(0, 200) : "";
   if (cancelled && !cancel_reason) errors.cancel_reason = "Why was there no service? (e.g. Easter weekend)";
   const topic = cancelled ? `No ${service.title.toLowerCase()}` : get("topic").slice(0, 200);
-  if (!topic) errors.topic = "What was the topic or theme?";
-  const out: Record<string, string | number | null> = { date, topic, status: cancelled ? "cancelled" : "held", cancel_reason: cancel_reason || null, mc: get("mc").slice(0, 120) || null,
-    speaker: get("speaker").slice(0, 120) || null, scripture: get("scripture").slice(0, 160) || null, summary: get("summary").slice(0, 3000) || null, notes: get("notes").slice(0, 2000) || null };
+  const out: Record<string, string | number | null> = { date, topic, status: cancelled ? "cancelled" : "held", cancel_reason: cancel_reason || null, mc: null, speaker: null, scripture: null, summary: null, notes: null };
+  if (!cancelled) {
+    const TEXT: [string, string, number][] = [["topic", "the topic or theme", 200], ["speaker", "the speaker", 120], ["mc", "the MC", 120], ["scripture", "the scripture", 160], ["summary", "a summary", 3000], ["notes", "notes", 2000]];
+    for (const [k, label, max] of TEXT) { const v = get(k).slice(0, max); if (!v) errors[k] = `Please add ${label}.`; else out[k] = v; }
+  }
+  const happened = !cancelled && DATE.test(date) && date <= today;
   for (const [k, label] of SESSION_COUNTS) {
     const v = get(k);
-    if (v === "") { out[k] = null; continue; }
-    const num = Number(v);
-    if (!Number.isInteger(num) || num < 0 || num > 100000) errors[k] = `${label}: enter a whole number.`; else out[k] = num;
+    if (v === "") { out[k] = null; if (happened) errors[k] = `${label}: enter a number (0 if none).`; continue; }
+    if (!/^\d{1,6}$/.test(v) || Number(v) > 100000) errors[k] = `${label}: enter a whole number.`; else out[k] = Number(v);
   }
   for (const [k, label] of SESSION_MONEY) {
-    const v = get(k.replace("_cents", "")).replace(/[R\s,]/gi, "");
-    if (v === "") { out[k] = null; continue; }
-    const num = Number(v);
-    if (!isFinite(num) || num < 0 || num > 100_000_000) errors[k.replace("_cents", "")] = `${label}: enter an amount in Rands.`; else out[k] = Math.round(num * 100);
+    const name = k.replace("_cents", ""), v = get(name).replace(/\s/g, "");
+    if (v === "") { out[k] = null; if (happened) errors[name] = `${label}: enter the amount in Rands (0 if none).`; continue; }
+    // Numbers only: Rands with up to 2 decimals, no letters, symbols or other currencies.
+    if (!/^\d{1,9}(\.\d{1,2})?$/.test(v) || Number(v) > 100_000_000) errors[name] = `${label}: numbers only, in Rands (e.g. 1250.50).`; else out[k] = Math.round(Number(v) * 100);
   }
-  if (Object.keys(errors).length) throw new HttpError(422, "Please check the highlighted fields.", errors);
+  if (Object.keys(errors).length) throw new HttpError(422, "Please fill in every field (only the poster is optional).", errors);
   if (cancelled) for (const [k] of [...SESSION_COUNTS, ...SESSION_MONEY]) out[k] = null;
   return out;
 }
@@ -384,7 +390,6 @@ export function insightsRoutes(router: Router, env: Env): void {
     const v = readSession(fd, service);
     const poster = fd.get("poster");
     const hasPoster = poster && typeof poster !== "string" && poster.size > 0;
-    if (!hasPoster && !existing && v.status === "held") throw new HttpError(422, "Please add the poster for this service.", { poster: "The poster image is required." });
     const clash = await env.DB.prepare("SELECT id FROM service_sessions WHERE service_id = ? AND date = ? AND id != ?").bind(serviceId, v.date, id ?? "").first();
     if (clash) throw new HttpError(409, "This service already has a record for that date. Edit that one instead.", { date: "Already recorded for this date." });
     const sid = id ?? uuid();

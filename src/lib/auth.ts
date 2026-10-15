@@ -42,6 +42,9 @@ export function permFor(method: string, path: string): string | null {
   if (/^\/api\/admin\/tickets\/(check-in|[^/]+)$/.test(p) && p !== "/api/admin/tickets/undo") return "scan";
   if (method === "GET" && (p === "/api/admin/events" || /^\/api\/admin\/events\/[^/]+\/tickets$/.test(p))) return "scan|events";
   if (/^\/api\/admin\/(reports|report|report\.csv|ledger)(\/|$)/.test(p)) return "reports";
+  // Recording a service is open to everyone on the team; managing the list of services, reminders and deleting stay with "services".
+  if ((p === "/api/admin/services" || p === "/api/admin/rsvps") && method === "GET") return "*";
+  if ((p === "/api/admin/sessions" && (method === "GET" || method === "POST")) || (/^\/api\/admin\/sessions\/[^/]+$/.test(p) && method === "PUT")) return "*";
   if (/^\/api\/admin\/(services|sessions|rsvps)(\/|$)/.test(p)) return "services";
   if (/^\/api\/admin\/(events|registrations|insights|approvals)(\/|$)/.test(p)) return "events";
   if (/^\/api\/admin\/people(\/|$)/.test(p)) return "members|people";
