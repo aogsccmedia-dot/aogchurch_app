@@ -2313,3 +2313,14 @@ html.signed-in .ask-page .ask-thread { border: 0 !important; box-shadow: none !i
 .si-g:empty { height: 44px; background: #fff; border: 1px solid rgba(22, 21, 27, .12); }
 .si-g > div, .si-g iframe { margin: 0 auto !important; }
 .si-taken { margin: 0 0 4px; padding: 10px 12px; border-radius: 12px; background: #fff5e6; border: 1px solid #f1d5a3; color: #6b4d12; font-size: 14px; line-height: 1.4; }
+/* Messages: instant, live */
+.msg-b { animation: msg-pop .18s ease-out; }
+@keyframes msg-pop { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+.msg-b.sending { opacity: .75; }
+.msg-b.failed { background: #fff1ef !important; color: #8a2a1c !important; border-color: #f2c2b9 !important; cursor: pointer; }
+.msg-b.failed small { opacity: 1; }
+.msg-typing { padding: 8px 12px; }
+.msg-seen { align-self: flex-end; margin: -2px 4px 0; font-size: 11.5px; color: var(--muted); }
+#msg-role.is-typing { color: #3fae6d; font-style: italic; }
+.msg-who b .vbadge, #msg-name .vbadge, .pick-leader b .vbadge { margin-left: 4px; vertical-align: -2px; }
+@media (prefers-reduced-motion: reduce) { .msg-b { animation: none; } }

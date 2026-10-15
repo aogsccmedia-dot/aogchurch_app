@@ -1499,3 +1499,24 @@ describe("Sign-up for existing people", () => {
     assert.equal(f.status, 200, "members set a password with “Forgot password”");
   });
 });
+
+describe("Messages are live", () => {
+  test("badges, typing, live delivery and seen", async () => {
+    const g = await makeEnv({ GOOGLE_CLIENT_ID: CLIENT_ID });
+    const adm = await superCookie(g);
+    const memberC = cookieOf(await post("/api/auth/google", { credential: await googleToken({ sub: "g-chat", email: "chatty@gmail.com", name: "Chatty" }) }, {}, g));
+    const { leaders } = await (await call("/api/chat/leaders", { headers: { cookie: memberC } }, g)).json() as { leaders: { id: string; badge: string | null }[] };
+    assert.equal(leaders[0].badge, "super", "the church office shows the main admin's black badge");
+    const { id } = await (await post("/api/chat/start", { to: leaders[0].id }, A(memberC), g)).json() as { id: string };
+    const L = (c: string, q = "") => call(`/api/chat/${id}/live?wait=0${q}`, { headers: { cookie: c } }, g).then((r) => r.json() as Promise<{ messages: { body: string }[]; typing: boolean; seen_at: string | null }>);
+    assert.equal((await post(`/api/chat/${id}/typing`, { on: true }, A(memberC), g)).status, 200);
+    assert.equal((await L(adm)).typing, true, "the leader sees the member typing");
+    await post(`/api/chat/${id}`, { body: "Hello pastor" }, A(memberC), g);
+    const got = await L(adm);
+    assert.deepEqual(got.messages.map((m) => m.body), ["Hello pastor"]); assert.equal(got.typing, false, "sending stops the typing dots");
+    const mine = await L(memberC);
+    assert.ok(mine.seen_at, "the member sees “Seen” once the leader has the message");
+    const v = await post("/api/auth/visitor", { name: "Visi", email: "visi.chat@gmail.com" }, {}, g);
+    assert.equal((await call(`/api/chat/${id}/live?wait=0`, { headers: { cookie: cookieOf(v) } }, g)).status, 403);
+  });
+});

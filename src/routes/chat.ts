@@ -9,6 +9,7 @@ import { rateLimit } from "../lib/ratelimit.ts";
 import { uuid } from "../lib/crypto.ts";
 import { sendMail } from "../lib/email.ts";
 import * as T from "../emails/templates.ts";
+import { isAdminEmail } from "../lib/auth.ts";
 
 type Leader = { id: string; name: string; picture: string | null; role: string; email: string };
 const MAIL_GAP_MS = 4 * 60_000;
@@ -30,6 +31,14 @@ export async function leaders(env: Env): Promise<Leader[]> {
   if (office && !out.some((l) => l.id === office.id)) out.unshift({ id: office.id, name: "Church office", picture: office.picture, role: "Main admin · AOG Sandton City Church", email: office.email });
   return out;
 }
+/** The verified sticker next to a name: black for the main admin, blue for admins, gold for leaders and verified members. */
+async function badge(env: Env, id: string, email?: string | null): Promise<"super" | "admin" | "member" | null> {
+  if (email && isAdminEmail(env, email)) return "super";
+  const r = await env.DB.prepare(`SELECT (SELECT role FROM admin_roles WHERE user_id = ?1) AS role,
+      EXISTS (SELECT 1 FROM members m JOIN users u ON u.id = ?1 WHERE (m.user_id = ?1 OR lower(m.email) = lower(u.email)) AND m.status = 'member') AS member`).bind(id).first<{ role: string | null; member: number }>();
+  if (!email) { const u = await env.DB.prepare("SELECT email FROM users WHERE id = ?").bind(id).first<{ email: string }>(); if (u && isAdminEmail(env, u.email)) return "super"; }
+  return r?.role === "admin" ? "admin" : r?.role || r?.member ? "member" : null;
+}
 const isLeader = async (env: Env, id: string) => (await leaders(env)).find((l) => l.id === id) || null;
 
 async function thread(env: Env, id: string, uid: string) {
@@ -48,7 +57,8 @@ export function chatRoutes(router: Router, env: Env): void {
     const s = await me(env, req);
     const q = (new URL(req.url).searchParams.get("q") || "").trim().toLowerCase();
     const list = (await leaders(env)).filter((l) => l.id !== s.user.id && (!q || `${l.name} ${l.role}`.toLowerCase().includes(q)));
-    return json({ ok: true, leaders: list.map(({ email: _e, ...l }) => l) });
+    const out = await Promise.all(list.map(async ({ email, ...l }) => ({ ...l, badge: await badge(env, l.id, email) })));
+    return json({ ok: true, leaders: out });
   });
 
   router.get("/api/chat", async (req) => {
@@ -58,7 +68,7 @@ export function chatRoutes(router: Router, env: Env): void {
     const threads = await Promise.all(results.map(async (t) => {
       const mine = t.starter_id === s.user.id, other = String(mine ? t.leader_id : t.starter_id);
       const lead = ls.find((l) => l.id === other), p = lead ? null : await person(env, other);
-      return { id: t.id, with: { id: other, name: lead?.name || p?.name || "Member", picture: lead?.picture ?? p?.picture ?? null, role: lead?.role || "Member" },
+      return { id: t.id, with: { id: other, name: lead?.name || p?.name || "Member", picture: lead?.picture ?? p?.picture ?? null, role: lead?.role || "Member", badge: await badge(env, other, lead?.email ?? p?.email) },
         last_at: t.last_at, preview: t.last_preview, from_me: t.last_sender === s.user.id, unread: Number(mine ? t.starter_unread : t.leader_unread) || 0 };
     }));
     return json({ ok: true, threads, unread: threads.reduce((n, t) => n + t.unread, 0), am_leader: ls.some((l) => l.id === s.user.id) }, 200, { "Cache-Control": "no-store" });
@@ -84,10 +94,49 @@ export function chatRoutes(router: Router, env: Env): void {
     const since = new URL(req.url).searchParams.get("since");
     const { results } = await env.DB.prepare(`SELECT id, sender_id, body, created_at FROM chat_messages WHERE thread_id = ? ${since ? "AND created_at > ?" : ""} ORDER BY created_at DESC LIMIT 200`)
       .bind(...(since ? [id, since] : [id])).all<{ id: string; sender_id: string; body: string; created_at: string }>();
-    await env.DB.prepare(`UPDATE chat_threads SET ${mine ? "starter_unread" : "leader_unread"} = 0 WHERE id = ?`).bind(id).run();
+    await env.DB.prepare(`UPDATE chat_threads SET ${mine ? "starter_unread" : "leader_unread"} = 0, ${mine ? "starter_seen_at" : "leader_seen_at"} = ? WHERE id = ?`).bind(new Date().toISOString(), id).run();
     const lead = await isLeader(env, other), p = lead ? null : await person(env, other);
-    return json({ ok: true, me: s.user.id, with: { id: other, name: lead?.name || p?.name || "Member", picture: lead?.picture ?? p?.picture ?? null, role: lead?.role || "Member" },
+    return json({ ok: true, me: s.user.id, with: { id: other, name: lead?.name || p?.name || "Member", picture: lead?.picture ?? p?.picture ?? null, role: lead?.role || "Member", badge: await badge(env, other, lead?.email ?? p?.email) },
+      seen_at: (mine ? t.leader_seen_at : t.starter_seen_at) ?? null,
       messages: results.reverse().map((m) => ({ ...m, mine: m.sender_id === s.user.id })) }, 200, { "Cache-Control": "no-store" });
+  });
+
+  // Live: waits (up to ~20 s) until something changes — a new message, the other person starts or stops typing, or they
+  // see your messages — then answers straight away. The page asks again at once, so messages arrive in about a second.
+  router.get("/api/chat/:id/live", async (req, { id }) => {
+    const s = await me(env, req);
+    const t0 = await thread(env, id, s.user.id);
+    const mine = t0.starter_id === s.user.id, u = new URL(req.url);
+    const since = u.searchParams.get("since") || "", typingWas = u.searchParams.get("typing") === "1", seenWas = u.searchParams.get("seen") || "";
+    const waitMs = Math.min(20_000, Math.max(0, Number(u.searchParams.get("wait") ?? 20_000) || 0));
+    const deadline = Date.now() + waitMs;
+    for (let i = 0; ; i++) {
+      const [msgs, t] = await Promise.all([
+        env.DB.prepare(`SELECT id, sender_id, body, created_at FROM chat_messages WHERE thread_id = ? ${since ? "AND created_at > ?" : ""} ORDER BY created_at LIMIT 100`).bind(...(since ? [id, since] : [id])).all<{ id: string; sender_id: string; body: string; created_at: string }>(),
+        env.DB.prepare("SELECT starter_typing_at, leader_typing_at, starter_seen_at, leader_seen_at FROM chat_threads WHERE id = ?").bind(id).first<Record<string, string | null>>(),
+      ]);
+      const otherTyping = (mine ? t?.leader_typing_at : t?.starter_typing_at) ?? null;
+      const typing = !!otherTyping && Date.now() - Date.parse(otherTyping) < 6000;
+      const seen = (mine ? t?.leader_seen_at : t?.starter_seen_at) ?? "";
+      const fresh = msgs.results;
+      if (fresh.some((m) => m.sender_id !== s.user.id)) {
+        await env.DB.prepare(`UPDATE chat_threads SET ${mine ? "starter_unread" : "leader_unread"} = 0, ${mine ? "starter_seen_at" : "leader_seen_at"} = ? WHERE id = ?`).bind(new Date().toISOString(), id).run();
+      }
+      if (fresh.length || typing !== typingWas || seen !== seenWas || Date.now() >= deadline) {
+        return json({ ok: true, messages: fresh.map((m) => ({ ...m, mine: m.sender_id === s.user.id })), typing, seen_at: seen || null }, 200, { "Cache-Control": "no-store" });
+      }
+      await new Promise((r) => setTimeout(r, i < 10 ? 600 : 1000));
+    }
+  });
+
+  // "…is typing": the page pings this every few seconds while someone types.
+  router.post("/api/chat/:id/typing", async (req, { id }) => {
+    const s = await me(env, req);
+    if (!trustedWrite(req)) throw new HttpError(403, "Missing request header.");
+    const t = await thread(env, id, s.user.id);
+    const { on } = await readJson<{ on?: boolean }>(req);
+    await env.DB.prepare(`UPDATE chat_threads SET ${t.starter_id === s.user.id ? "starter_typing_at" : "leader_typing_at"} = ? WHERE id = ?`).bind(on === false ? null : new Date().toISOString(), id).run();
+    return json({ ok: true });
   });
 
   router.post("/api/chat/:id", async (req, { id }, ctx) => {
@@ -102,7 +151,7 @@ export function chatRoutes(router: Router, env: Env): void {
     const mid = uuid();
     await env.DB.batch([
       env.DB.prepare("INSERT INTO chat_messages (id, thread_id, sender_id, body, created_at) VALUES (?,?,?,?,?)").bind(mid, id, s.user.id, text, now),
-      env.DB.prepare(`UPDATE chat_threads SET last_at = ?, last_preview = ?, last_sender = ?, ${mine ? "leader_unread = leader_unread + 1" : "starter_unread = starter_unread + 1"} WHERE id = ?`)
+      env.DB.prepare(`UPDATE chat_threads SET last_at = ?, last_preview = ?, last_sender = ?, ${mine ? "leader_unread = leader_unread + 1" : "starter_unread = starter_unread + 1"}, ${mine ? "starter_typing_at" : "leader_typing_at"} = NULL WHERE id = ?`)
         .bind(now, text.slice(0, 140), s.user.id, id),
     ]);
     // Email the other person, at most once every few minutes per thread.
