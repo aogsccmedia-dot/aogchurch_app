@@ -6,7 +6,7 @@ import { icon } from "./icons.js";
 import { helloOnce, renderTabs } from "./portal.js";
 
 const root = document.getElementById("ask-root");
-const STARTERS = ["What's happening this week?", "Pray with me for my week", "Explain John 3:16 simply"];
+const STARTERS = ["What's happening this week?", "Verses for a stressful week", "Explain John 3:16 simply"];
 let info = null, agent = null, lastAgent = null, history = [], busy = false;
 
 const card = (c) => c.kind === "event"

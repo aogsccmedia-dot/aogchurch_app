@@ -11,7 +11,7 @@ import type { Env } from "../env.ts";
 import { siteUrl } from "../env.ts";
 import { calendarUrl, outlookUrl, TZ } from "./time.ts";
 
-export const PROMPT_VERSION = "ask-scc-2026-10-15-kind-lean";
+export const PROMPT_VERSION = "ask-scc-2026-10-15-no-prayers";
 const ADDRESS = "17 Humber Street, Woodmead, Sandton";
 const MAPS = "https://maps.google.com/?q=17+Humber+Street+Woodmead+Sandton";
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -201,11 +201,39 @@ const visit: Run = async (env) => {
     suggestions: ["When is the Sunday service?", "What's coming up?"] };
 };
 
-const prayer: Run = async () => ({
-  agent: "prayer", text: "We'd be honoured to pray with you. Share your request on the prayer page; you choose whether it's private for the prayer team or shared on the prayer wall.",
-  facts: "Prayer requests go through the prayer page. Pastoral or urgent needs: a leader will reach out.", cards: [],
-  actions: [{ label: "Share a prayer request", href: "/prayer", primary: true }], suggestions: ["When is the prayer meeting?"],
-});
+// Prayer: Ask SCC never prays itself. It shares a few fitting verses and hands the person to a real leader
+// (picked at random, so the team shares the care) who can pray with them.
+const VERSES: [RegExp, string[]][] = [
+  [/anxi|worr|stress|panic|overwhelm/, ["Philippians 4:6-7: do not be anxious, bring everything to God in prayer", "1 Peter 5:7: cast all your care on Him, for He cares for you"]],
+  [/fear|afraid|scared/, ["Isaiah 41:10: fear not, for I am with you", "Psalm 56:3: when I am afraid, I will trust in You"]],
+  [/exam|test|study|school|varsity|university|matric/, ["James 1:5: if anyone lacks wisdom, let him ask of God", "Proverbs 3:5-6: trust in the Lord with all your heart"]],
+  [/sick|ill|heal|hospital|pain|health|surgery/, ["Jeremiah 17:14: heal me, O Lord, and I shall be healed", "James 5:14-15: call for the elders of the church to pray"]],
+  [/grie|loss|died|passed|funeral|mourn|heartbreak|broken/, ["Psalm 34:18: the Lord is near to the broken-hearted", "Matthew 5:4: blessed are those who mourn, for they shall be comforted"]],
+  [/tired|weary|strength|weak|burn/, ["Isaiah 40:31: those who wait on the Lord shall renew their strength", "Matthew 11:28: come to Me, all who are weary"]],
+  [/job|work|money|financ|provi|rent|bills/, ["Philippians 4:19: my God shall supply all your need", "Matthew 6:33: seek first the kingdom of God"]],
+  [/family|marri|relationship|parent|child/, ["Colossians 3:13-14: forgive and put on love", "Joshua 24:15: as for me and my house, we will serve the Lord"]],
+];
+export function prayerVerses(t: string): string[] {
+  const q = t.toLowerCase();
+  return VERSES.find(([re]) => re.test(q))?.[1] ?? ["Psalm 46:1: God is our refuge and strength, a very present help in trouble", "Matthew 11:28: come to Me, all who are weary and burdened"];
+}
+const prayer: Run = async (env, t, who) => {
+  const { leaders } = await import("../routes/chat.ts");
+  const team = (await leaders(env)).filter((l) => l.id !== who?.userId && l.name !== "Church office");
+  const pool = team.length ? team : (await leaders(env)).filter((l) => l.id !== who?.userId);
+  const leader = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+  const verses = prayerVerses(t);
+  const first = leader?.name.split(" ")[0];
+  return {
+    agent: "prayer",
+    text: `I'm sorry you're carrying this. Here are a couple of verses to hold on to. ${leader ? `${first} from our church would love to pray with you: tap below to message them.` : "A church leader would love to pray with you: share your request on the prayer page."}`,
+    facts: facts([...verses.map((v) => `Verse: ${v}`), leader ? `A leader who can pray with them: ${leader.name} (${leader.role}). They can message this leader with the button under your reply.` : "Prayer requests: the prayer page."]),
+    cards: [{ kind: "info", title: "Verses for you", lines: verses }],
+    actions: leader ? [{ label: `Ask ${first} to pray with you`, href: `/messages?to=${encodeURIComponent(leader.id)}`, primary: true }, { label: "Prayer page", href: "/prayer" }]
+      : [{ label: "Share a prayer request", href: "/prayer", primary: true }],
+    suggestions: ["When is the prayer meeting?"],
+  };
+};
 
 const votes: Run = async (env, _t, who) => {
   if (!who?.member) return { agent: "votes", text: "Voting is for confirmed church members. Once you're confirmed, votes show here.", facts: "", cards: [], actions: [{ label: "Membership", href: "/join" }], suggestions: ["How do I join?"] };

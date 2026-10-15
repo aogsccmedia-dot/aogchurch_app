@@ -1520,3 +1520,16 @@ describe("Messages are live", () => {
     assert.equal((await call(`/api/chat/${id}/live?wait=0`, { headers: { cookie: cookieOf(v) } }, g)).status, 403);
   });
 });
+
+describe("Ask SCC and prayer", () => {
+  test("never prays: verses plus a real leader to pray with", async () => {
+    const { prayerish } = await import("../src/routes/assistant.ts");
+    assert.ok(prayerish("Dear Lord, please help Sipho. Amen.")); assert.ok(prayerish("Let us pray together")); assert.ok(!prayerish("Philippians 4:6 says do not be anxious."));
+    const c = await adminCookie();
+    const r = await (await post("/api/assistant/chat", { message: "Please pray with me, I'm anxious about exams" }, A(c))).json() as { reply: { agent: string; text: string; cards: { lines: string[] }[]; actions: { href: string }[] } };
+    assert.equal(r.reply.agent, "prayer");
+    assert.ok(!prayerish(r.reply.text), "no prayer written");
+    assert.ok(r.reply.cards[0].lines.some((l) => /\d+:\d+/.test(l)), "verses suggested");
+    assert.ok(r.reply.actions.some((a) => a.href.startsWith("/messages?to=") || a.href === "/prayer"), "handed to a leader");
+  });
+});
