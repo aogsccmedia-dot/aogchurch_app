@@ -19,13 +19,17 @@ async function show() {
   if (a.super) churches();
   if (!a.church) { noChurch(a); return; }
   $("fc-go").hidden = false;
-  $("fc-who").textContent = `${a.church.name} workspace · signed in as ${me.user.email}.`;
+  // Signed in: no reading, just the way in. The tool shows people around itself.
+  document.querySelector(".fc-page")?.classList.add("fc-in");
+  document.querySelector(".fc-hero h1").textContent = `Hi ${me.user.given_name || (me.user.name || "").split(" ")[0] || "there"}`;
+  $("fc-who").textContent = a.church.name;
   if (phone()) {
     const open = $("fc-open");
     if (a.mobile) { open.href = "/freecreator/app/camera.html"; open.lastChild.textContent = " Use this phone as a camera"; $("fc-phone").hidden = false; $("fc-phone").textContent = "On phones, FreeCreator works as an extra camera for the Studio on your computer."; }
     else { $("fc-go").hidden = true; $("fc-phone").hidden = false; $("fc-phone").textContent = "FreeCreator Online runs on a laptop or desktop computer. Open this page on a computer to use it."; }
   } else if (new URLSearchParams(location.search).has("signin")) location.replace("/freecreator/app/");
   if (a.church.role !== "member") manage(a.church);
+  $("fc-open").addEventListener("click", () => setTimeout(() => toast("FreeCreator opened in a new window"), 300));
 }
 
 function noChurch(a) {
@@ -48,10 +52,11 @@ function noChurch(a) {
 async function manage(church) {
   const el = $("fc-manage"); el.hidden = false;
   const d = await api("/api/freecreator/church/members").catch(() => null); if (!d) { el.hidden = true; return; }
-  el.innerHTML = `<h2>People in ${esc(church.name)}'s workspace</h2>
-    <p class="muted-text">${d.automatic ? "Approved Sandton City Church members and the team have access automatically. Add anyone else who helps (e.g. a guest technician) here." : "Only the people you add here can use FreeCreator Online for your church."}</p>
-    <form class="fc-add" id="fc-add"><input class="input" name="email" type="email" required placeholder="their.email@example.com"><select class="input" name="role"><option value="member">Member</option>${church.role === "owner" ? `<option value="admin">Admin</option>` : ""}</select><button class="btn btn-gold" type="submit">Add</button></form>
-    <ul class="fc-people">${d.members.map((m) => `<li><span>${esc(m.email)}</span><small>${esc(m.role)}</small>${m.role !== "owner" ? `<button class="link-btn" data-rm="${esc(m.email)}">Remove</button>` : ""}</li>`).join("") || `<li class="muted-text">Nobody added by hand yet.</li>`}</ul>`;
+  const was = el.querySelector("details")?.open;
+  el.innerHTML = `<details${was ? " open" : ""}><summary>People in ${esc(church.name)}'s workspace <small>${d.members.length}</small></summary>
+    <p class="muted-text">${d.automatic ? "Approved members, the team and the media team have access automatically. Add media people or a guest technician here. Each person can be in one church only." : "Only the people you add here can use FreeCreator Online for your church."}</p>
+    <form class="fc-add" id="fc-add"><input class="input" name="email" type="email" required placeholder="their.email@example.com"><select class="input" name="role"><option value="member">Member</option>${church.id === "scc" ? `<option value="media">Media team</option>` : ""}${church.role === "owner" ? `<option value="admin">Admin</option>` : ""}</select><button class="btn btn-gold" type="submit">Add</button></form>
+    <ul class="fc-people">${d.members.map((m) => `<li><span>${esc(m.email)}</span><small>${esc(m.role)}</small>${m.role !== "owner" ? `<button class="link-btn" data-rm="${esc(m.email)}">Remove</button>` : ""}</li>`).join("") || `<li class="muted-text">Nobody added by hand yet.</li>`}</ul></details>`;
   $("fc-add").onsubmit = async (e) => { e.preventDefault(); try { await api("/api/freecreator/church/members", { method: "POST", body: Object.fromEntries(new FormData(e.target)) }); toast("Added"); manage(church); } catch (err) { toast(err.message); } };
   el.onclick = async (e) => { const b = e.target.closest("[data-rm]"); if (!b || !confirm(`Remove ${b.dataset.rm}?`)) return; try { await api("/api/freecreator/church/members", { method: "POST", body: { email: b.dataset.rm, remove: true } }); manage(church); } catch (err) { toast(err.message); } };
 }
@@ -59,8 +64,9 @@ async function manage(church) {
 async function churches() {
   const el = $("fc-churches"); el.hidden = false;
   const d = await api("/api/freecreator/churches").catch(() => null); if (!d) { el.hidden = true; return; }
-  el.innerHTML = `<h2>Churches using FreeCreator <small class="muted-text">(main admin)</small></h2><ul class="fc-people">${d.churches.map((c) => `<li><span><b>${esc(c.name)}</b>${c.city ? ` · ${esc(c.city)}` : ""}<br><small>${c.id === "scc" ? "Approved members automatically" : `${esc(c.contact_email || "")} · ${c.members} ${c.members === 1 ? "person" : "people"}`}${c.note ? ` · ${esc(c.note)}` : ""}</small></span><small class="pill">${esc(c.status)}</small>
-    ${c.id !== "scc" ? `${c.status !== "active" ? `<button class="btn btn-sm btn-gold" data-ch="${c.id}" data-st="active">Approve</button>` : ""}${c.status !== "declined" ? `<button class="btn btn-sm" data-ch="${c.id}" data-st="declined">${c.status === "active" ? "Switch off" : "Decline"}</button>` : ""}` : ""}</li>`).join("")}</ul>`;
+  const was = el.querySelector("details")?.open;
+  el.innerHTML = `<details${was ? " open" : ""}><summary>Churches using FreeCreator <small>${d.churches.filter((c) => c.status === "pending").length ? `${d.churches.filter((c) => c.status === "pending").length} waiting` : d.churches.length}</small></summary><ul class="fc-people">${d.churches.map((c) => `<li><span><b>${esc(c.name)}</b>${c.city ? ` · ${esc(c.city)}` : ""}<br><small>${c.id === "scc" ? "Approved members automatically" : `${esc(c.contact_email || "")} · ${c.members} ${c.members === 1 ? "person" : "people"}`}${c.note ? ` · ${esc(c.note)}` : ""}</small></span><small class="pill">${esc(c.status)}</small>
+    ${c.id !== "scc" ? `${c.status !== "active" ? `<button class="btn btn-sm btn-gold" data-ch="${c.id}" data-st="active">Approve</button>` : ""}${c.status !== "declined" ? `<button class="btn btn-sm" data-ch="${c.id}" data-st="declined">${c.status === "active" ? "Switch off" : "Decline"}</button>` : ""}` : ""}</li>`).join("")}</ul></details>`;
   el.onclick = async (e) => { const b = e.target.closest("[data-ch]"); if (!b) return; try { await api(`/api/freecreator/churches/${b.dataset.ch}`, { method: "POST", body: { status: b.dataset.st } }); churches(); } catch (err) { toast(err.message); } };
 }
 show();

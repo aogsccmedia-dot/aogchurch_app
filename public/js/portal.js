@@ -261,9 +261,31 @@ document.addEventListener("click", (e) => {
   a.classList.add("going");
 });
 
+/** Sign-in: the hand-written welcome plays straight away (no "getting ready" screen) while the person's page loads
+ *  behind it. The finished welcome is carried to the next page and stays up until that page is ready. */
+export async function playWelcome(me) {
+  const { WELCOME_SVG } = await import("./welcome-art.js");
+  const first = (me.user.given_name || me.user.name || "").split(" ")[0], role = roleName(me);
+  const inner = `${WELCOME_SVG}<h2 class="welcome-title">Welcome back${first ? `, ${esc(first)}` : ""}${badgeHtml(me, 26)}</h2><p class="welcome-line">${role ? `${esc(role)} portal` : "Your church family"}</p>`;
+  const el = document.createElement("div");
+  el.className = "welcome-screen hello-write"; el.id = "welcome-live"; el.setAttribute("role", "status"); el.setAttribute("aria-label", `Welcome back${first ? ", " + first : ""}`);
+  el.innerHTML = `<div class="welcome-blobs" aria-hidden="true"><i></i><i></i><i></i></div><div class="welcome-inner">${inner}</div>`;
+  document.documentElement.append(el);
+  requestAnimationFrame(() => el.classList.add("play"));
+  try { localStorage.setItem("scc-hello", String(me.user.id || me.user.email)); sessionStorage.setItem("scc-welcome", JSON.stringify({ inner, at: Date.now() })); } catch { /* fine */ }
+  return el;
+}
+
 /** The black welcome, once per sign-in session: "Welcome back, Thandi · Youth leader portal". Tap to skip. */
 export function helloOnce(me, { skip = false } = {}) {
   if (!me?.user) return;
+  // Arrived from sign-in: the welcome is already up (carried over); this page is ready, so let it go.
+  const carried = document.getElementById("welcome-carry");
+  if (carried) {
+    let at = 0; try { at = JSON.parse(sessionStorage.getItem("scc-welcome") || "{}").at || 0; sessionStorage.removeItem("scc-welcome"); } catch { /* fine */ }
+    setTimeout(() => { carried.classList.add("out"); setTimeout(() => carried.remove(), 460); }, Math.max(900, 4600 - (Date.now() - at)));
+    return;
+  }
   // Pages opened ahead of time in the background wait until they're actually shown.
   if (document.prerendering) { document.addEventListener("prerenderingchange", () => helloOnce(me, { skip }), { once: true }); return; }
   // Once per sign-in, across every page and tab (cleared when they sign out).

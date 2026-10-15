@@ -1404,6 +1404,13 @@ describe("FreeCreator church workspaces", () => {
     await call("/api/freecreator/lib", { headers: { cookie: helper } }, g);
     assert.equal((await post("/api/freecreator/lib", { coll: "songs", id: "g1", item: { title: "Grace song" } }, A(helper), g)).status, 200);
     assert.equal((await post("/api/freecreator/church/members", { email: "x@gmail.com" }, A(helper), g)).status, 403, "plain members can't add people");
+    // One church per person: Phil is Sandton City Church media; Helper is Grace Chapel's.
+    assert.equal((await post("/api/freecreator/church/members", { email: "philasandendunge@gmail.com" }, A(pastor), g)).status, 409, "already in another church");
+    assert.equal((await post("/api/freecreator/church/members", { email: "helper@gmail.com" }, A(adm), g)).status, 409, "already in another church");
+    const phil = await G("g-phil", "philasandendunge@gmail.com", "Phil");
+    const pa = await (await call("/api/freecreator/access", { headers: { cookie: phil } }, g)).json() as { church: { id: string; role: string }; mobile: boolean };
+    assert.equal(pa.church.id, "scc"); assert.equal(pa.church.role, "media", "Phil has media status"); assert.equal(pa.mobile, true);
+    assert.equal((await call("/api/freecreator/church/members", { headers: { cookie: phil } }, g)).status, 200, "media can manage the workspace");
     const mine = await (await call("/api/freecreator/lib", { headers: { cookie: pastor } }, g)).json() as { items: { id: string }[]; here: string[] };
     assert.deepEqual(mine.items.map((i) => i.id), ["g1"]); assert.ok(mine.here.includes("Helper"), "sees who else is working");
     const scc = await (await call("/api/freecreator/lib", { headers: { cookie: adm } }, g)).json() as { items: { id: string }[]; here: string[] };
@@ -1415,5 +1422,31 @@ describe("FreeCreator church workspaces", () => {
     await g.DB.prepare("UPDATE settings SET value = ? WHERE key = 'freecreator_mobile'").bind(JSON.stringify(["philasandendunge@gmail.com", "otherpastor@gmail.com"])).run();
     assert.equal((await post("/api/freecreator/cam/offer", { code: room.code, sdp }, A(pastor), g)).status, 404, "another church's room is invisible");
     assert.equal((await post("/api/freecreator/cam/offer", { code: room.code, sdp }, A(adm), g)).status, 200);
+  });
+});
+
+describe("FreeCreator scripture", () => {
+  test("whole chapters cached, ranges sliced, bad chapters never sent upstream, fallback when busy", async () => {
+    const c = await adminCookie();
+    const real = globalThis.fetch, asked: string[] = [];
+    let mainBusy = false;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(input instanceof Request ? input.url : input);
+      if (u.startsWith("https://bible-api.com/")) { asked.push(u); if (mainBusy) return new Response("slow down", { status: 429 }); return Response.json({ verses: Array.from({ length: 36 }, (_, i) => ({ chapter: 3, verse: i + 1, text: `Verse ${i + 1} text ` })) }); }
+      if (u.startsWith("https://bolls.life/")) { asked.push(u); return Response.json([{ verse: 1, text: "In the beginning<S>7225</S> God" }, { verse: 2, text: "And the earth" }]); }
+      return real(input, init);
+    }) as typeof fetch;
+    try {
+      const r = await (await call("/api/freecreator/bible?ref=John%203:16-18", { headers: { cookie: c } })).json() as { reference: string; verses: { verse: number }[] };
+      assert.equal(r.reference, "John 3:16-18"); assert.deepEqual(r.verses.map((v) => v.verse), [16, 17, 18]);
+      const whole = await (await call("/api/freecreator/bible?ref=John%203", { headers: { cookie: c } })).json() as { verses: unknown[] };
+      assert.equal(whole.verses.length, 36);
+      const n = asked.length;
+      assert.equal((await call("/api/freecreator/bible?ref=John%2022:1", { headers: { cookie: c } })).status, 422, "John has 21 chapters");
+      assert.equal(asked.length, n, "invalid chapters are never sent upstream");
+      mainBusy = true;
+      const g = await (await call("/api/freecreator/bible?ref=Genesis%201:1&tr=kjv", { headers: { cookie: c } })).json() as { verses: { text: string }[] };
+      assert.equal(g.verses[0].text, "In the beginning God", "fallback source, tags removed");
+    } finally { globalThis.fetch = real; }
   });
 });

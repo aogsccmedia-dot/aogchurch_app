@@ -1,7 +1,7 @@
 import { veilCarry, veilHide, veilShow } from "./switcher.js";
 // Sign in with Google (Google Identity Services) or email + password (signin.js). No codes for normal sign-ins.
 import { api, esc, toast } from "./site.js";
-import { badgeHtml, cacheMe, cachedMe, renderPortalNav } from "./portal.js";
+import { badgeHtml, cacheMe, cachedMe, playWelcome, renderPortalNav } from "./portal.js";
 
 // Draw the portal bar from the last known sign-in straight away (no jump), then confirm with the server.
 renderPortalNav(cachedMe());
@@ -47,15 +47,31 @@ export async function finishSignIn(result) {
     if (customDone) { veilHide(); await customDone(me); return; }
     renderPortalNav(me); renderHeaderUser(me);
     document.getElementById("signin-dialog")?.close();
-    if (me.admin_account && !midTask) { const l = "Opening your dashboard…"; veilShow(l); veilCarry(l); location.href = "/admin/"; return; }
+    // Members and the team: the hand-written welcome plays straight away while their page loads behind it.
+    const welcomeThenGo = async (url) => {
+      veilHide();
+      const t0 = Date.now();
+      await playWelcome(me).catch(() => null);
+      const l = document.createElement("link"); l.rel = "prefetch"; l.href = url; document.head.append(l);
+      await new Promise((r) => setTimeout(r, Math.max(0, 3900 - (Date.now() - t0))));
+      location.href = url;   // the next page keeps the finished welcome up until it's ready
+    };
+    if (me.admin_account && !midTask) { await welcomeThenGo("/admin/"); return; }
     if (!onMe && !midTask) {
-      // Members (and the team) land on their Home: tickets, what's coming up and what to know. New people go to the join form.
-      const label = me.member || me.is_admin ? "Getting things ready…" : "Setting up your sign-up…";
-      veilShow(label); veilCarry(label);
-      location.href = me.member || me.is_admin ? "/me" : "/join";
-      return;   // the next page fades the veil out once it has loaded
+      if (me.member || me.is_admin) { await welcomeThenGo("/me"); return; }
+      const label = "Setting up your sign-up…"; veilShow(label); veilCarry(label);   // new people go to the join form
+      location.href = "/join";
+      return;
     }
-    if (!onMe) veilShow("Filling in your details…");
+    if (onMe) {
+      veilHide();
+      const t0 = Date.now(), el = await playWelcome(me).catch(() => null);
+      try { sessionStorage.removeItem("scc-welcome"); } catch { /* fine */ }
+      await Promise.all(onSignedIn.map((cb) => Promise.resolve().then(() => cb(me)).catch(() => {})));
+      setTimeout(() => { el?.classList.add("out"); setTimeout(() => el?.remove(), 460); }, Math.max(300, 4600 - (Date.now() - t0)));
+      return;
+    }
+    veilShow("Filling in your details…");
     await Promise.all(onSignedIn.map((cb) => Promise.resolve().then(() => cb(me)).catch(() => {})));
     veilHide();
     toast(`Welcome${me.user?.given_name ? ", " + me.user.given_name : ""}!`);

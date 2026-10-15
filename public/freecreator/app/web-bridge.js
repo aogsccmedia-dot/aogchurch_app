@@ -77,10 +77,27 @@ const sub = (set) => (cb) => { set.add(cb); return () => set.delete(cb); };
 const wins = { output: null, stage: null };
 const screens = { listeners: new Set() };
 const DEFAULT_OUTPUTS = [{ id: "main", name: "Projector", mode: "full", displayId: null, enabled: true }, { id: "stage", name: "Stage screen", mode: "stage", displayId: null, enabled: true }];
+// Screens: with the browser's window-management permission (Chrome / Edge) every connected screen is listed
+// by name, including an ATEM or capture device fed by HDMI, and output windows open on the right one.
+let screenDetails = null;
+async function detectScreens(ask) {
+  if (!("getScreenDetails" in window)) return false;
+  if (!ask) { const p = await navigator.permissions.query({ name: "window-management" }).catch(() => null); if (p?.state !== "granted") return false; }
+  try { screenDetails = await window.getScreenDetails(); screenDetails.onscreenschange = emitScreens; emitScreens(); return true; } catch { return false; }
+}
+detectScreens(false);
+const displayList = () => screenDetails?.screens?.length
+  ? screenDetails.screens.map((sc, i) => ({ id: i + 1, label: `${sc.label || `Screen ${i + 1}`}${/atem|blackmagic/i.test(sc.label) ? " (ATEM)" : ""}${sc === screenDetails.currentScreen ? " (this one)" : ""}`, primary: sc.isPrimary, internal: sc.isInternal, width: sc.width, height: sc.height, scale: sc.devicePixelRatio, pixelsWide: Math.round(sc.width * sc.devicePixelRatio), pixelsHigh: Math.round(sc.height * sc.devicePixelRatio), hz: 60, colorDepth: sc.colorDepth, atem: /atem|blackmagic/i.test(sc.label) }))
+  : [{ id: 1, label: "This screen", primary: true, internal: true, width: screen.width, height: screen.height, scale: devicePixelRatio, pixelsWide: Math.round(screen.width * devicePixelRatio), pixelsHigh: Math.round(screen.height * devicePixelRatio), hz: 60, colorDepth: screen.colorDepth }];
 function screensState() {
   for (const k of Object.keys(wins)) if (wins[k]?.closed) wins[k] = null;
-  return { output: !!wins.output, stage: !!wins.stage, open: Object.keys(wins).filter((k) => wins[k]), outputs: db.settings.outputs || DEFAULT_OUTPUTS,
-    displays: [{ id: 1, label: "This screen", primary: true, internal: true, width: screen.width, height: screen.height, scale: devicePixelRatio, pixelsWide: Math.round(screen.width * devicePixelRatio), pixelsHigh: Math.round(screen.height * devicePixelRatio), hz: 60, colorDepth: screen.colorDepth }] };
+  return { output: !!wins.output, stage: !!wins.stage, open: Object.keys(wins).filter((k) => wins[k]), outputs: db.settings.outputs || DEFAULT_OUTPUTS, displays: displayList() };
+}
+/** Where an output goes: the screen chosen in Setup, else an ATEM input, else any screen that isn't this one. */
+function targetScreen(o) {
+  const list = screenDetails?.screens || []; if (list.length < 2) return null;
+  if (o?.displayId && list[o.displayId - 1]) return list[o.displayId - 1];
+  return list.find((sc) => /atem|blackmagic/i.test(sc.label)) || list.find((sc) => sc !== screenDetails.currentScreen) || null;
 }
 const emitScreens = () => { const s = screensState(); for (const cb of screens.listeners) cb(s); };
 setInterval(() => { const before = JSON.stringify([!!wins.output, !!wins.stage]); screensState(); if (JSON.stringify([!!wins.output, !!wins.stage]) !== before) emitScreens(); }, 1500);
@@ -89,7 +106,9 @@ function openWindow(kind) {
   if (!outs.length) return { count: 0 };
   const o = outs[0];
   const url = kind === "stage" ? "/freecreator/app/web/stage.html" : `/freecreator/app/web/output.html?mode=${encodeURIComponent(o.mode || "full")}`;
-  const w = window.open(url, `freecreator-${kind}`, "popup,width=960,height=540");
+  const sc = targetScreen(o);
+  const feat = sc ? `popup,left=${sc.availLeft},top=${sc.availTop},width=${sc.availWidth},height=${sc.availHeight},fullscreen` : "popup,width=960,height=540";
+  const w = window.open(url, `freecreator-${kind}`, feat);
   if (!w) throw new Error("Your browser blocked the window. Allow pop-ups for this site, then try again.");
   wins[kind] = w; setTimeout(broadcast, 600); emitScreens();
   return { ok: true, windowed: true, count: 1 };
@@ -129,7 +148,15 @@ window.scc = {
   remote: { setView: async () => true, onCommand: () => () => {} },
   screens: {
     get: async () => screensState(),
-    open: async (k) => openWindow(k || "output"),
+    open: async (k) => {
+      const r = openWindow(k || "output");   // open straight away (the click still counts), then move it once screens are known
+      if (!screenDetails) detectScreens(true).then((ok) => {
+        const w = wins[k || "output"], o = (db.settings.outputs || DEFAULT_OUTPUTS).find((x) => (k === "stage") === (x.mode === "stage")), sc = ok && targetScreen(o);
+        if (w && sc) { try { w.moveTo(sc.availLeft, sc.availTop); w.resizeTo(sc.availWidth, sc.availHeight); } catch { /* user can drag it */ } }
+      });
+      return r;
+    },
+    detect: async () => detectScreens(true),
     close: async (k) => { try { wins[k]?.close(); } catch { /* */ } wins[k] = null; emitScreens(); return true; },
     identify: async () => true, onChange: sub(screens.listeners),
   },

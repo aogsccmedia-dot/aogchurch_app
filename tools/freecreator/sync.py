@@ -35,7 +35,11 @@ for p in list(OUT.rglob("*.html")) + list(OUT.rglob("*.js")) + list(OUT.rglob("*
 # The control screen: the browser bridge first, and the page lives at /freecreator/app/
 idx = (OUT / "control" / "index.html").read_text()
 idx = idx.replace('<span class="name">Presenter</span>', '<span class="name">FreeCreator</span>').replace('<div class="boot-name">Presenter</div>', '<div class="boot-name">FreeCreator</div>')
-idx = idx.replace("<title>SCC Presenter</title>", "<title>FreeCreator Online · Sandton City Church</title>")
+idx = idx.replace("<title>SCC Presenter</title>", "<title>FreeCreator Online</title>")
+# Online: keep the screen calm. Desktop-only buttons go; the side panels start folded.
+idx = re.sub(r'\s*<button class="tbtn beta" id="btnFeedback".*?</button>', "", idx, flags=re.S)
+idx = re.sub(r'\s*<button class="tbtn" id="btnConnect".*?</button>', "", idx, flags=re.S)
+idx = idx.replace('<details class="sound" id="soundPanel" open>', '<details class="sound" id="soundPanel">').replace('<details class="stage-tools" open>', '<details class="stage-tools">')
 (OUT / "index.html").write_text(idx)
 (OUT / "control" / "index.html").unlink()
 

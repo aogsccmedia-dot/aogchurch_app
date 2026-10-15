@@ -57,3 +57,16 @@ kbd { font: 600 11px/1 ui-monospace, monospace; padding: 2px 5px; border-radius:
 .st-pane[hidden] { display: none; }
 .st-phones { display: grid; gap: 8px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: #101017; }
 .st-code { font: 700 22px/1 "Jost", system-ui; letter-spacing: .25em; padding: 6px 12px; border-radius: 8px; background: #0b0b10; border: 1px dashed rgba(214,166,80,.5); color: #ffd27a; }
+.st-sec { display: grid; gap: 2px; margin-top: 4px; } .st-sec b { font-size: 13.5px; }
+.st-srcs { display: grid; gap: 6px; }
+.st-src { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 8px; border-radius: 10px; background: #101017; border: 1px solid var(--line); }
+.st-src-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.st-src-k { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 3px 7px; border-radius: 6px; background: #262632; color: var(--muted); }
+.st-src-k.atem { background: rgba(255,77,94,.18); color: #ff8a96; } .st-src-k.hdmi { background: rgba(62,207,142,.15); color: var(--green); } .st-src-k.phone { background: rgba(214,166,80,.15); color: var(--gold); }
+.st-src .st-btn { padding: 5px 10px; font-weight: 700; }
+.st-src.a [data-to="a"], .st-src.b [data-to="b"] { background: var(--red); border-color: var(--red); color: #fff; }
+.st-sel { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: #0f0f15; }
+.st-corners { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 132px; aspect-ratio: 16 / 9; padding: 6px; border-radius: 10px; background: #0b0b10; border: 1px solid var(--line); }
+.st-corners button { border-radius: 6px; border: 1px dashed rgba(255,255,255,.18); background: none; cursor: pointer; }
+.st-corners button[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); }
+#stHold.on { border-color: var(--gold); color: var(--gold); } #stTimerBtn.on { border-color: var(--green); color: var(--green); }

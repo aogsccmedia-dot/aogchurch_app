@@ -9,17 +9,17 @@ import { HttpError, Router, json, readJson, trustedWrite } from "../lib/http.ts"
 import { getSession, isAdminEmail } from "../lib/auth.ts";
 import { rateLimit } from "../lib/ratelimit.ts";
 import { SCENES } from "./poster.ts";
-import { churchFor, type FcChurch } from "../lib/fc-church.ts";
+import { churchFor, churchOfEmail, type FcChurch } from "../lib/fc-church.ts";
 import { uuid } from "../lib/crypto.ts";
 
-const TRANSLATIONS = ["kjv", "web", "asv", "bbe", "ylt"];
+import { TRANSLATIONS, passage } from "../lib/bible.ts";
 const PROMPTS: Record<string, [string, number]> = {
   tidy: ["You format worship song lyrics for church projection. Return ONLY the lyrics with section headers in square brackets like [Verse 1], [Chorus], [Bridge]. Remove chords, repeat markers like 'x2' (write the lines out instead), copyright notes and extra blank lines. Keep each stanza to at most 4–6 short lines. Do not invent or change words.", 1800],
   scriptures: ["You help a church media team. Suggest 6 well-known Bible passages for the topic. Reply ONLY with JSON: [{\"ref\":\"Book chapter:verse-verse\",\"why\":\"under 12 words\"}]. Use standard English book names.", 600],
   sermon: ["Turn sermon notes into projection slides. Each slide is short (max 20 words): a title slide, then main points and key quotes. When the notes cite a Bible verse, add a slide with kind \"scripture\" and the reference. Reply ONLY with JSON: [{\"kind\":\"text\"|\"scripture\",\"text\":\"...\",\"ref\":\"John 3:16\"}].", 2500],
   test: ["Reply with exactly: ready", 10],
-  lowerthirds: ["You write lower-third captions for a church livestream in Sandton, South Africa. From the service description, write 5 short lower thirds: the speaker (name + role), the message title, a welcome line, how to connect or give (generic, no made-up links or numbers), and a closing blessing. Reply ONLY with JSON: [{\"name\":\"max 40 chars\",\"title\":\"max 70 chars\"}].", 500],
-  streamtext: ["You write YouTube/Facebook livestream titles and descriptions for a warm Pentecostal church (AOG Sandton City Church, 17 Humber Street, Woodmead, Sandton). Reply ONLY with JSON: {\"title\":\"max 90 chars\",\"description\":\"3 short paragraphs, inviting, no hashtags spam, no made-up links\"}.", 600],
+  lowerthirds: ["You write lower-third captions for the livestream of {church}. From the service description, write 5 short lower thirds: the speaker (name + role), the message title, a welcome line, how to connect or give (generic, no made-up links or numbers), and a closing blessing. Reply ONLY with JSON: [{\"name\":\"max 40 chars\",\"title\":\"max 70 chars\"}].", 500],
+  streamtext: ["You write YouTube/Facebook livestream titles and descriptions for {church}. Reply ONLY with JSON: {\"title\":\"max 90 chars\",\"description\":\"3 short paragraphs, inviting, no hashtags spam, no made-up links\"}.", 600],
 };
 
 const signedIn = async (env: Env, req: Request) => {
@@ -107,23 +107,11 @@ export function freecreatorRoutes(router: Router, env: Env): void {
 
   router.get("/api/freecreator/bible", async (req) => {
     const { s } = await member(req);
-    await rateLimit(env, "fc-bible", s.user.id, 300, 3600);
+    await rateLimit(env, "fc-bible", s.user.id, 400, 3600);
     const u = new URL(req.url), ref = (u.searchParams.get("ref") || "").trim().slice(0, 80), tr = (u.searchParams.get("tr") || "kjv").toLowerCase();
-    if (!ref || !/^[1-3]?\s?[A-Za-z ]+\s\d/.test(ref)) throw new HttpError(422, "Try a reference like John 3:16 or Psalm 23.");
     if (!TRANSLATIONS.includes(tr)) throw new HttpError(422, "Unknown translation.");
-    const src = `https://bible-api.com/${encodeURIComponent(ref)}?translation=${tr}`;
-    const cache = (globalThis as { caches?: { default?: Cache } }).caches?.default, key = new Request(`https://cache.internal/bible/${tr}/${encodeURIComponent(ref.toLowerCase())}`);
-    let data = await cache?.match(key).then((r) => r?.json()).catch(() => null) as { reference?: string; translation_id?: string; verses?: { chapter: number; verse: number; text: string }[] } | null;
-    if (!data) {
-      const res = await fetch(src, { headers: { "user-agent": "aogsccyouth.com FreeCreator Online" } }).catch(() => null);
-      if (!res) throw new HttpError(503, "Couldn't reach the Bible service. Try again in a moment.");
-      if (!res.ok) throw new HttpError(res.status === 404 ? 404 : 503, res.status === 404 ? `Couldn't find ${ref}.` : "The Bible service is busy. Try again in a moment.");
-      data = await res.json();
-      await cache?.put(key, new Response(JSON.stringify(data), { headers: { "cache-control": "max-age=2592000", "content-type": "application/json" } })).catch(() => {});
-    }
-    const verses = (data?.verses || []).map((v) => ({ chapter: v.chapter, verse: v.verse, text: String(v.text || "").replace(/\s+/g, " ").trim() }));
-    if (!verses.length) throw new HttpError(404, `Couldn't find ${ref}.`);
-    return json({ ok: true, reference: data?.reference || ref, translation: (data?.translation_id || tr).toUpperCase(), verses });
+    if (!ref) throw new HttpError(422, "Try a reference like John 3:16 or Psalm 23.");
+    return json({ ok: true, ...(await passage(env, ref, tr)) }, 200, { "Cache-Control": "private, max-age=3600" });
   });
 
   // Upload speed check for streaming: the browser sends ~2 MB and times it.
@@ -155,7 +143,7 @@ export function freecreatorRoutes(router: Router, env: Env): void {
 
   router.post("/api/freecreator/ai", async (req) => {
     if (!trustedWrite(req)) throw new HttpError(403, "Missing request header.");
-    const { s } = await member(req);
+    const { s, church } = await member(req);
     await rateLimit(env, "fc-ai", s.user.id, 40, 3600);
     const b = await readJson<{ task?: string; text?: string }>(req);
     const p = PROMPTS[String(b.task)];
@@ -163,7 +151,7 @@ export function freecreatorRoutes(router: Router, env: Env): void {
     if (!env.AI) return json({ ok: false, text: null });
     try {
       const out = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
-        messages: [{ role: "system", content: p[0] }, { role: "user", content: String(b.text || "").slice(0, 15000) }], max_tokens: p[1], temperature: 0.3,
+        messages: [{ role: "system", content: p[0].replace("{church}", church.name) }, { role: "user", content: String(b.text || "").slice(0, 15000) }], max_tokens: p[1], temperature: 0.3,
       }) as { response?: unknown };
       const r = out?.response;
       return json({ ok: true, text: typeof r === "string" ? r : JSON.stringify(r ?? "") });
@@ -202,7 +190,7 @@ export function freecreatorRoutes(router: Router, env: Env): void {
   router.post("/api/freecreator/church/register", async (req) => {
     write(req); const s = await signedIn(env, req);
     await rateLimit(env, "fc-church", s.user.id, 3, 86400);
-    if (await churchFor(env, s)) throw new HttpError(409, "You're already part of a church workspace.");
+    if (await churchFor(env, s) || await churchOfEmail(env, s.user.email)) throw new HttpError(409, "You're already part of a church workspace. A person can be in one church at a time.");
     const b = await readJson<{ name?: string; city?: string; contact?: string; note?: string }>(req);
     const name = String(b.name || "").trim().slice(0, 120), city = String(b.city || "").trim().slice(0, 80);
     if (name.length < 3) throw new HttpError(422, "Please add the church's name.");
@@ -228,7 +216,9 @@ export function freecreatorRoutes(router: Router, env: Env): void {
       await env.DB.prepare("DELETE FROM fc_members WHERE church_id = ? AND email = ? AND role != 'owner'").bind(church.id, email).run();
       return json({ ok: true });
     }
-    const role = b.role === "admin" && church.role === "owner" ? "admin" : "member";
+    const elsewhere = await churchOfEmail(env, email);
+    if (elsewhere && elsewhere !== church.id) throw new HttpError(409, "That person is already in another church's workspace. A person can be in one church at a time.");
+    const role = b.role === "admin" && church.role === "owner" ? "admin" : b.role === "media" && church.id === "scc" && ["owner", "admin", "media"].includes(church.role) ? "media" : "member";
     await env.DB.prepare("INSERT INTO fc_members (church_id, email, role, added_by) VALUES (?,?,?,?) ON CONFLICT(church_id, email) DO UPDATE SET role = CASE WHEN fc_members.role = 'owner' THEN 'owner' ELSE excluded.role END")
       .bind(church.id, email, role, s.user.id).run();
     return json({ ok: true });

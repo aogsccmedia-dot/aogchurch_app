@@ -16,6 +16,22 @@
   } catch (e) { /* storage blocked: just load normally */ }
 })();
 
+// Arriving from sign-in: the hand-written welcome (already written on the sign-in page) stays on screen from the
+// very first paint until this page has the person's details ready (portal.js helloOnce lets it go).
+(function () {
+  try {
+    var raw = sessionStorage.getItem("scc-welcome");
+    if (!raw) return;
+    var w = JSON.parse(raw);
+    if (!w || !w.inner || Date.now() - w.at > 20000) { sessionStorage.removeItem("scc-welcome"); return; }
+    var el = document.createElement("div");
+    el.id = "welcome-carry"; el.className = "welcome-screen hello-write play done"; el.setAttribute("role", "status");
+    el.innerHTML = '<div class="welcome-blobs" aria-hidden="true"><i></i><i></i><i></i></div><div class="welcome-inner">' + w.inner + "</div>";
+    document.documentElement.appendChild(el);
+    setTimeout(function () { var x = document.getElementById("welcome-carry"); if (x) { x.classList.add("out"); setTimeout(function () { x.remove(); }, 460); } sessionStorage.removeItem("scc-welcome"); }, 9000);
+  } catch (e) { /* storage blocked: load normally */ }
+})();
+
 // Signed in? You're in the app: the portal bar replaces the website menus from the very first paint, and the
 // website's own pages send you to your Home. The way back to the website is signing out.
 (function () {

@@ -21,16 +21,19 @@
       <button class="st-btn big" id="stL3Toggle">Show lower third <kbd>L</kbd></button>
       <button class="st-btn big" id="stWordsToggle">Song words: on <kbd>W</kbd></button>
       <button class="st-btn big" id="stLogoToggle">Logo: off <kbd>G</kbd></button>
+      <button class="st-btn big" id="stHold" title="“We'll be right back” for viewers">Holding screen <kbd>H</kbd></button>
+      <button class="st-btn big" id="stTimerBtn" title="Countdown on the stream (set it up under Look)">Timer <kbd>T</kbd></button>
       <button class="st-btn big danger" id="stFade">Fade to black <kbd>B</kbd></button>
     </div>
   </section>
   <aside class="st-panel">
     <nav class="st-tabs" role="tablist">
-      <button data-tab="sources" aria-selected="true">Inputs</button><button data-tab="l3">Lower thirds</button><button data-tab="sound">Sound</button><button data-tab="stream">Stream</button><button data-tab="ai">AI</button>
+      <button data-tab="sources" aria-selected="true">Inputs</button><button data-tab="l3">Titles</button><button data-tab="look">Look</button><button data-tab="sound">Sound</button><button data-tab="stream">Stream</button><button data-tab="ai">AI</button>
     </nav>
 
     <div class="st-pane" data-pane="sources">
-      <p class="st-hint">Cameras, HDMI capture cards and an ATEM Mini over USB all appear here as video inputs.</p>
+      <div class="st-sec"><b>Sources found</b><span class="st-hint">Updates by itself when you plug something in. Tap A or B.</span></div>
+      <div id="srcList" class="st-srcs"></div>
       <label class="st-field"><span>Main camera (A)</span><select id="srcA"></select></label>
       <label class="st-field"><span>Second camera (B, picture-in-picture)</span><select id="srcB"></select></label>
       <label class="st-field"><span>Microphone / audio input</span><select id="srcMic"></select></label>
@@ -40,16 +43,38 @@
       <div class="st-phones"><b>Phone cameras</b><p class="st-hint">Use team phones as extra cameras. Open <b>aogsccyouth.com/freecreator/cam</b> on the phone, sign in, and type the code.</p>
         <div class="st-row"><button class="st-btn" id="phoneAdd">Add a phone</button><span class="st-code" id="phoneCode" hidden></span></div>
         <div id="phoneList" class="st-music"></div></div>
+      <div class="st-phones"><b>Program out (screens &amp; ATEM)</b><p class="st-hint">Send the finished picture to another screen, e.g. the HDMI cable into an ATEM input, a projector or a monitor.</p>
+        <div class="st-row"><select id="progScreen" class="st-sel" aria-label="Screen"><option value="">This screen (window)</option></select><button class="st-btn" id="progDetect">Find screens</button></div>
+        <button class="st-btn" id="progOpen">Open program output</button></div>
       <div class="st-note"><b>ATEM switchers</b>: plug the ATEM Mini's USB-C into this computer and pick “Blackmagic” as camera A. Switch cameras on the ATEM itself (or ATEM Software Control). Full ATEM control from FreeCreator is in the desktop app.</div>
     </div>
 
     <div class="st-pane" data-pane="l3" hidden>
       <div class="st-l3-list" id="l3List"></div>
       <button class="st-btn" id="l3Add">+ Add lower third</button>
-      <label class="st-field"><span>Style</span><select id="l3Style"><option value="bar">Modern bar</option><option value="glass">Glass</option><option value="block">Bold block</option><option value="line">Minimal line</option><option value="pill">Pill</option></select></label>
+      <label class="st-field"><span>Style</span><select id="l3Style"><option value="bar">Modern bar</option><option value="glass">Glass</option><option value="block">Bold block</option><option value="line">Minimal line</option><option value="pill">Pill</option><option value="gradient">Gradient fade</option><option value="ribbon">Angled ribbon</option><option value="news">News bar</option><option value="card">White card</option><option value="neon">Neon glow</option><option value="split">Split boxes</option></select></label>
       <label class="st-field"><span>Accent colour</span><input type="color" id="l3Color" value="#d6a650"></label>
       <label class="st-field"><span>Hide automatically after</span><select id="l3Auto"><option value="0">Don't hide</option><option value="6">6 seconds</option><option value="10" selected>10 seconds</option><option value="20">20 seconds</option></select></label>
       <p class="st-hint">Click a lower third to put it on, press <kbd>L</kbd> to show or hide.</p>
+    </div>
+
+    <div class="st-pane" data-pane="look" hidden>
+      <label class="st-field"><span>Scripture on screen</span><select id="scrStyle"><option value="card">Frosted card</option><option value="classic">Classic serif</option><option value="band">Lower band</option><option value="minimal">Minimal corner</option><option value="bold">Bold statement</option><option value="split">Split with reference</option><option value="tag">Verse tag</option></select></label>
+      <div class="st-sec"><b>Logo</b><span class="st-hint">Stays fixed in its corner. Press <kbd>G</kbd> to show or hide.</span></div>
+      <div class="st-corners" id="logoCorner" role="radiogroup" aria-label="Logo corner"><button data-c="tl" title="Top left"></button><button data-c="tr" title="Top right"></button><button data-c="bl" title="Bottom left"></button><button data-c="br" title="Bottom right"></button></div>
+      <label class="st-field"><span>Size</span><input type="range" id="logoSize" min="0.05" max="0.18" step="0.01"></label>
+      <label class="st-field"><span>See-through</span><input type="range" id="logoOpacity" min="0.3" max="1" step="0.05"></label>
+      <div class="st-row"><button class="st-btn" id="logoUpload">Use our logo…</button><button class="st-btn" id="logoReset">Reset</button></div>
+      <div class="st-sec"><b>Holding screen</b><span class="st-hint">What viewers see while you pause, or while the internet struggles.</span></div>
+      <label class="st-field"><span>Headline</span><input id="holdMsg" maxlength="60"></label>
+      <label class="st-field"><span>Line under it</span><input id="holdSub" maxlength="90"></label>
+      <label class="st-check"><input type="checkbox" id="autoHold"> Switch to it by itself when the internet struggles, and reconnect the stream</label>
+      <div class="st-sec"><b>Timer</b><span class="st-hint">A countdown on the stream, e.g. before the service starts.</span></div>
+      <div class="st-row"><label class="st-field" style="flex:1"><span>Minutes</span><input id="timerMin" type="number" min="1" max="180" value="5"></label><label class="st-field" style="flex:1"><span>or until</span><input id="timerAt" type="time"></label></div>
+      <label class="st-field"><span>Words</span><input id="timerLabel" maxlength="40"></label>
+      <div class="st-row"><label class="st-field" style="flex:1"><span>Show as</span><select id="timerMode"><option value="corner">Small, in a corner</option><option value="full">Full screen countdown</option></select></label>
+        <label class="st-field" style="flex:1"><span>When it ends</span><select id="timerThen"><option value="">Stay on this</option><option value="cam">Camera</option><option value="camwords">Camera + words</option><option value="slides">Slides</option></select></label></div>
+      <div class="st-row"><button class="st-btn go" id="timerStart">Start timer</button><button class="st-btn" id="timerStop">Stop</button><span class="st-code" id="timerOut" hidden></span></div>
     </div>
 
     <div class="st-pane" data-pane="sound" hidden>
@@ -66,11 +91,12 @@
       <div class="st-row"><button class="st-btn go" id="goLive">Go live</button><button class="st-btn" id="recBtn">Record</button></div>
       <p class="st-hint">Cloudflare Stream: Stream → Live inputs → create one → copy the WebRTC (WHIP) URL. To reach YouTube and Facebook too, add them under that live input's “Outputs” and Cloudflare sends your stream to all of them at once.</p>
       <p class="st-hint">Recordings download to this computer when you stop.</p>
+      <p class="st-hint">If the internet struggles, viewers see your holding screen and FreeCreator reconnects by itself. If it drops completely, nothing can reach viewers until it's back; your recording keeps going.</p>
     </div>
 
     <div class="st-pane" data-pane="ai" hidden>
-      <p class="st-hint">Free AI help for signed-in members, powered by the church's open-source AI.</p>
-      <label class="st-field"><span>What's today's service about?</span><input id="aiTopic" placeholder="e.g. Youth service · Walking by faith · Pastor Thabo"></label>
+      <p class="st-hint">Free AI help for your church's members (open-source AI).</p>
+      <label class="st-field"><span>What's today's service about?</span><input id="aiTopic" placeholder="e.g. Youth service · Walking by faith · our pastor's name"></label>
       <div class="st-row wrap"><button class="st-btn" id="aiL3">Write lower thirds</button><button class="st-btn" id="aiTitle">Write stream title &amp; description</button><button class="st-btn" id="aiBg">Paint a background</button></div>
       <div class="st-ai-out" id="aiOut"></div>
     </div>

@@ -54,9 +54,8 @@
     <button class="tbtn import-chip" id="importChip" hidden title="Import in progress — click for details"><span class="spin-dot"></span><span>Importing…</span></button>
     <button class="tbtn live-btn" id="btnLive" title="Live desk: ATEM, OBS, cameras and streaming (Ctrl+L)"><i class="led-dot"></i><span>Live</span></button>
     <button class="tbtn chip-setup" id="setupChip" title="Screens, speakers and this computer"><svg class="ic"><use href="#i-monitor"/></svg><span>Setup</span></button>
-    <button class="tbtn beta" id="btnFeedback" title="Tell us what works and what doesn't"><span class="beta-tag">BETA</span><span>Feedback</span></button>
     <button class="tbtn" id="btnAI" title="AI helpers"><svg class="ic"><use href="#i-spark"/></svg><span>AI</span></button>
-    <button class="tbtn" id="btnConnect" title="Phone remote, OBS, stage screens and file sharing"><svg class="ic"><use href="#i-wifi"/></svg><span>Connect</span></button>
+    <button class="tbtn" id="btnHelp" title="Show me around again"><span>?</span></button>
     <button class="tbtn" id="btnSettings" title="Settings"><svg class="ic"><use href="#i-gear"/></svg></button>
   </div>
 </header>
@@ -107,14 +106,14 @@
       <label>Look<select id="themeSelect"></select></label>
       <label>Background<select id="bgSelect"></select></label>
     </div>
-    <details class="sound" id="soundPanel" open>
+    <details class="sound" id="soundPanel">
       <summary>Sound &amp; music</summary>
       <label class="row-label">Speaker<select id="speakerSelect" aria-label="Speaker"></select></label>
       <label class="row-label">Sound<select id="presetSelect" aria-label="Sound preset"></select></label>
       <div class="row pad-row"><select id="padKey" aria-label="Pad key"></select><button class="btn small" id="btnPad"></button></div>
       <div class="row"><svg class="ic"><use href="#i-volume"/></svg><input type="range" id="padVol" min="0" max="1" step="0.05" value="0.6" aria-label="Pad volume"><label class="check small"><input type="checkbox" id="padBright">Bright</label></div>
     </details>
-    <details class="stage-tools" open>
+    <details class="stage-tools">
       <summary>Stage tools</summary>
       <div class="row"><input class="input" id="stageMsg" placeholder="Message to stage screen" maxlength="120"><button class="btn small" id="btnMsg">Send</button></div>
       <div class="row timer"><svg class="ic"><use href="#i-clock"/></svg><input class="input" id="timerMin" type="number" min="1" max="180" value="30" aria-label="Minutes"><span class="muted">min</span><button class="btn small" id="btnTimer">Start</button><button class="btn small ghost" id="btnTimerReset">Reset</button><output id="timerOut"></output></div>
