@@ -1,7 +1,7 @@
 import { veilCarry, veilHide, veilShow } from "./switcher.js";
 // Sign in with Google (Google Identity Services) or email + password (signin.js). No codes for normal sign-ins.
 import { api, esc, toast } from "./site.js";
-import { cacheMe, cachedMe, renderPortalNav } from "./portal.js";
+import { badgeHtml, cacheMe, cachedMe, renderPortalNav } from "./portal.js";
 
 // Draw the portal bar from the last known sign-in straight away (no jump), then confirm with the server.
 renderPortalNav(cachedMe());
@@ -122,7 +122,7 @@ export function renderHeaderUser(me) {
   const initials = (u.given_name || u.name || u.email || "?").slice(0, 1).toUpperCase();
   const avatar = u.picture ? `<img src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : `<span>${esc(initials)}</span>`;
   slot.innerHTML = `<details class="user-menu"><summary aria-label="Account menu" class="avatar">${avatar}</summary>
-    <div class="user-pop"><b>${esc(u.name || u.email)}</b><small>${esc(u.email)}</small>
+    <div class="user-pop"><b>${esc(u.name || u.email)}${badgeHtml(me, 16)}</b><small>${esc(u.email)}</small>
       ${me.admin_account ? "" : `<a href="/me">Home</a>`}
       <a href="/devotions">Devotions</a>
       <a href="/assistant">Ask SCC</a>

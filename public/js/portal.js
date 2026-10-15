@@ -15,6 +15,27 @@ export function mainTabs(me) {
     ["/devotions", "bookOpen", "Devotions"],
   ];
 }
+/**
+ * Verified stickers next to a person's name: black for the main admin, blue for admins, gold for verified members
+ * (and for everyone else on the team, like youth leaders). Nobody else gets one.
+ */
+export function badgeKind(me) {
+  if (!me?.user) return null;
+  if (me.admin_account || me.admin_role === "super") return "super";
+  if (me.admin_role === "staff") return "admin";
+  if (me.admin_role || me.member_verified || me.member?.status === "member") return "member";
+  return null;
+}
+const BADGE = {
+  super: ["#3a3a3a", "#000000", "Main admin"], admin: ["#5aa2ff", "#1d5fe0", "Church admin"], member: ["#ffe08a", "#c8963e", "Verified member"],
+};
+let badgeN = 0;
+export function badgeHtml(me, size = 18) {
+  const k = badgeKind(me); if (!k) return "";
+  const [a, b, label] = BADGE[k], id = `vb${++badgeN}`;
+  return `<span class="vbadge vb-${k}" title="${label}" role="img" aria-label="${label}"><svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><path fill="url(#${id})" d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m8.6 12.2 2.3 2.3 4.6-4.8" fill="none" stroke="${k === "member" ? "#5a3a08" : "#fff"}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+}
+
 export function moreTabs(me) {
   const role = roleName(me);
   return [
@@ -68,7 +89,7 @@ export function cacheMe(me) {
     if (!me?.user) { localStorage.removeItem(KEY); localStorage.removeItem("scc-hello"); return; }
     const u = me.user;
     localStorage.setItem(KEY, JSON.stringify({ user: { id: u.id, email: u.email, given_name: u.given_name, name: u.name, picture: u.picture }, admin_role: me.admin_role || null,
-      admin_account: !!me.admin_account, is_admin: !!me.is_admin, member: !!me.member, admin_perms: me.admin_perms || null }));
+      admin_account: !!me.admin_account, is_admin: !!me.is_admin, member: !!me.member, member_verified: me.member_verified ?? me.member?.status === "member", admin_perms: me.admin_perms || null }));
   } catch { /* storage blocked */ }
 }
 export function cachedMe() { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } }
@@ -94,7 +115,7 @@ export function renderPortalNav(me) {
   const role = roleName(me), r = document.querySelector("[data-app-role]");
   if (r) { r.textContent = role || "Member"; r.dataset.kind = me.admin_role || "member"; }
   const av = document.querySelector("[data-app-avatar]");
-  if (av) av.innerHTML = faceInner(me.user);
+  if (av) av.innerHTML = faceInner(me.user) + badgeHtml(me, 15).replace('class="vbadge', 'class="vbadge vb-corner');
   const brand = document.querySelector(".app-brand"); if (brand) brand.href = me.admin_account ? "/admin/" : "/me";
   renderBottom(me);
   // The logo takes you Home inside the app (signing out is the way back to the website).
@@ -142,7 +163,7 @@ function openSheet() {
   const u = me.user, role = roleName(me) || "Member";
   const el = document.createElement("div");
   el.className = "app-sheet"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "More");
-  el.innerHTML = `<div class="sheet-card"><header class="sheet-me"><span class="avatar">${faceInner(u)}</span><div><b>${esc(u.name || u.email)}</b><span>${esc(role)}</span></div>
+  el.innerHTML = `<div class="sheet-card"><header class="sheet-me"><span class="avatar">${faceInner(u)}</span><div><b>${esc(u.name || u.email)}${badgeHtml(sheetMe || {}, 16)}</b><span>${esc(role)}</span></div>
       <button type="button" class="sheet-x" data-sheet-close aria-label="Close">${icon("x")}</button></header>
     ${toolsFor(me).length && !onAdmin() ? `<p class="sheet-group">Your tools</p><nav class="sheet-links tools">${toolsFor(me).map(([h, i, l]) => link(h, i, l)).join("")}<button type="button" class="sheet-ask" data-ask-access>${icon("plus")}<span>Ask for more access</span></button></nav><p class="sheet-group">More</p>` : ""}
     <nav class="sheet-links">${[...(onAdmin() ? [["/devotions", "bookOpen", "Devotions"]] : []), ...moreTabs(me)].map(([h, i, l]) => link(h, i, l)).join("")}</nav>
@@ -255,7 +276,7 @@ export function helloOnce(me, { skip = false } = {}) {
     const el = document.createElement("div");
     el.className = "welcome-screen hello-write"; el.setAttribute("role", "status"); el.setAttribute("aria-label", `Welcome back${first ? ", " + first : ""}`);
     el.innerHTML = `<div class="welcome-blobs" aria-hidden="true"><i></i><i></i><i></i></div><div class="welcome-inner">${WELCOME_SVG}
-      <h2 class="welcome-title">Welcome back${first ? `, ${esc(first)}` : ""}</h2><p class="welcome-line">${role ? `${esc(role)} portal` : "Your church family"}</p></div>`;
+      <h2 class="welcome-title">Welcome back${first ? `, ${esc(first)}` : ""}${badgeHtml(me, 26)}</h2><p class="welcome-line">${role ? `${esc(role)} portal` : "Your church family"}</p></div>`;
     document.documentElement.append(el);
     requestAnimationFrame(() => el.classList.add("play"));
     const done = () => { el.classList.add("out"); setTimeout(() => el.remove(), 460); };

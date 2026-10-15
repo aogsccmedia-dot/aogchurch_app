@@ -1,6 +1,9 @@
 :root { --bg: #0d0d12; --panel: #15151c; --line: rgba(255,255,255,.09); --text: #ececf3; --muted: #9a9aad; --gold: #d6a650; --red: #ff4d5e; --green: #3ecf8e; color-scheme: dark; }
+@font-face { font-family: "Jost"; src: url("/fonts/Jost.woff") format("woff"); font-weight: 100 900; font-display: swap; }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, "Segoe UI", Inter, sans-serif; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.45 "Jost", system-ui, "Segoe UI", sans-serif; overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+.st-main, .st-panel, .st-program { overscroll-behavior: contain; }
+button, select, input { touch-action: manipulation; }
 button, input, select { font: inherit; color: inherit; }
 kbd { font: 600 11px/1 ui-monospace, monospace; padding: 2px 5px; border-radius: 4px; background: rgba(255,255,255,.1); margin-left: 6px; }
 .st-top { height: 52px; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid var(--line); background: #101016; }

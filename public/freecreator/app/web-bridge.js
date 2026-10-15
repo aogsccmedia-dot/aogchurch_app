@@ -185,7 +185,7 @@ const bar = document.createElement("div");
 bar.className = "fc-web-bar";
 bar.innerHTML = `<b>FreeCreator Online</b><span>Signed in as ${String(me.user.given_name || me.user.email).replace(/[<>&"]/g, "")} · your library is saved in this browser</span><a href="/freecreator">Help</a><a href="/me">Church app</a>`;
 const style = document.createElement("style");
-style.textContent = `.fc-web-bar{position:fixed;left:0;right:0;bottom:0;z-index:9999;display:flex;gap:14px;align-items:center;padding:6px 14px;font:12.5px/1.3 system-ui,sans-serif;background:rgba(10,10,14,.92);color:#cfcfe0;border-top:1px solid rgba(255,255,255,.08)}.fc-web-bar b{color:#fff}.fc-web-bar span{flex:1;opacity:.8}.fc-web-bar a{color:#ffd27a;text-decoration:none}body{padding-bottom:30px}`;
+style.textContent = `@font-face{font-family:"Jost";src:url("/fonts/Jost.woff") format("woff");font-weight:100 900;font-display:swap}html,body{overscroll-behavior:none}.fc-web-bar{position:fixed;left:0;right:0;bottom:0;z-index:9999;display:flex;gap:14px;align-items:center;height:30px;padding:0 14px;font:500 12.5px/1 "Jost",system-ui,sans-serif;background:rgba(10,10,14,.92);color:#cfcfe0;border-top:1px solid rgba(255,255,255,.08)}.fc-web-bar b{color:#fff}.fc-web-bar span{flex:1;opacity:.8}.fc-web-bar a{color:#ffd27a;text-decoration:none}body{padding-bottom:30px}`;
 document.head.append(style);
 addEventListener("DOMContentLoaded", () => document.body.append(bar));
 if (document.readyState !== "loading") document.body.append(bar);

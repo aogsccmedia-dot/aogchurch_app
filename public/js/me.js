@@ -2,7 +2,7 @@ import { icon } from "./icons.js";
 import { api, cachedGet, esc, freshGet, toast } from "./site.js";
 import { getMe, signInCard, whenSignedIn } from "./auth.js";
 import { switchReady } from "./switcher.js";
-import { cachedMe, helloOnce, renderTabs, roleName, toolsFor } from "./portal.js";
+import { badgeHtml, cachedMe, helloOnce, renderTabs, roleName, toolsFor } from "./portal.js";
 import { faceInner } from "./faces.js";
 
 const $ = (id) => document.getElementById(id);
@@ -42,11 +42,11 @@ async function render() {
 function paint(me, d, fromCache) {
   renderTabs($("portal-tabs"), me, "/me");
   const u = d.user;
-  $("me-avatar").innerHTML = faceInner(u);
+  $("me-avatar").innerHTML = faceInner(u) + badgeHtml({ ...me, member: d.member }, 22).replace('class="vbadge', 'class="vbadge vb-corner');
   firstName = d.member?.preferred_name || d.member?.first_name || (d.user?.name || "").split(" ")[0] || "friend";
   const hour = Number(new Intl.DateTimeFormat("en-ZA", { hour: "numeric", hour12: false, timeZone: TZ }).format(new Date()));
   $("me-greet").textContent = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  $("me-name").textContent = firstName;
+  $("me-name").innerHTML = `${esc(firstName)}${badgeHtml({ ...me, member: d.member }, 24)}`;
   const role = roleName(me);
   $("me-status").textContent = [d.member?.status === "member" ? `Member · ${d.member.ref_code}` : d.member ? "Membership being confirmed" : "Not a member yet", role].filter(Boolean).join(" · ");
   $("me-member").innerHTML = memberCard(d.member);

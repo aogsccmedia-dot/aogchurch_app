@@ -2220,3 +2220,13 @@ html:has(body.si-open) { overflow-x: clip; }
 .fc-art { position: relative; display: grid; place-items: center; background: linear-gradient(135deg, #1b1340, #5a3fd0); color: #fff; }
 .fc-art .i { width: 64px; height: 64px; }
 .fc-art span { position: absolute; bottom: 14px; padding: 4px 12px; border-radius: 999px; background: #ffd27a; color: #1b1340; font-weight: 700; font-size: 13px; }
+
+/* Verified stickers: black (main admin), blue (admins), gold (verified members and the team) */
+.vbadge { display: inline-flex; vertical-align: -0.12em; margin-left: .3em; line-height: 0; flex: none; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.18)); }
+.vbadge svg { display: block; }
+.vb-member svg path:first-of-type { filter: none; }
+.vb-corner { position: absolute; right: -3px; bottom: -3px; margin: 0; background: #fff; border-radius: 50%; padding: 1px; }
+.avatar, [data-app-avatar], #me-avatar, .su-face { position: relative; }
+.welcome-title .vbadge { vertical-align: 0.02em; }
+.avatar:has(.vb-corner), [data-app-avatar]:has(.vb-corner) { overflow: visible; }
+.avatar:has(.vb-corner) > :not(.vbadge) { border-radius: inherit; overflow: hidden; width: 100%; height: 100%; }

@@ -7,7 +7,7 @@ import { initInsights } from "./admin-insights.js";
 import { initMore } from "./admin-more.js";
 import { initExtra } from "./admin-extra.js";
 import { arrivedBySwitch, switchReady } from "./switcher.js";
-import { cacheMe, helloOnce, renderTabs, setBadge, moreTabs } from "./portal.js";
+import { badgeHtml, cacheMe, helloOnce, renderTabs, setBadge, moreTabs } from "./portal.js";
 import { faceInner } from "./faces.js";
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -181,7 +181,7 @@ function dressSide(r, role) {
   });
   const u = r.user || {};
   $("#su-face").innerHTML = faceInner(u);
-  $("#su-name").textContent = u.given_name || u.name || u.email || "Admin";
+  $("#su-name").innerHTML = `${esc(u.given_name || u.name || u.email || "Admin")}${badgeHtml({ ...r, user: u }, 16)}`;
   $("#su-role").textContent = role === "super" ? "Main admin" : role === "youth" ? "Youth leader" : "Admin";
   $("#su-bell").onclick = () => { location.hash = "overview"; setTimeout(() => $("#attention")?.scrollIntoView({ behavior: "smooth", block: "center" }), 250); };
   if (!allowed("calls")) { const pr = $("#side-promo"); pr.href = "/go-ye"; pr.target = "_blank"; pr.querySelector(".sp-btn").firstChild.textContent = "Open Go Ye "; }
