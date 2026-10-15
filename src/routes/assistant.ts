@@ -103,26 +103,32 @@ function streamAnswer(env: Env, o: { reply: Reply; pubReply: Omit<Reply, "facts"
       const send = (ev: string, data: unknown) => controller.enqueue(enc.encode(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`));
       send("meta", { id, mode: "ai", reply: { ...o.pubReply, text: "", agent_label: AGENTS[o.agent].label } });
       let full = "", model = o.model, ok = 1, error: string | null = null;
-      try {
-        const src = await env.AI!.run(model, { messages: [{ role: "system", content: systemPrompt(o.reply, o.who, o.context, o.general) }, ...o.history.slice(-6), { role: "user", content: o.message }],
-          stream: true, max_tokens: model === FAST ? 400 : 600, temperature: 0.4 }) as ReadableStream<Uint8Array>;
-        const reader = src.pipeThrough(new TextDecoderStream() as unknown as ReadableWritablePair<string, Uint8Array>).getReader();
-        let buf = "";
-        const deadline = Date.now() + 25000;
-        for (;;) {
-          const { value, done } = await Promise.race([reader.read(), new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), Math.max(1, deadline - Date.now())))]);
-          if (done) break;
-          buf += value;
-          let i: number;
-          while ((i = buf.indexOf("\n")) >= 0) {
-            const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
-            if (!line.startsWith("data:")) continue;
-            const d = line.slice(5).trim();
-            if (!d || d === "[DONE]") continue;
-            try { const j = JSON.parse(d) as { response?: string }; if (j.response) { full += j.response; send("t", { t: j.response }); } } catch { /* partial line */ }
+      const msgs = [{ role: "system", content: systemPrompt(o.reply, o.who, o.context, o.general) }, ...o.history.slice(-6), { role: "user", content: o.message }];
+      const timeout = (ms: number) => new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), Math.max(1, ms)));
+      // Try the chosen model; if it hasn't started answering within a few seconds, switch to the fast one.
+      for (const m of model === FAST ? [FAST] : [BIG, FAST]) {
+        model = m;
+        try {
+          const src = await Promise.race([env.AI!.run(m, { messages: msgs, stream: true, max_tokens: m === FAST ? 400 : 600, temperature: 0.4 }), timeout(m === FAST ? 8000 : 6000)]) as ReadableStream<Uint8Array>;
+          const reader = src.pipeThrough(new TextDecoderStream() as unknown as ReadableWritablePair<string, Uint8Array>).getReader();
+          let buf = "", started = false;
+          const firstBy = Date.now() + (m === FAST ? 8000 : 6000), deadline = Date.now() + 25000;
+          for (;;) {
+            const { value, done } = await Promise.race([reader.read(), timeout((started ? deadline : firstBy) - Date.now())]).catch((e) => { reader.cancel().catch(() => {}); throw e; });
+            if (done) break;
+            buf += value;
+            let i: number;
+            while ((i = buf.indexOf("\n")) >= 0) {
+              const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+              if (!line.startsWith("data:")) continue;
+              const d = line.slice(5).trim();
+              if (!d || d === "[DONE]") continue;
+              try { const j = JSON.parse(d) as { response?: string }; if (j.response) { started = true; full += j.response; send("t", { t: j.response }); } } catch { /* partial line */ }
+            }
           }
-        }
-      } catch (e) { ok = full ? 1 : 0; error = String((e as Error)?.message || e).slice(0, 200); }
+          if (full) { ok = 1; error = null; break; }
+        } catch (e) { error = String((e as Error)?.message || e).slice(0, 200); if (full) break; }
+      }
       if (!full) {   // nothing came through: one quick non-streamed try on the other model, then the built-in answer
         try { const r = await smartAnswer(env, o.reply, o.who, o.message, o.history, o.context, o.general, model === FAST ? BIG : FAST); full = r.text; model = r.model; ok = 1; }
         catch { full = o.general ? "I can't think that one through right now. Please try again in a moment, or tap one of the suggestions below." : o.reply.text; }
