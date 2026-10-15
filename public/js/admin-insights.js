@@ -250,7 +250,7 @@ export function initInsights(ctx) {
       <p class="form-error" id="ss-error" hidden></p>
       <div class="card form-grid">
         <div class="grid-2">
-          <div class="field"><label>Service ${R}</label><select class="input" name="service_id" ${sess ? "disabled" : ""}>${services.map((w) => `<option value="${esc(w.id)}" ${w.id === svcId ? "selected" : ""}>${esc(w.title)} · ${esc(w.day_label)}</option>`).join("")}</select></div>
+          <div class="field"><label>Service ${R}</label><select class="input" name="service_id" ${sess ? "disabled" : ""}>${services.map((w) => `<option value="${esc(w.id)}" ${w.id === svcId ? "selected" : ""}>${esc(w.title)}</option>`).join("")}</select></div>
           <div class="field"><label>Date ${R}</label><select class="input" name="date_pick"></select>
             <input class="input" type="date" name="date_other" hidden style="margin-top:8px">
             <label class="check" data-otherday hidden><input type="checkbox" name="other_day" value="1"> Held on a different day this time</label></div>
@@ -261,11 +261,11 @@ export function initInsights(ctx) {
         <div class="field" data-when-held><label>MC ${R}</label>
           <select class="input" name="mc_pick"><option value="">Choose who led…</option>${people.map((n) => `<option ${n === mc ? "selected" : ""}>${esc(n)}</option>`).join("")}<option value="__other" ${mcListed ? "" : "selected"}>Someone else (not on the list)</option></select>
           <input class="input" name="mc_other" maxlength="120" placeholder="Their name" value="${mcListed ? "" : esc(mc)}" ${mcListed ? "hidden" : ""} style="margin-top:8px"></div>
-        <div class="field" data-when-held><label>Word of the day ${R}</label><textarea class="input" name="scripture" maxlength="500" rows="1" placeholder="e.g. Hebrews 11:1 · Now faith is the substance of things hoped for">${val("scripture")}</textarea></div>
+        <div class="field" data-when-held><label>Word of the day ${R}</label><textarea class="input" name="scripture" maxlength="500" rows="1" placeholder="e.g. Hebrews 11:1 (Now faith is…)">${val("scripture")}</textarea></div>
         <div data-when-held>
           <div class="ss-nums">
             <label class="field"><span>Attendance ${R}</span><input class="input" name="attendance" type="number" inputmode="numeric" min="0" step="1" placeholder="0" value="${val("attendance")}"></label>
-            <label class="field"><span>First-time visitors ${R}</span><input class="input" name="first_time_visitors" type="number" inputmode="numeric" min="0" step="1" placeholder="0" value="${val("first_time_visitors")}"></label>
+            <label class="field"><span>New visitors ${R}</span><input class="input" name="first_time_visitors" type="number" inputmode="numeric" min="0" step="1" placeholder="0" value="${val("first_time_visitors")}"></label>
             <label class="field"><span>Money made ${R}</span><span class="rand-in"><b>R</b><input class="input" name="money" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" value="${esc(moneyNow)}"></span></label>
           </div>
           <p class="muted small" data-future-note hidden>This service hasn't happened yet. Save it now and add attendance, visitors and money on the day.</p>
@@ -286,7 +286,8 @@ export function initInsights(ctx) {
       const w = SVC.services.find((x) => x.id === svcSel.value); if (!w) return;
       const want = sess?.date || date || w.next_date;
       const dates = [...new Set([...w.dates, ...(want ? [want] : [])])].sort();
-      pick.innerHTML = dates.map((d) => `<option value="${d}" ${d === want ? "selected" : ""}>${esc(day(d))}${d === SVC.today ? " (today)" : d === w.next_date ? " (next)" : ""}</option>`).join("") + `<option value="other">Another date…</option>`;
+      const short = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("en-ZA", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).replace(",", "");
+      pick.innerHTML = dates.map((d) => `<option value="${d}" ${d === want ? "selected" : ""}>${esc(short(d))}${d === SVC.today ? " · today" : d === w.next_date ? " · next" : ""}</option>`).join("") + `<option value="other">Another date…</option>`;
       other.hidden = true; $("[data-otherday]", f).hidden = true;
     };
     svcSel.addEventListener("change", fillDates); fillDates();
@@ -308,6 +309,7 @@ export function initInsights(ctx) {
       api(`/api/admin/sessions/${sess.id}`, { method: "DELETE" }).then(() => toast("Deleted")).catch((err) => { toast(err.message); safe(loaders.services)(); });
     });
     dlg.showModal();
+    if (matchMedia("(pointer: coarse)").matches) document.activeElement?.blur();
   }
   function saveSession(sess) {
     const dlg = $("#session-drawer"), f = $("#session-form"), err = $("#ss-error", f);
