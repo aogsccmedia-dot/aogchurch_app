@@ -2094,3 +2094,23 @@ html:has(body.si-open) { overflow-x: clip; }
 .si-ph-3 { left: 6%; top: 42%; }
 .si-art { height: 580px; }
 .si-art-line { right: 0; bottom: 36px; }
+
+/* Go Ye: the vision, from our homes outwards */
+.go-vision { margin: 0 0 22px; }
+.go-vision-k { margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+.go-vision-p { margin: 0 0 14px; color: var(--text-2); line-height: 1.55; max-width: 62ch; }
+.go-rings { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.go-rings li { display: flex; gap: 14px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--bg-2); border: 1px solid var(--line); }
+.go-rings li > span { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 15px;
+  border: 2px solid var(--line-strong); color: var(--text-2); background: #fff; }
+.go-rings li div { display: grid; grid-template-columns: 1fr auto; column-gap: 10px; flex: 1; min-width: 0; }
+.go-rings li b { font-size: 15.5px; font-weight: 600; }
+.go-rings li small { grid-column: 1; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+.go-rings li em { grid-row: 1; grid-column: 2; font-style: normal; font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); align-self: center; }
+.go-rings li.now { background: #16151b; border-color: #16151b; color: #fff; }
+.go-rings li.now > span { background: #d6a650; border-color: #d6a650; color: #16151b; }
+.go-rings li.now small { color: #cfcbd8; } .go-rings li.now em { color: #d6a650; }
+/* Each wider circle is a little further away: slightly lighter */
+.go-rings li:nth-child(4), .go-rings li:nth-child(5) { opacity: .88; }
+@media (min-width: 760px) { .go-rings { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .go-rings li { flex-direction: column; align-items: flex-start; } .go-rings li div { grid-template-columns: 1fr; } .go-rings li em { grid-row: auto; grid-column: 1; margin-top: 6px; } }
