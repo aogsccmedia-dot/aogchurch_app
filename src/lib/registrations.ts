@@ -58,6 +58,7 @@ export async function notifyRegistration(env: Env, e: EventRow, r: RegRow, opts:
       ...base, status: r.status, approved: !!e.requires_pop && r.status === "confirmed" && !opts.promoted,
       message: opts.promoted ? "Good news — a spot opened up and it's yours!" : e.requires_pop && r.status === "confirmed" ? "Your payment has been approved. This email is your ticket — show your reference at the door." : e.confirmation_message,
       calendarUrl: calendarUrl(e), outlookUrl: outlookUrl(e), icsUrl: `${site}/api/events/${encodeURIComponent(e.slug)}/calendar.ics`,
+      entry: new Intl.DateTimeFormat("en-ZA", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Africa/Johannesburg" }).format(new Date(e.starts_at)),
     });
     return sendMail(env, { to: r.email, toName: r.name, ...m, template: r.status === "confirmed" ? "event_confirmation" : "event_waitlist",
       attachments: r.status === "confirmed"

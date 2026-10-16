@@ -7,7 +7,7 @@ import * as T from "./templates.ts";
 export interface Sample { key: string; group: "Events" | "Weekly letter" | "Welcome" | "Care" | "Admin"; when: string; render: (site: string) => { subject: string; html: string; text: string } }
 
 const ev = (site: string) => ({
-  name: "Thandi", ref: "SCC-7Q4K", title: "Youth Worship Night", when: "Friday 27 November 2026 · 18:30 – 21:00",
+  name: "Thandi", ref: "SCC-7Q4K", title: "Youth Worship Night", when: "Friday 27 November 2026 · 17:30 – 21:00",
   location: "17 Humber Street, Woodmead, Sandton", eventUrl: `${site}/event?e=youth-worship-night-2026`, cover: `${site}/assets/photos/worship-1200.jpg`,
 });
 
@@ -38,7 +38,7 @@ export const SAMPLES: Sample[] = [
       body: "Dear family, what a joy it was to worship together this morning.\n\nThis week we're gathering for prayer on Wednesday and our youth are hosting Worship Night on Friday. Bring a friend!",
       scripture_text: "This is the day the Lord has made; let us rejoice and be glad in it.", scripture_ref: "Psalm 118:24",
       services: [{ title: "Sunday service", when: "Sunday · 09:30", location: "17 Humber Street" }, { title: "Prayer & Bible study", when: "Wednesday · 18:30" }],
-      events: [{ title: "Youth Worship Night", when: "Fri 27 Nov · 18:30", location: "17 Humber Street", url: `${s}/event?e=youth-worship-night-2026` }],
+      events: [{ title: "Youth Worship Night", when: "Fri 27 Nov · 17:30", location: "17 Humber Street", url: `${s}/event?e=youth-worship-night-2026` }],
       cta_label: null, cta_url: null }, "Thandi", `${s}/api/newsletter/unsubscribe?t=sample`) },
   { key: "member_verified", group: "Welcome", when: "You set a member's status to “member” (verified): the animated welcome.",
     render: (s) => T.memberVerified({ site: s }, { name: "Thandi", ref: "SCC-2M8D" }) },
@@ -77,7 +77,7 @@ export const SAMPLES: Sample[] = [
   { key: "access_decision", group: "Admin", when: "Your answer to an access request.",
     render: (s) => T.accessDecision({ site: s }, { name: "Sipho", approved: true, wants: ["Events & forms"], role: "Youth leader", can: ["Fridays", "Door scanner", "Reports", "Events & forms"] }) },
   { key: "event_update", group: "Events", when: "Sent to ticket holders when someone tells them about a change to an event.",
-    render: (s) => T.eventUpdate({ site: s }, { name: "Thandi", title: "Youth Worship Night", when: "Friday 27 November · 18:30–21:00", location: "17 Humber Street, Woodmead", message: "We now start at 19:00. Doors open at 18:30.", url: `${s}/event?e=youth-worship-night-2026`, from: "Sipho" }) },
+    render: (s) => T.eventUpdate({ site: s }, { name: "Thandi", title: "Youth Worship Night", when: "Friday 27 November · 17:30–21:00", location: "17 Humber Street, Woodmead", message: "We now start at 19:00. Doors open at 18:30.", url: `${s}/event?e=youth-worship-night-2026`, from: "Sipho" }) },
   { key: "prayer_weekly", group: "Care", when: "Monday mornings, when there are requests on the prayer wall.",
     render: (s) => T.prayerWeekly({ site: s }, { name: "Thandi", items: [{ who: "Lerato", request: "Healing for my mother after her operation.", prayed: 12 }, { who: "Someone", request: "Wisdom for a new job.", prayed: 5 }], unsub: `${s}/api/prayer/weekly/stop?token=sample` }) },
   { key: "election_reminder", group: "Care", when: "Every two weeks before voting starts (to pray), and when each round opens.",

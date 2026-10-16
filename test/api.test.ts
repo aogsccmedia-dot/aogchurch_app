@@ -829,7 +829,9 @@ describe("door, insights, weekly services and the board report", () => {
     assert.equal(row.attendance, 90); assert.equal(row.offering_cents, 525050); assert.equal(row.salvations, 3);
     assert.ok(row.poster_attachment_id);
     // A coming service can be planned ahead (numbers on the day). It shows on the website with its poster.
-    assert.equal((await send(form({ service_id: youth.id, date: youth.next_date, topic: "Next week's word", ...plan }))).status, 201);
+    const today = new Date(Date.now() + 2 * 3600_000).toISOString().slice(0, 10);
+    const ahead = youth.dates.find((d) => d > today)!;   // strictly in the future (on a Friday, "next" can be tonight)
+    assert.equal((await send(form({ service_id: youth.id, date: ahead, topic: "Next week's word", ...plan }))).status, 201);
     const pub = await (await call("/api/programme")).json() as { weekly: { id: string; next: { topic: string; poster_url: string } | null }[] };
     const y = pub.weekly.find((w) => w.id === youth.id)!;
     assert.equal(y.next?.topic, "Next week's word");
@@ -1551,5 +1553,15 @@ describe("Search and AI readiness", () => {
     const faq = seo.faqLd(f);
     assert.equal(faq["@type"], "FAQPage"); assert.ok(faq.mainEntity.length >= 5);
     assert.ok(seo.isSeoPath("/events") && seo.isSeoPath("/llms.txt") && !seo.isSeoPath("/me"));
+  });
+});
+
+describe("Ticket emails say when entry starts", () => {
+  test("confirmed tickets show the entry and scanning time", async () => {
+    const T = await import("../src/emails/templates.ts");
+    const m = T.eventConfirmation({ site: "https://x" }, { name: "Thandi", status: "confirmed", ref: "SCC-1", title: "Youth Worship Night", when: "Fri 27 Nov · 17:30", location: null, message: null,
+      calendarUrl: "#", eventUrl: "#", tickets: { count: 1, url: "#" }, entry: "17:30" });
+    assert.match(m.html, /Entry from 17:30: tickets are scanned at the door from 17:30/);
+    assert.match(m.text, /Entry from 17:30/);
   });
 });
