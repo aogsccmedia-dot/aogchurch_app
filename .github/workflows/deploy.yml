@@ -137,3 +137,5 @@ jobs:
           check "home page shows real service times" "curl -fsS $S/ | grep -Eq 'Everyone is welcome\. [^<]*[0-9]{2}:[0-9]{2}'"
           check "robots.txt points to the sitemap" "curl -fsS $S/robots.txt | grep -q 'Sitemap: https://aogsccyouth.com/sitemap.xml'"
           head -12 /tmp/llms.txt
+          ev=$(curl -fsS $S/api/events | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const j=JSON.parse(d);console.log(j.events.map(e=>`${e.title}: ${new Date(e.starts_at).toLocaleString("en-ZA",{timeZone:"Africa/Johannesburg",dateStyle:"medium",timeStyle:"short"})} · poster ${e.cover_url||"none"}`).join(" | "))})' || true)
+          echo "::notice title=Live events::$ev"
