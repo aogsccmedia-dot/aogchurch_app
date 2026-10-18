@@ -81,7 +81,12 @@ const handleCredential = (resp) => finishSignIn(() => api("/api/auth/google", { 
 
 // While Google's window is open, the button says so (instead of looking like nothing happened).
 function watchGoogleButton(el) {
-  if (el.dataset.watch) return; el.dataset.watch = "1";
+  const ensureWait = () => {
+    if (el.querySelector(".gsi-wait")) return;
+    const w = document.createElement("span"); w.className = "gsi-wait"; w.setAttribute("aria-live", "polite"); w.innerHTML = '<i class="spinner" aria-hidden="true"></i>Waiting for Google…';
+    w.addEventListener("click", () => el.classList.remove("gsi-waiting")); el.append(w);
+  };
+  if (el.dataset.watch) { ensureWait(); return; } el.dataset.watch = "1";
   let wait = el.querySelector(".gsi-wait");
   if (!wait) { wait = document.createElement("span"); wait.className = "gsi-wait"; wait.setAttribute("aria-live", "polite"); wait.innerHTML = '<i class="spinner" aria-hidden="true"></i>Waiting for Google…'; el.append(wait); }
   addEventListener("blur", () => setTimeout(() => { if (el.contains(document.activeElement)) el.classList.add("gsi-waiting"); }, 0));
@@ -89,17 +94,42 @@ function watchGoogleButton(el) {
   wait.addEventListener("click", () => el.classList.remove("gsi-waiting"));   // tap to try again
 }
 
-/** Render a Google button into `el`. Returns false if Google sign-in isn't configured. */
+/** The width a Google button can take inside `el` without spilling out: the first visible box's inner width,
+ *  never more than the screen allows (Google draws its button at a fixed pixel width, so this must be right). */
+function roomFor(el) {
+  let n = el;
+  while (n && !(n.clientWidth > 0)) n = n.parentElement;
+  let w = n ? n.clientWidth : innerWidth;
+  if (n && n !== el) { const cs = getComputedStyle(n); w -= (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0); }
+  return Math.floor(Math.min(w, document.documentElement.clientWidth - 24));
+}
+const gWidth = (el, want) => Math.max(200, Math.min(want, roomFor(el)));   // Google's smallest button is 200px
+
+/** Render a Google button into `el`, centred and sized to fit. Returns false if Google sign-in isn't configured. */
 export async function googleButton(el, { text = "continue_with", width, round = false, card = false } = {}) {
   const me = await getMe();
   const clientId = me.google_client_id;
   if (!clientId || !el) { if (el) el.hidden = true; return false; }
   try { await loadGsi(); } catch { el.hidden = true; return false; }
   if (!gsiReady) { google.accounts.id.initialize({ client_id: clientId, callback: handleCredential, ux_mode: "popup", auto_select: false, itp_support: true }); gsiReady = true; }
-  if (round) google.accounts.id.renderButton(el, { type: "icon", theme: "outline", size: "large", shape: "circle" });
-  else if (card) google.accounts.id.renderButton(el, { theme: "outline", size: "large", shape: "pill", text, logo_alignment: "center", width: Math.min(400, Math.max(240, el.clientWidth || 320)) });
-  else google.accounts.id.renderButton(el, { theme: document.body.classList.contains("admin") ? "filled_black" : "outline", size: "large", shape: "pill", text, logo_alignment: "left", width: width || Math.min(360, el.clientWidth || 320) });
   el.hidden = false;
+  el.classList.add("g-fit");
+  let drawn = 0;
+  const draw = () => {
+    if (round) { google.accounts.id.renderButton(el, { type: "icon", theme: "outline", size: "large", shape: "circle" }); return; }
+    const w = card ? gWidth(el, 400) : gWidth(el, width || 360);
+    if (Math.abs(w - drawn) < 6) return;
+    drawn = w;
+    const opts = card ? { theme: "outline", size: "large", shape: "pill", text, logo_alignment: "center", width: w }
+      : { theme: document.body.classList.contains("admin") ? "filled_black" : "outline", size: "large", shape: "pill", text, logo_alignment: "left", width: w };
+    google.accounts.id.renderButton(el, opts);
+    if (el.dataset.watch) watchGoogleButton(el);   // put the "Waiting for Google…" cover back after a redraw
+  };
+  draw();
+  if (!round && "ResizeObserver" in window && !el.dataset.fit) {   // phone turned, window resized, or the box was hidden at first
+    el.dataset.fit = "1"; let t = 0;
+    new ResizeObserver(() => { clearTimeout(t); t = setTimeout(draw, 150); }).observe(el.parentElement || el);
+  }
   if (!round && !card) { watchGoogleButton(el); emailLink(el); }
   if (card) watchGoogleButton(el);
   return true;

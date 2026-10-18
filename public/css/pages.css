@@ -2372,3 +2372,54 @@ body.portal, html.signed-in body:not(.admin) { --bg: #ffffff; background: #fffff
 .welcome-screen { background: #ffffff; }
 .welcome-blobs { display: none; }
 .word-block { background: transparent; }
+
+/* ===================================================================== Solid on every screen size
+   Buttons never spill past the edge, sign-in buttons sit centred, button rows stack neatly on phones,
+   and titles and text keep comfortable, even spacing. */
+/* Sign in: plain white like the rest of the site, card centred */
+.si-scene { background: #ffffff !important; }
+.si-stage { justify-items: center; }
+.si-card { margin-inline: auto; }
+.si-card .si-go, .si-card .si-visit, .si-card .si-g, .si-card .g-fit { margin-inline: auto; }
+/* Google's button: centred, sized by script to fit its box, never cut off */
+.g-fit { width: 100%; max-width: 400px; margin-inline: auto; display: flex; justify-content: center; overflow: visible; }
+.g-fit > div, .g-fit iframe { margin-inline: auto !important; max-width: none; }
+.signin-card .google-slot, .signin-card .gbtn { width: 100%; max-width: 400px; margin-inline: auto; overflow: visible; }
+.google-slot, .gbtn, .si-g { justify-content: center; }
+/* Header: the church name sits on at most two balanced lines */
+.brand span { line-height: 1.2; text-wrap: balance; }
+@media (max-width: 400px) {
+  .brand { font-size: 11.5px; letter-spacing: .07em; gap: 7px; }
+  .brand img { width: 30px; height: 30px; }
+  .header-actions { gap: 4px; }
+  .header-actions .btn { padding: 7px 11px; min-height: 36px; }
+}
+/* Buttons: text stays inside the outline, nothing pokes past the screen */
+.btn { box-sizing: border-box; max-width: 100%; overflow-wrap: anywhere; }
+.btn > .i, .btn svg { flex: none; }
+/* Phones: button rows become a tidy, centred stack of equal full-width buttons */
+@media (max-width: 520px) {
+  .hero .actions, .hero-copy .actions, .ev-hero .actions, .ev-cta .actions, .cta-band .actions, .prose-cta, .actions:not(.item .actions):not(.row-actions),
+  .welcome-actions, .podcast-actions, .word-actions, .word-art-actions, .wp-actions, .pm-actions, .pp-actions, .pam-actions, .ob-actions, .team-actions {
+    display: flex; flex-direction: column; align-items: stretch; gap: 10px; width: 100%;
+  }
+  :is(.hero .actions, .hero-copy .actions, .ev-hero .actions, .ev-cta .actions, .cta-band .actions, .prose-cta, .welcome-actions, .podcast-actions, .word-actions, .word-art-actions, .wp-actions, .pm-actions, .pp-actions, .pam-actions, .ob-actions, .team-actions) > :is(.btn, a.btn, button.btn) {
+    width: 100%; justify-content: center; text-align: center;
+  }
+  .cta-band { padding-inline: 4px; }
+  .cta-band > .btn, .cta-band > a.btn { width: min(100%, 360px); justify-content: center; }
+  form:not(.ask-form) > .btn[type="submit"]:not([aria-label]):not(.btn-sm):not(.icon-btn), .form-actions .btn { width: 100%; justify-content: center; }
+}
+/* Titles and text: steady rhythm, no orphaned single words, nothing wider than its box */
+h1, h2, h3 { text-wrap: balance; }
+p, li, .lede { text-wrap: pretty; }
+.eyebrow { overflow-wrap: anywhere; }
+section, .block, .panel, .card { min-width: 0; }
+@media (max-width: 520px) {
+  h1 { line-height: 1.08; }
+  h2 { line-height: 1.15; }
+  .wrap { width: min(100% - 32px, var(--max)); }
+}
+.si-visit { justify-content: center; text-align: center; }
+.si-visit span { text-wrap: balance; }
+@media (max-width: 359px) { .site-header .brand span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
