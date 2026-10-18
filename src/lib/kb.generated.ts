@@ -3,7 +3,7 @@ export const KB: { id: string; title: string; url: string; text: string }[] = [
 {
 "title": "Home · A family bound in fellowship by the Spirit.",
 "url": "/",
-"text": "A family bound in fellowship by the Spirit.\n A community-centred, Bible-based church in the heart of Sandton.\n Join the church \n Coming soon · Spotify",
+"text": "A family bound in fellowship by the Spirit.\n A community-centred, Bible-based church in the heart of Sandton.\n Join the church Get Tickets \n Coming soon · Spotify",
 "id": "k0"
 },
 {

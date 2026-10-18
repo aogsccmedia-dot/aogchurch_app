@@ -2356,3 +2356,13 @@ html.signed-in .ask-page .ask-thread { border: 0 !important; box-shadow: none !i
 #ev-cover.cover-video, #ev-cover.cover-video * { filter: none !important; }
 @media (max-width: 560px) { .promo-ticket { padding: 8px 13px; font-size: 13.5px; gap: 6px; } .promo-ticket .i { width: 15px; height: 15px; } }
 .promo-sound { bottom: auto; top: clamp(12px, 2.4vw, 22px); }
+/* Hero: Get Tickets beside Join the church */
+.hero .actions, .hero-copy .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn-ticket { background: #1c1712; color: #fff; border-color: #1c1712; }
+.btn-ticket:hover { background: #2c241c; color: #fff; }
+.btn-ticket .i { width: 18px; height: 18px; }
+.hdr-ticket { display: inline-flex; align-items: center; gap: 6px; }
+.hdr-ticket[hidden] { display: none !important; }
+.hdr-ticket .i { width: 16px; height: 16px; }
+@media (max-width: 860px) { .hdr-ticket { display: none !important; } }
+html.signed-in .hdr-ticket { display: none !important; }

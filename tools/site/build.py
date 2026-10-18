@@ -129,7 +129,7 @@ def header():
         <a class="brand" href="/" aria-label="AOG Sandton City Church home"><img src="/assets/logo-64.png" alt="" width="34" height="34"><span>Sandton City Church</span></a>
       </div>
       <nav class="main-nav" aria-label="Primary">{primary}</nav>
-      <div class="header-actions"><span data-user-slot></span><a class="btn btn-gold" href="/join" data-join-cta><span>Join<span class="long"> church</span></span></a></div>
+      <div class="header-actions"><span data-user-slot></span><a class="btn btn-ticket hdr-ticket" href="/events" data-hero-ticket hidden>{{{{i:ticket}}}}<span>Get Tickets</span>{{{{arrow}}}}</a><a class="btn btn-gold" href="/join" data-join-cta><span>Join<span class="long"> church</span></span></a></div>
     </div>
     <div class="scroll-progress" aria-hidden="true"></div>
   </header>

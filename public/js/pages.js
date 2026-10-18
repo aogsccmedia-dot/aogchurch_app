@@ -75,9 +75,12 @@ async function loadEvents() {
       return;
     }
     const featured = events.find((e) => e.cover_url && e.registration_open) || events.find((e) => e.registration_open);
+    // Hero: "Get Tickets" next to "Join the church", straight to the next event with tickets open.
+    const open = events.find((e) => e.registration_open), home = location.pathname === "/" || location.pathname === "/index";
+    if (open) document.querySelectorAll("[data-hero-ticket]").forEach((ht) => { if (ht.classList.contains("hdr-ticket") && !home) return; ht.href = `/event?e=${encodeURIComponent(open.slug)}`; ht.hidden = false; ht.title = open.title; });
     // The next event with a promo video plays at the top of "What's coming up".
     const promo = events.find((e) => e.cover_video), slot = $id("promo-slot");
-    if (promo && slot) { const { promoHtml, initPromos } = await import("./promo.js"); slot.innerHTML = promoHtml(promo, { ticket: promo.registration_open, label: promo.registration_open ? "Get Ticket" : "Details" }); slot.hidden = false; initPromos(slot); }
+    if (promo && slot) { const { promoHtml, initPromos } = await import("./promo.js"); slot.innerHTML = promoHtml(promo, { ticket: promo.registration_open, label: promo.registration_open ? "Get Ticket" : "Details" }); slot.hidden = false; initPromos(slot, { sound: true }); }
     if (featured && $id("featured")) renderFeatured(featured);
     eventsEl.innerHTML = (limit ? events.slice(0, limit) : events).map((ev, i) => `<a class="event-card" href="/event?e=${encodeURIComponent(ev.slug)}">
         <figure class="photo cover-square">${coverImg(ev, i)}</figure>
