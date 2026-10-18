@@ -372,3 +372,12 @@ body.portal .portal-tabs { position: sticky; top: 78px; z-index: 20; box-shadow:
 html { overflow-x: clip; overscroll-behavior: none; touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { overflow-x: clip; overscroll-behavior: none; max-width: 100vw; }
 img, video, canvas, iframe, table { max-width: 100%; }
+
+/* Shrinks properly at any width: media never wider than its box, long words wrap, grid/flex children can shrink. */
+img, video, iframe, canvas { max-width: 100%; }
+h1, h2, h3, h4, p, li, dd, dt, td, th, figcaption, blockquote, label, .lede { overflow-wrap: break-word; }
+h1, h2 { hyphens: manual; }
+main, section, article, aside, .wrap { min-width: 0; }
+/* Buttons never push the page wider: on a narrow screen a long label wraps onto two lines. */
+.btn { max-width: 100%; }
+@media (max-width: 520px) { .btn { white-space: normal; text-align: center; line-height: 1.25; min-height: 44px; height: auto; } }
