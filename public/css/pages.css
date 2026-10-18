@@ -2428,3 +2428,14 @@ section, .block, .panel, .card { min-width: 0; }
 #signin-dialog .si-pop, #signin-dialog .si-card, .si-card { box-sizing: border-box; max-width: 100%; min-width: 0; }
 .si-card > *, .si-form > * { min-width: 0; max-width: 100%; }
 .si-card .g-fit { overflow: hidden; border-radius: 999px; }
+/* One-column grids never grow wider than their box (Safari sizes a grid column to its longest unbreakable line,
+   which pushed the ticket payment box and Get Ticket button off the right edge on iPhones). Zero specificity, so
+   any layout that sets its own columns still wins. */
+:where(.reg-card, .reg-card form, .pay-block, .pay-step, .bank-rows, .field, .panel, .join-card, .si-card, .si-form, .event-hero,
+  .ev-hero, .me-card, .letter, .fc-hero, .fc-reg, .notice, .card, .cta-band, .welcome-inner, form) { grid-template-columns: minmax(0, 1fr); }
+:where(.reg-card, .reg-card form, .pay-block, .pay-step, .bank-rows, .field, .panel, .join-card, .si-card, .si-form, .event-hero,
+  .ev-hero, .me-card, .letter, .fc-hero, .fc-reg, .card, form) > * { min-width: 0; }
+.pay-block, .pay-step, .bank-rows, .reg-card form > .btn { max-width: 100%; box-sizing: border-box; }
+.bank-rows :is(dt, dd, b, span, div), .pay-head :is(b, span), .reg-done * { overflow-wrap: anywhere; }
+.reg-card form > .btn { width: 100%; justify-content: center; }
+.bank-row { grid-template-columns: minmax(90px, 38%) minmax(0, 1fr); }
