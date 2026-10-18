@@ -1356,9 +1356,11 @@ describe("poster maker", () => {
 });
 
 describe("FreeCreator Online", () => {
-  test("scripture and AI are for signed-in people only; bad references are refused", async () => {
-    assert.equal((await call("/api/freecreator/bible?ref=John%203:16")).status, 401);
-    assert.equal((await post("/api/freecreator/ai", { task: "tidy", text: "x" }, { "x-scc-admin": "1" })).status, 401);
+  test("free for anyone: scripture and AI work without an account; bad references are refused", async () => {
+    assert.equal((await call("/api/freecreator/bible?ref=hello")).status, 422, "guests reach the Bible lookup");
+    assert.equal((await post("/api/freecreator/ai", { task: "tidy", text: "x" }, { "x-scc-admin": "1" })).status, 200, "guests get AI help");
+    assert.equal((await call("/api/freecreator/lib")).status, 401, "the shared church library still needs an account");
+    assert.equal((await post("/api/freecreator/cam/room", {}, { "x-scc-admin": "1" })).status, 401, "phone cameras still need an account");
     const c = await adminCookie();
     assert.equal((await call("/api/freecreator/bible?ref=hello", { headers: { cookie: c } })).status, 422);
     assert.equal((await call("/api/freecreator/bible?ref=John%203:16&tr=niv", { headers: { cookie: c } })).status, 422, "public-domain translations only");
@@ -1369,9 +1371,9 @@ describe("FreeCreator Online", () => {
 });
 
 describe("FreeCreator Studio", () => {
-  test("speed test and painter need sign-in; AI writes lower thirds only with known tasks", async () => {
-    assert.equal((await call("/api/freecreator/speedtest", { method: "POST", headers: { "x-scc-admin": "1" }, body: "x".repeat(1000) })).status, 401);
-    assert.equal((await call("/api/freecreator/paint?topic=worship")).status, 401);
+  test("speed test works for guests; AI writes lower thirds only with known tasks", async () => {
+    const g = await (await call("/api/freecreator/speedtest", { method: "POST", headers: { "x-scc-admin": "1" }, body: "x".repeat(1000) })).json() as { bytes: number };
+    assert.equal(g.bytes, 1000);
     const c = await adminCookie();
     const r = await (await call("/api/freecreator/speedtest", { method: "POST", headers: A(c), body: "x".repeat(200000) })).json() as { bytes: number };
     assert.equal(r.bytes, 200000);
@@ -1385,11 +1387,11 @@ describe("FreeCreator church workspaces", () => {
     const G = async (sub: string, email: string, name: string) => cookieOf(await post("/api/auth/google", { credential: await googleToken({ sub, email, name }) }, {}, g));
     const adm = await superCookie(g);
     const stranger = await G("g-fs", "stranger@gmail.com", "Stranger");
-    // Not a member of any church: no access, no library, no AI.
+    // Not a member of any church: no church library (the free tool and its AI still work on their own).
     const acc0 = await (await call("/api/freecreator/access", { headers: { cookie: stranger } }, g)).json() as { church: unknown };
     assert.equal(acc0.church, null);
     assert.equal((await call("/api/freecreator/lib", { headers: { cookie: stranger } }, g)).status, 403, "strictly members");
-    assert.equal((await post("/api/freecreator/ai", { task: "tidy", text: "x" }, A(stranger), g)).status, 403);
+    assert.equal((await post("/api/freecreator/ai", { task: "tidy", text: "x" }, A(stranger), g)).status, 200);
     // Main admin is in Sandton City Church and can use phones.
     const acc = await (await call("/api/freecreator/access", { headers: { cookie: adm } }, g)).json() as { church: { id: string }; mobile: boolean };
     assert.equal(acc.church.id, "scc"); assert.equal(acc.mobile, true);

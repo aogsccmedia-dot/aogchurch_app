@@ -39,7 +39,7 @@ export const KB: { id: string; title: string; url: string; text: string }[] = [
 {
 "title": "Home · FreeCreator Online",
 "url": "/",
-"text": "FreeCreator Online\n Songs, scripture and sermon slides on your projector, plus a live-stream studio with lower thirds. Right in your browser, built by Sandton City Church.\n Sign in & open \n About this website",
+"text": "FreeCreator Online\n Songs, scripture and sermon slides on your projector, plus a live-stream studio with lower thirds. Free, no account needed: right in your browser on any computer. Built by Sandton City Church.\n Open it free \n About this website",
 "id": "k6"
 },
 {
@@ -411,13 +411,13 @@ export const KB: { id: string; title: string; url: string; text: string }[] = [
 {
 "title": "Tools (FreeCreator) · Free tools for churches.",
 "url": "/tools",
-"text": "Free tools for churches. \n Things we built for our own Sundays, shared freely with every church.\n Online \n New In your browser · sign in to use",
+"text": "Free tools for churches. \n Things we built for our own Sundays, shared freely with every church.\n Online \n New In your browser · free, no account needed",
 "id": "k68"
 },
 {
 "title": "Tools (FreeCreator) · FreeCreator Online",
 "url": "/tools",
-"text": "FreeCreator Online\n Built by AOG Sandton City Church\n The same FreeCreator, right in your browser: songs, scripture, sermon slides, themes and a projector window. Nothing to install.\n Sign in & open \n Coming 1 Feb 2027 Windows & Mac",
+"text": "FreeCreator Online\n Built by AOG Sandton City Church\n The same FreeCreator, right in your browser: songs, scripture, sermon slides, themes and a projector window. Nothing to install.\n Open it free \n Coming 1 Feb 2027 Windows & Mac",
 "id": "k69"
 },
 {

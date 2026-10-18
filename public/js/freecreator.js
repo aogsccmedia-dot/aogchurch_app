@@ -1,47 +1,39 @@
-// FreeCreator Online landing: sign in, join through your church workspace, open the app in its own window.
-// Church admins add their members here; the main admin approves new churches. Churches never see each other's data.
+// FreeCreator Online landing: free for anyone on a computer, no account needed. One button opens the app in its own window.
+// Phones and tablets are asked to use a computer (a few team accounts can use their phone as an extra Studio camera).
+// Signed-in church teams can share their library; church admins add their members; the main admin approves new churches.
 import { api, esc, toast } from "./site.js";
-import { getMe, signInCard, onSignInDone } from "./auth.js";
+import { getMe } from "./auth.js";
+import { isPhoneOrTablet } from "/freecreator/app/gate.js";
 const $ = (id) => document.getElementById(id);
-const phone = () => matchMedia("(pointer: coarse) and (max-width: 900px)").matches;
 
 async function show() {
-  const me = await getMe(true);
-  if (!me.user) {
-    $("fc-need").hidden = !new URLSearchParams(location.search).has("signin");
-    $("fc-signin").hidden = false;
-    onSignInDone(() => location.assign("/freecreator"));
-    await signInCard($("fc-card"));
-    return;
-  }
-  $("fc-signin").hidden = true; $("fc-need").hidden = true;
+  const phone = isPhoneOrTablet();
+  if (phone) { $("fc-go").hidden = true; $("fc-phone").hidden = false; }
+  $("fc-open").addEventListener("click", () => setTimeout(() => toast("FreeCreator opened in a new window"), 300));
+  const me = await getMe(true).catch(() => ({}));
+  if (!me?.user || me.user.visitor || me.visitor) return;   // guests: nothing else to do, just open it
   const a = await api("/api/freecreator/access").catch(() => ({}));
   if (a.super) churches();
+  if (phone && a.mobile) {
+    const open = $("fc-open"); open.href = "/freecreator/app/camera.html"; open.lastChild.textContent = " Use this phone as a camera";
+    $("fc-go").hidden = false; $("fc-phone").textContent = "On phones, FreeCreator works as an extra camera for the Studio on your computer.";
+  }
   if (!a.church) { noChurch(a); return; }
-  $("fc-go").hidden = false;
-  // Signed in: no reading, just the way in. The tool shows people around itself.
-  document.querySelector(".fc-page")?.classList.add("fc-in");
-  document.querySelector(".fc-hero h1").textContent = `Hi ${me.user.given_name || (me.user.name || "").split(" ")[0] || "there"}`;
-  $("fc-who").textContent = a.church.name;
-  if (phone()) {
-    const open = $("fc-open");
-    if (a.mobile) { open.href = "/freecreator/app/camera.html"; open.lastChild.textContent = " Use this phone as a camera"; $("fc-phone").hidden = false; $("fc-phone").textContent = "On phones, FreeCreator works as an extra camera for the Studio on your computer."; }
-    else { $("fc-go").hidden = true; $("fc-phone").hidden = false; $("fc-phone").textContent = "FreeCreator Online runs on a laptop or desktop computer. Open this page on a computer to use it."; }
-  } else if (new URLSearchParams(location.search).has("signin")) location.replace("/freecreator/app/");
+  $("fc-who").textContent = `${a.church.name}: songs and shows are shared with your church team.`;
   if (a.church.role !== "member") manage(a.church);
-  $("fc-open").addEventListener("click", () => setTimeout(() => toast("FreeCreator opened in a new window"), 300));
 }
 
 function noChurch(a) {
   const box = $("fc-church"); box.hidden = false;
-  if (a.pending) { box.innerHTML = `<div class="notice">Your church <b>${esc(a.pending.name)}</b> is ${a.pending.status === "declined" ? "not approved" : "waiting for approval"}. We'll let you know.</div>`; return; }
-  box.innerHTML = `<div class="notice">FreeCreator Online is strictly for church members. <b>Sandton City Church:</b> it opens once your membership is approved. <b>Another church?</b> Register it below; once approved, you add your own members.</div>
-    <form class="panel fc-reg" id="fc-reg"><h2>Register your church</h2>
+  if (a.pending) { box.innerHTML = `<p class="muted-text">Your church <b>${esc(a.pending.name)}</b> is ${a.pending.status === "declined" ? "not approved for a shared workspace" : "waiting for approval for a shared workspace"}. You can use FreeCreator on your own in the meantime.</p>`; return; }
+  box.innerHTML = `<details class="fc-admin"><summary>Want your team to share songs and shows? Register your church</summary>
+    <p class="muted-text"><b>Sandton City Church:</b> sharing opens once your membership is approved. <b>Another church?</b> Register it here; once approved, you add your own team.</p>
+    <form class="fc-reg" id="fc-reg">
       <label class="field"><span>Church name</span><input class="input" name="name" required maxlength="120"></label>
       <label class="field"><span>City</span><input class="input" name="city" maxlength="80"></label>
       <label class="field"><span>Contact email</span><input class="input" name="contact" type="email" maxlength="200"></label>
       <label class="field"><span>Anything we should know? <small>optional</small></span><textarea class="input" name="note" rows="2" maxlength="600"></textarea></label>
-      <button class="btn btn-gold" type="submit">Register church</button></form>`;
+      <button class="btn btn-gold" type="submit">Register church</button></form></details>`;
   $("fc-reg").onsubmit = async (e) => {
     e.preventDefault();
     try { await api("/api/freecreator/church/register", { method: "POST", body: Object.fromEntries(new FormData(e.target)) }); toast("Thanks! Your church is waiting for approval."); show(); }

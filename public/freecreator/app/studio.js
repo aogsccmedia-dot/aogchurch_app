@@ -1,15 +1,15 @@
 // FreeCreator Studio (online): cameras / HDMI / ATEM-over-USB inputs, scenes, animated lower thirds, the song words
 // from FreeCreator, background music, recording and live streaming (WHIP), all in the browser.
 // Built for speed: one canvas compositor on a steady timer, overlay layers cached and only redrawn when they change.
-const me = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" }).then((r) => r.json()).catch(() => ({}));
-if (!me?.user) { location.replace("/freecreator?signin=1"); await new Promise(() => {}); }
-if (matchMedia("(pointer: coarse) and (max-width: 900px)").matches) { location.replace("/freecreator/app/camera.html"); await new Promise(() => {}); }
-// Strictly for members of a church workspace; everything here is that church's own (nothing is shared between churches).
-const acc = await fetch("/api/freecreator/access", { credentials: "same-origin", cache: "no-store" }).then((r) => r.json()).catch(() => ({}));
-if (!acc?.church) { location.replace("/freecreator?nochurch=1"); await new Promise(() => {}); }
-const CHURCH = acc.church;
+// No account needed: guests' Studio settings stay in this browser. Church teams' are kept per church and account
+// (nothing is ever shared between churches). Phones and tablets are sent away by the gate.
+import { gate } from "./gate.js";
+const WHO = await gate();
+const CHURCH = WHO.church || { id: "guest", name: "" };
 const $ = (id) => document.getElementById(id);
-const KEY = `freecreator:${CHURCH.id}:${me.user.id}:studio`;
+const KEY = `freecreator:${WHO.scope}:studio`;
+// Phone cameras need a church team account (the main admin switches them on), so guests don't see them.
+if (WHO.guest) document.querySelector(".st-phones")?.remove();
 const store = (() => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } })();
 const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch { /* full */ } };
 const H = { "Content-Type": "application/json", "x-scc-admin": "1" };
@@ -23,7 +23,7 @@ const toast = (m) => { const t = document.createElement("div"); t.textContent = 
 const S = {
   q: QUALITY[store.quality] || QUALITY["1080p30"], scene: store.scene || "camwords",
   words: "", reference: "", wordsOn: store.wordsOn !== false, logoOn: !!store.logoOn, fade: 0, fadeTarget: 0,
-  l3: store.l3 || [{ name: "Our pastor", title: "Senior Pastor" }, { name: "Welcome home", title: CHURCH.name }],
+  l3: store.l3 || [{ name: "Our pastor", title: "Senior Pastor" }, { name: "Welcome home", title: CHURCH.name || "We're glad you're here" }],
   l3Style: store.l3Style || "bar", l3Color: store.l3Color || "#d6a650", l3Auto: Number(store.l3Auto ?? 10), l3Active: -1, l3Shown: false, l3Anim: 0, l3At: 0,
   bgImg: null,
   logoCorner: store.logoCorner || "tr", logoSize: Number(store.logoSize ?? 0.09), logoOpacity: Number(store.logoOpacity ?? 0.9),
@@ -76,10 +76,10 @@ function addPhoneOptions() {
     for (const [id, ph] of phones) sel.insertAdjacentHTML("beforeend", `<option data-phone value="phone:${id}">📱 ${ph.label.replace(/</g, "")}</option>`);
   }
   if (S.cams) drawSources();
-  $("phoneList").innerHTML = [...phones.values()].map((ph) => `<div class="st-track playing"><span>📱 ${ph.label.replace(/</g, "")}</span><small>${ph.pc.connectionState}</small></div>`).join("");
+  if ($("phoneList")) $("phoneList").innerHTML = [...phones.values()].map((ph) => `<div class="st-track playing"><span>📱 ${ph.label.replace(/</g, "")}</span><small>${ph.pc.connectionState}</small></div>`).join("");
 }
 let room = null, roomTimer = 0;
-$("phoneAdd").onclick = async () => {
+if ($("phoneAdd")) $("phoneAdd").onclick = async () => {
   if (!room) {
     const r = await fetch("/api/freecreator/cam/room", { method: "POST", headers: H, credentials: "same-origin", body: "{}" }).then((x) => x.json()).catch(() => null);
     if (!r?.code) return toast("Couldn't open a phone code. Try again.");
@@ -385,7 +385,7 @@ function drawCountdown(W, Hh) {
   ctx.fillStyle = "#fff"; ctx.font = `800 ${Hh * 0.2}px ${SANS}`; ctx.fillText(clockText(left), W / 2, Hh * 0.58);
   const bw = W * 0.36, bx = (W - bw) / 2, by = Hh * 0.66; ctx.fillStyle = "rgba(255,255,255,.15)"; ctx.beginPath(); ctx.roundRect(bx, by, bw, Hh * 0.01, Hh * 0.005); ctx.fill();
   ctx.fillStyle = S.l3Color || "#d6a650"; ctx.beginPath(); ctx.roundRect(bx, by, bw * (1 - frac), Hh * 0.01, Hh * 0.005); ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,.7)"; ctx.font = `500 ${Hh * 0.03}px ${SANS}`; ctx.fillText(CHURCH.name, W / 2, Hh * 0.78); ctx.textAlign = "left";
+  ctx.fillStyle = "rgba(255,255,255,.7)"; ctx.font = `500 ${Hh * 0.03}px ${SANS}`; if (CHURCH.name) ctx.fillText(CHURCH.name, W / 2, Hh * 0.78); ctx.textAlign = "left";
 }
 /** Last on top of everything: the timer badge, the logo (fixed in its corner, never moves) and the fade. */
 function finish(W, Hh) {

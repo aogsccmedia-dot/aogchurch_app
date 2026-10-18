@@ -1,28 +1,21 @@
 // FreeCreator Online: the browser version of the desktop app's bridge (window.scc).
-// Your library (songs, shows, media) is saved in this browser, per account. Outputs open as browser windows
-// (drag one to the projector and press F11), fed live from this window. Sign-in is required.
+// Free for anyone on a computer, no account needed: the library (songs, shows, media) is saved in this browser.
+// Signed-in church teams also share songs and shows with their church. Outputs open as browser windows
+// (drag one to the projector and press F11), fed live from this window.
 // Desktop-only features (ATEM, OBS, recording, phone remote, updates, folder import) say so politely.
 import { tidyLocally, topicLocally, sermonLocally } from "./ai-local.js";
 import { parseReference, formatReference } from "./shared/scripture.js";
+import { gate } from "./gate.js";
 
 const DESKTOP_ONLY = "That's in the FreeCreator desktop app (Windows & Mac).";
 
-// ---- Sign-in gate
-const me = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" }).then((r) => r.json()).catch(() => ({}));
-if (!me?.user) { location.replace("/freecreator?signin=1"); await new Promise(() => {}); }
-const uid = me.user.id;
-// Church workspace: FreeCreator is strictly for members of a registered church, and each church only sees its own work.
-const access = await fetch("/api/freecreator/access", { credentials: "same-origin", cache: "no-store" }).then((r) => r.json()).catch(() => ({}));
-if (!access.church) { location.replace("/freecreator?nochurch=1"); await new Promise(() => {}); }
-const church = access.church;
-// Phones: FreeCreator itself runs on a computer. A few allowed accounts can use their phone as an extra camera.
-if (matchMedia("(pointer: coarse) and (max-width: 900px)").matches) {
-  location.replace(access.mobile ? "/freecreator/app/camera.html" : "/freecreator?phone=1"); await new Promise(() => {});
-}
+// ---- Who's here: no account needed. Guests keep everything in this browser; church teams also share songs and shows.
+const who = await gate();
+const church = who.church, uid = who.guest ? "guest" : who.user.id;
 document.documentElement.dataset.web = "1";
 
 // ---- Library: localStorage (words) + IndexedDB (media files), per account
-const KEY = `freecreator:${church.id}:${uid}:lib`;
+const KEY = `freecreator:${who.scope}:lib`;
 const DEFAULTS = { songs: [], shows: [], media: [], settings: { themeId: "classic", outputDisplay: null, stageDisplay: null, translation: "kjv", maxLines: 4, logoSrc: null, remotePin: null, customThemes: [], setupDone: false } };
 let db; try { db = { ...structuredClone(DEFAULTS), ...JSON.parse(localStorage.getItem(KEY) || "{}") }; db.settings = { ...DEFAULTS.settings, ...db.settings }; } catch { db = structuredClone(DEFAULTS); }
 // Songs and shows are shared with everyone in the church workspace (saved on the server); settings and media files stay on this computer.
@@ -30,6 +23,7 @@ const SHARED = ["songs", "shows"];
 const H = { "Content-Type": "application/json", "x-scc-admin": "1" };
 let libAt = 0, here = [];
 async function pull(first = false) {
+  if (!church) return false;
   const r = await fetch(`/api/freecreator/lib?since=${libAt}`, { credentials: "same-origin", cache: "no-store" }).then((x) => x.json()).catch(() => null);
   if (!r?.ok) return false;
   here = r.here || []; window.__fcDrawBar?.();
@@ -44,7 +38,7 @@ async function pull(first = false) {
   if (changed) { save(); if (!first) dispatchEvent(new Event("fc:lib-changed")); }
   return true;
 }
-const push = (coll, item, deleted = false) => fetch("/api/freecreator/lib", { method: "POST", headers: H, credentials: "same-origin", body: JSON.stringify({ coll, id: item.id, item: deleted ? null : item, deleted }) })
+const push = (coll, item, deleted = false) => !church ? Promise.resolve() : fetch("/api/freecreator/lib", { method: "POST", headers: H, credentials: "same-origin", body: JSON.stringify({ coll, id: item.id, item: deleted ? null : item, deleted }) })
   .then((r) => r.json()).then((r) => { if (!r.ok) throw new Error(r.error); }).catch((e) => toast(`Not saved to your church library: ${e.message || "no connection"}. It's kept on this computer.`));
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { toast("This browser is out of space for your library. Remove some media or shows."); } };
 const newId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
@@ -63,7 +57,7 @@ window.__fcMediaUrl = (id) => urls.get(id) || "";
     for (const c of SHARED) for (const it of localOnly[c]) if (!db[c].some((x) => x.id === it.id)) { db[c].push(it); push(c, it); }
   } else { db.songs = localOnly.songs; db.shows = localOnly.shows; }
   save();
-  setInterval(() => { if (!document.hidden) pull(); }, 6000);
+  if (church) setInterval(() => { if (!document.hidden) pull(); }, 6000);
 }
 
 // ---- Live state: this window is the source; output and stage windows listen
@@ -250,7 +244,9 @@ const bar = document.createElement("div");
 bar.className = "fc-web-bar";
 const clean = (t) => String(t || "").replace(/[<>&"]/g, "");
 function drawBar() {
-  bar.innerHTML = `<b>FreeCreator Online</b><span>${clean(church.name)} · ${clean(me.user.given_name || me.user.email)}${here.length ? ` · also here: ${here.slice(0, 4).map(clean).join(", ")}${here.length > 4 ? ` +${here.length - 4}` : ""}` : ""} · songs and shows are shared with your church</span><a href="/freecreator">Help</a><a href="/me">Church app</a>`;
+  bar.innerHTML = church
+    ? `<b>FreeCreator Online</b><span>${clean(church.name)} · ${clean(who.name)}${here.length ? ` · also here: ${here.slice(0, 4).map(clean).join(", ")}${here.length > 4 ? ` +${here.length - 4}` : ""}` : ""} · songs and shows are shared with your church</span><a href="/freecreator">Help</a><a href="/me">Church app</a>`
+    : `<b>FreeCreator Online</b><span>Free · your work is saved in this browser</span><a href="/freecreator">Help</a>`;
 }
 drawBar(); window.__fcDrawBar = drawBar;
 const style = document.createElement("style");

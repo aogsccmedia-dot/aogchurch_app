@@ -1,11 +1,13 @@
 /**
- * FreeCreator Online: the desktop presentation app running in the browser for signed-in people.
+ * FreeCreator Online: the desktop presentation app running in the browser, free for anyone on a computer, no account needed.
+ * Guests keep their work in their own browser; scripture, AI help, painted backgrounds and the internet check are open
+ * to them (rate-limited by a hashed IP). Signed-in church teams also get their church's shared library and phone cameras.
  * The app itself is static (public/freecreator/app, built from the desktop source by tools/freecreator/sync.py).
  * These endpoints give it scripture (bible-api.com, public-domain translations, cached) and the church's
  * open-source AI (Workers AI) for tidying lyrics, suggesting scriptures and turning sermon notes into slides.
  */
 import type { Env } from "../env.ts";
-import { HttpError, Router, json, readJson, trustedWrite } from "../lib/http.ts";
+import { HttpError, Router, clientIp, json, readJson, trustedWrite } from "../lib/http.ts";
 import { getSession, isAdminEmail } from "../lib/auth.ts";
 import { rateLimit } from "../lib/ratelimit.ts";
 import { SCENES } from "./poster.ts";
@@ -36,6 +38,12 @@ export async function mobileAllowed(env: Env, email: string): Promise<boolean> {
 }
 
 export function freecreatorRoutes(router: Router, env: Env): void {
+  /** Anyone: a church member gets their church's name and per-account limits; a guest gets tighter limits by hashed IP. */
+  const anyone = async (req: Request) => {
+    const s = await getSession(env, req).catch(() => null);
+    const church = s && !s.visitor ? await churchFor(env, s).catch(() => null) : null;
+    return { key: s ? `u:${s.user.id}` : `ip:${clientIp(req)}`, guest: !church, churchName: church?.name || "a local church" };
+  };
   /** Signed in AND a member of an active church workspace. Everything after this is scoped to that church. */
   const member = async (req: Request) => {
     const s = await signedIn(env, req);
@@ -106,8 +114,8 @@ export function freecreatorRoutes(router: Router, env: Env): void {
   });
 
   router.get("/api/freecreator/bible", async (req) => {
-    const { s } = await member(req);
-    await rateLimit(env, "fc-bible", s.user.id, 400, 3600);
+    const w = await anyone(req);
+    await rateLimit(env, "fc-bible", w.key, w.guest ? 300 : 400, 3600);
     const u = new URL(req.url), ref = (u.searchParams.get("ref") || "").trim().slice(0, 80), tr = (u.searchParams.get("tr") || "kjv").toLowerCase();
     if (!TRANSLATIONS.includes(tr)) throw new HttpError(422, "Unknown translation.");
     if (!ref) throw new HttpError(422, "Try a reference like John 3:16 or Psalm 23.");
@@ -117,8 +125,8 @@ export function freecreatorRoutes(router: Router, env: Env): void {
   // Upload speed check for streaming: the browser sends ~2 MB and times it.
   router.post("/api/freecreator/speedtest", async (req) => {
     if (!trustedWrite(req)) throw new HttpError(403, "Missing request header.");
-    const { s } = await member(req);
-    await rateLimit(env, "fc-speed", s.user.id, 20, 3600);
+    const w = await anyone(req);
+    await rateLimit(env, "fc-speed", w.key, w.guest ? 10 : 20, 3600);
     const buf = await req.arrayBuffer();
     if (buf.byteLength > 4 * 1024 * 1024) throw new HttpError(413, "Too big.");
     return json({ ok: true, bytes: buf.byteLength });
@@ -126,14 +134,14 @@ export function freecreatorRoutes(router: Router, env: Env): void {
 
   // AI-painted background for the Studio's slides (no text, no people), picked to suit the service. Cached per scene.
   router.get("/api/freecreator/paint", async (req) => {
-    const { s } = await member(req);
+    const w = await anyone(req);
     const u = new URL(req.url), topic = (u.searchParams.get("topic") || "").toLowerCase().slice(0, 200), v = Math.max(0, Math.min(2, Number(u.searchParams.get("v")) || 0));
     const words: Record<string, string> = { star: "stars", night: "stars", sea: "ocean", water: "ocean", baptism: "ocean", mountain: "mountains", faith: "mountains", garden: "garden", growth: "garden", light: "light", hope: "sunrise", new: "sunrise", morning: "sunrise", fire: "fire", spirit: "fire", revival: "fire", city: "city", youth: "city", worship: "worship", praise: "worship", music: "worship" };
     const scene = Object.entries(words).find(([w]) => topic.includes(w))?.[1] || "abstract";
     const key = `fc:bg:${scene}:${v}`;
     try { const hit = await env.FILES_KV?.get(key, "arrayBuffer"); if (hit) return new Response(hit, { headers: { "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=86400" } }); } catch { /* paint */ }
     if (!env.AI) throw new HttpError(404, "Not available.");
-    await rateLimit(env, "fc-paint", s.user.id, 10, 3600);
+    await rateLimit(env, "fc-paint", w.key, w.guest ? 4 : 10, 3600);
     const out = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", { prompt: `${SCENES[scene]}, wide 16:9 cinematic background, soft and calm with lots of empty space for words, high quality, no text, no letters, no words, no logos, no people, no faces, no hands`, steps: 6, seed: 4000 + v * 91 }) as { image?: string };
     if (!out?.image) throw new HttpError(503, "The painter is busy. Try again in a moment.");
     const bin = Uint8Array.from(atob(out.image), (c) => c.charCodeAt(0));
@@ -143,15 +151,15 @@ export function freecreatorRoutes(router: Router, env: Env): void {
 
   router.post("/api/freecreator/ai", async (req) => {
     if (!trustedWrite(req)) throw new HttpError(403, "Missing request header.");
-    const { s, church } = await member(req);
-    await rateLimit(env, "fc-ai", s.user.id, 40, 3600);
+    const w = await anyone(req);
+    await rateLimit(env, "fc-ai", w.key, w.guest ? 15 : 40, 3600);
     const b = await readJson<{ task?: string; text?: string }>(req);
     const p = PROMPTS[String(b.task)];
     if (!p) throw new HttpError(422, "Unknown task.");
     if (!env.AI) return json({ ok: false, text: null });
     try {
       const out = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
-        messages: [{ role: "system", content: p[0].replace("{church}", church.name) }, { role: "user", content: String(b.text || "").slice(0, 15000) }], max_tokens: p[1], temperature: 0.3,
+        messages: [{ role: "system", content: p[0].replace("{church}", w.churchName) }, { role: "user", content: String(b.text || "").slice(0, 15000) }], max_tokens: p[1], temperature: 0.3,
       }) as { response?: unknown };
       const r = out?.response;
       return json({ ok: true, text: typeof r === "string" ? r : JSON.stringify(r ?? "") });
