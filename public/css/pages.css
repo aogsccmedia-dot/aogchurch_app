@@ -2366,3 +2366,9 @@ html.signed-in .ask-page .ask-thread { border: 0 !important; box-shadow: none !i
 .hdr-ticket .i { width: 16px; height: 16px; }
 @media (max-width: 860px) { .hdr-ticket { display: none !important; } }
 html.signed-in .hdr-ticket { display: none !important; }
+
+/* ---------- Plain white backgrounds (members' app, welcome screen, page bands) ---------- */
+body.portal, html.signed-in body:not(.admin) { --bg: #ffffff; background: #ffffff !important; }
+.welcome-screen { background: #ffffff; }
+.welcome-blobs { display: none; }
+.word-block { background: transparent; }

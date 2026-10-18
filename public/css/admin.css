@@ -1091,3 +1091,8 @@ body[data-view="event-edit"] .app-bottom, body[data-view="letter-edit"] .app-bot
 .split .d, .legend .d { background: #8a7fc9; }
 .legend small { color: var(--muted); }
 .pill.tiny { display: inline-block; margin-top: 4px; font-size: 10.5px; padding: 1px 7px; }
+
+/* ---------- Plain white backgrounds in the admin portal (colour stays in the menu and the small accents) ---------- */
+body.admin { --bg: #ffffff; background: #ffffff !important; }
+body.admin .main { background: #ffffff; }
+body.admin .login, .login { background: #ffffff; }

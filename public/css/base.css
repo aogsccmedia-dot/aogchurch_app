@@ -8,7 +8,7 @@
    ========================================================================== */
 
 :root {
-  --bg: #fcfcfe;
+  --bg: #ffffff;
   --bg-2: #ffffff;
   --surface: #f4f3f9;
   --surface-2: #ecebf3;
@@ -104,9 +104,8 @@ body {
   overflow-x: hidden;
 }
 
-/* Website background: clean white with a faint wash of baby blue, soft lilac and baby pink, and a fine film grain.
-   Both layers are fixed, drawn once and composited by the GPU, so scrolling stays smooth. */
-body:not(.admin):not(.portal) { background: #fdfdff; }
+/* Website background: plain white everywhere (the old colour wash layers below are switched off at the end of this file). */
+body:not(.admin):not(.portal) { background: #ffffff; }
 body:not(.admin):not(.portal)::before, body:not(.admin):not(.portal)::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
 body:not(.admin):not(.portal)::before {
   background:
@@ -381,3 +380,9 @@ main, section, article, aside, .wrap { min-width: 0; }
 /* Buttons never push the page wider: on a narrow screen a long label wraps onto two lines. */
 .btn { max-width: 100%; }
 @media (max-width: 520px) { .btn { white-space: normal; text-align: center; line-height: 1.25; min-height: 44px; height: auto; } }
+
+/* ---------- Plain white backgrounds, right through the website, app and admin ---------- */
+html, body { background: #ffffff; }
+body::before, body::after { display: none !important; background: none !important; }
+.ticker { background: #ffffff; }
+.tk-x { background: linear-gradient(90deg, transparent, #ffffff 40%); }
