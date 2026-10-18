@@ -97,11 +97,14 @@ function watchGoogleButton(el) {
 /** The width a Google button can take inside `el` without spilling out: the first visible box's inner width,
  *  never more than the screen allows (Google draws its button at a fixed pixel width, so this must be right). */
 function roomFor(el) {
-  let n = el;
+  const page = document.documentElement.clientWidth - 24;
+  if (el.clientWidth > 0) return Math.floor(Math.min(el.clientWidth, page));
+  if (!el.getClientRects().length) return 0;   // hidden (e.g. a pop-up that isn't open yet): measure once it shows
+  let n = el.parentElement;
   while (n && !(n.clientWidth > 0)) n = n.parentElement;
-  let w = n ? n.clientWidth : innerWidth;
-  if (n && n !== el) { const cs = getComputedStyle(n); w -= (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0); }
-  return Math.floor(Math.min(w, document.documentElement.clientWidth - 24));
+  if (!n) return 0;
+  const cs = getComputedStyle(n);
+  return Math.floor(Math.min(n.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0), page));
 }
 const gWidth = (el, want) => Math.max(200, Math.min(want, roomFor(el)));   // Google's smallest button is 200px
 
@@ -117,6 +120,7 @@ export async function googleButton(el, { text = "continue_with", width, round = 
   let drawn = 0;
   const draw = () => {
     if (round) { google.accounts.id.renderButton(el, { type: "icon", theme: "outline", size: "large", shape: "circle" }); return; }
+    if (!roomFor(el)) return;   // not visible yet: the size watcher draws it when it appears
     const w = card ? gWidth(el, 400) : gWidth(el, width || 360);
     if (Math.abs(w - drawn) < 6) return;
     drawn = w;
@@ -128,7 +132,8 @@ export async function googleButton(el, { text = "continue_with", width, round = 
   draw();
   if (!round && "ResizeObserver" in window && !el.dataset.fit) {   // phone turned, window resized, or the box was hidden at first
     el.dataset.fit = "1"; let t = 0;
-    new ResizeObserver(() => { clearTimeout(t); t = setTimeout(draw, 150); }).observe(el.parentElement || el);
+    const ro = new ResizeObserver(() => { clearTimeout(t); t = setTimeout(draw, drawn ? 150 : 0); });
+    ro.observe(el); if (el.parentElement) ro.observe(el.parentElement);
   }
   if (!round && !card) { watchGoogleButton(el); emailLink(el); }
   if (card) watchGoogleButton(el);

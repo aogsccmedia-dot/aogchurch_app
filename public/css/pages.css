@@ -2423,3 +2423,8 @@ section, .block, .panel, .card { min-width: 0; }
 .si-visit { justify-content: center; text-align: center; }
 .si-visit span { text-wrap: balance; }
 @media (max-width: 359px) { .site-header .brand span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
+/* The sign-in pop-up never scrolls or shifts sideways; everything inside keeps to the card */
+#signin-dialog { overflow-x: hidden; overscroll-behavior: contain; }
+#signin-dialog .si-pop, #signin-dialog .si-card, .si-card { box-sizing: border-box; max-width: 100%; min-width: 0; }
+.si-card > *, .si-form > * { min-width: 0; max-width: 100%; }
+.si-card .g-fit { overflow: hidden; border-radius: 999px; }
