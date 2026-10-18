@@ -117,7 +117,7 @@ def header():
     <div class="app-bar-in">
       <a class="app-brand" href="/me"><img src="/assets/logo-64.png" alt="" width="30" height="30"><b>SCC</b><span class="app-role" data-app-role></span></a>
       <span class="app-gap"></span>
-      <div class="app-me"><button type="button" class="app-search" data-app-search aria-label="Search">{{{{i:search}}}}<span>Search</span></button><a class="btn btn-sm btn-ghost app-help" href="/help" aria-label="How to use the app">Help</a><span class="avatar sm" data-app-avatar></span><button class="btn btn-sm" type="button" data-app-signout>Sign out</button></div>
+      <div class="app-me"><a class="btn btn-sm btn-ghost app-help" href="/help" aria-label="How to use the app">Help</a><span class="avatar sm" data-app-avatar></span><button class="btn btn-sm" type="button" data-app-signout>Sign out</button></div>
     </div>
   </header>
   <div class="app-fade" aria-hidden="true"></div>
