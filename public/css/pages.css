@@ -2334,3 +2334,25 @@ html.signed-in .ask-page .ask-thread { border: 0 !important; box-shadow: none !i
 .faq-item[open] summary::after { content: "–"; }
 .faq-item p { margin: 8px 0 0; color: var(--text-2); line-height: 1.55; }
 .ssr-events { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+/* Event promo video: plays by itself, rounded, with Get Ticket in the bottom-right corner */
+.promo-slot { margin: 0 0 28px; }
+.promo { position: relative; border-radius: 24px; overflow: hidden; background: #0d0c14; aspect-ratio: 16 / 9; box-shadow: 0 24px 60px -28px rgba(20, 14, 40, .55); isolation: isolate; }
+.promo-v { display: block; width: 100%; height: 100%; object-fit: cover; }
+.promo::after { content: ""; position: absolute; inset: auto 0 0 0; height: 38%; background: linear-gradient(transparent, rgba(0, 0, 0, .38)); pointer-events: none; }
+.promo-ticket { position: absolute; right: clamp(12px, 2.4vw, 22px); bottom: clamp(12px, 2.4vw, 22px); z-index: 2; display: inline-flex; align-items: center; gap: 8px;
+  padding: clamp(10px, 1.4vw, 14px) clamp(16px, 2vw, 22px); border-radius: 999px; background: var(--gold, #d6a650); color: #1c1712; font-weight: 600; font-size: clamp(14px, 1.5vw, 16.5px);
+  text-decoration: none; box-shadow: 0 10px 30px rgba(0, 0, 0, .35); transition: transform .15s, box-shadow .15s; }
+.promo-ticket:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(0, 0, 0, .4); }
+.promo-ticket .i { width: 18px; height: 18px; }
+.promo-ticket .arr { transition: transform .15s; } .promo-ticket:hover .arr { transform: translateX(3px); }
+.promo-sound { position: absolute; left: clamp(12px, 2.4vw, 22px); bottom: clamp(12px, 2.4vw, 22px); z-index: 2; width: 40px; height: 40px; border-radius: 50%; border: 0;
+  display: grid; place-items: center; background: rgba(0, 0, 0, .45); color: #fff; cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.promo-sound .i { width: 18px; height: 18px; } .promo-sound.on { background: rgba(255, 255, 255, .9); color: #1c1712; }
+#ev-cover.cover-video { aspect-ratio: auto; background: none; overflow: visible; }
+.me-section .promo-slot { margin: 6px 0 16px; }
+@media (max-width: 560px) { .promo { border-radius: 18px; } .promo-sound { width: 34px; height: 34px; } }
+.promo-ticket { background: linear-gradient(135deg, #f8d67e, #e6ad4c); color: #1c1306; border: 1px solid rgba(255, 255, 255, .55); }
+.promo-ticket:hover { background: linear-gradient(135deg, #fbdc8c, #eab557); }
+#ev-cover.cover-video, #ev-cover.cover-video * { filter: none !important; }
+@media (max-width: 560px) { .promo-ticket { padding: 8px 13px; font-size: 13.5px; gap: 6px; } .promo-ticket .i { width: 15px; height: 15px; } }
+.promo-sound { bottom: auto; top: clamp(12px, 2.4vw, 22px); }

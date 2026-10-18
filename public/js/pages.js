@@ -75,6 +75,9 @@ async function loadEvents() {
       return;
     }
     const featured = events.find((e) => e.cover_url && e.registration_open) || events.find((e) => e.registration_open);
+    // The next event with a promo video plays at the top of "What's coming up".
+    const promo = events.find((e) => e.cover_video), slot = $id("promo-slot");
+    if (promo && slot) { const { promoHtml, initPromos } = await import("./promo.js"); slot.innerHTML = promoHtml(promo, { ticket: promo.registration_open, label: promo.registration_open ? "Get Ticket" : "Details" }); slot.hidden = false; initPromos(slot); }
     if (featured && $id("featured")) renderFeatured(featured);
     eventsEl.innerHTML = (limit ? events.slice(0, limit) : events).map((ev, i) => `<a class="event-card" href="/event?e=${encodeURIComponent(ev.slug)}">
         <figure class="photo cover-square">${coverImg(ev, i)}</figure>

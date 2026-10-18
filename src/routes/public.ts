@@ -34,7 +34,7 @@ function publicEvent(e: EventRow, counts: { people: number }) {
   const closed = !e.rsvp_enabled || (e.registration_closes_at ? e.registration_closes_at < new Date().toISOString() : false) || e.starts_at < new Date(Date.now() - 3 * 3600_000).toISOString();
   return {
     id: e.id, slug: e.slug, title: e.title, category: e.category, description: e.description, starts_at: e.starts_at, ends_at: e.ends_at,
-    location: e.location, cover_url: e.cover_attachment_id ? `/api/media/${e.cover_attachment_id}` : e.cover_image || null, price_label: e.price_label,
+    location: e.location, cover_video: e.cover_video || null, cover_url: e.cover_attachment_id ? `/api/media/${e.cover_attachment_id}` : e.cover_image || null, price_label: e.price_label,
     ticket_price: e.ticket_price || null, requires_pop: !!e.requires_pop, auto_approve: !!e.auto_approve,
     registration_open: !closed, capacity: e.capacity, spots_left: e.capacity ? Math.max(0, e.capacity - counts.people) : null,
     collect_phone: !!e.collect_phone,

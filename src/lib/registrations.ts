@@ -11,7 +11,7 @@ export interface EventRow {
   location: string | null; is_published: number; rsvp_enabled: number; cover_attachment_id: string | null; form_schema: string;
   capacity: number | null; registration_closes_at: string | null; confirmation_message: string | null; collect_phone: number;
   cover_image: string | null; price_label: string | null; ticket_price: number | null; requires_pop: number; auto_approve: number;
-  payment_instructions: string | null;
+  payment_instructions: string | null; cover_video?: string | null;
 }
 export interface RegRow { id: string; event_id: string; ref_code: string; name: string; email: string; guests: number; status: string; amount_due: number | null }
 

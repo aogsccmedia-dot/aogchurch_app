@@ -153,6 +153,8 @@ async function voteBanner() {
 async function loadUpcoming(fromCache) {
   const r = (fromCache ? cachedGet("/api/events") : null) || await freshGet("/api/events").catch(() => ({ events: [] }));
   const list = (r.events || []).slice(0, 12);
+  const promo = list.find((e) => e.cover_video), slot = $("me-promo");
+  if (promo && slot && !slot.dataset.v) { slot.dataset.v = promo.id; const { promoHtml, initPromos } = await import("./promo.js"); slot.innerHTML = promoHtml(promo, { ticket: promo.registration_open, label: promo.registration_open ? "Get Ticket" : "Details" }); slot.hidden = false; initPromos(slot); }
   $("me-upcoming").innerHTML = list.length ? list.map((e) => `<a class="slide ev-slide" href="/event?e=${encodeURIComponent(e.slug)}">
       ${e.cover_url ? `<img src="${esc(e.cover_url)}" alt="" loading="lazy">` : `<span class="ev-ph">${icon("calendar")}</span>`}
       <span class="ev-body"><b>${esc(e.title)}</b><small>${esc(fmt(e.starts_at))}${e.price_label ? ` · ${esc(e.price_label)}` : ""}</small>

@@ -64,7 +64,13 @@ async function load() {
   $("ev-ics").href = event.ics_url;
   $("ev-outlook").href = event.outlook_url;
   if (event.price_label) { $("ev-price-row").hidden = false; $("ev-price").textContent = event.price_label; }
-  if (event.cover_url) $("ev-cover").innerHTML = `<img src="${esc(event.cover_url)}" alt="${esc(event.title)} poster">`;
+  if (event.cover_video) {
+    // The promo video plays here; its Get Ticket button jumps to the ticket form on this page.
+    const { promoHtml, initPromos } = await import("./promo.js");
+    const fig = $("ev-cover"); fig.classList.remove("cover-square", "alive", "photo"); fig.classList.add("cover-video");
+    fig.innerHTML = promoHtml(event, { ticket: event.registration_open, href: "#reg-card" });
+    initPromos(fig);
+  } else if (event.cover_url) $("ev-cover").innerHTML = `<img src="${esc(event.cover_url)}" alt="${esc(event.title)} poster">`;
   if (event.capacity) { $("ev-cap-row").hidden = false; $("ev-cap").textContent = event.spots_left > 0 ? `${event.spots_left} of ${event.capacity} spots left` : "Fully booked — join the waitlist"; }
   if (!event.collect_phone) { $("r-phone-field").hidden = true; }
   else form.phone.required = true;

@@ -49,6 +49,8 @@ export function eventLd(env: Env, e: EventRow) {
     eventStatus: "https://schema.org/EventScheduled", eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     location: e.location && !/humber|woodmead|sandton city church/i.test(e.location) ? { "@type": "Place", name: e.location, address: e.location } : PLACE,
     organizer: { "@type": "Organization", "@id": `${siteUrl(env)}/#church`, name: NAME, url: `${siteUrl(env)}/` },
+    ...((e as EventRow & { cover_video?: string | null }).cover_video ? { video: { "@type": "VideoObject", name: `${e.title} · promo`, description: plain(e.description) || e.title,
+      thumbnailUrl: `${siteUrl(env)}${(e as EventRow & { cover_video: string }).cover_video}-poster.jpg`, contentUrl: `${siteUrl(env)}${(e as EventRow & { cover_video: string }).cover_video}-1080.mp4`, uploadDate: "2026-10-18" } } : {}),
     offers: { "@type": "Offer", url: eventUrl(env, e), price: price.toFixed(2), priceCurrency: "ZAR", availability: "https://schema.org/InStock", validFrom: new Date(Date.now() - 86400_000).toISOString().slice(0, 10) },
   };
 }
