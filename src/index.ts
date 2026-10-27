@@ -41,8 +41,30 @@ import { nextSundayAfternoon } from "./lib/time.ts";
 import { sendMail } from "./lib/email.ts";
 import { adminLetterReminder } from "./emails/templates.ts";
 
-// Endpoints that legitimately receive cross-site POSTs (mail providers' one-click unsubscribe).
-const CROSS_SITE_OK = new Set(["/api/newsletter/unsubscribe"]);
+// Endpoints that legitimately receive cross-site POSTs: mail providers' one-click unsubscribe and signed webhooks.
+const CROSS_SITE_OK = new Set(["/api/newsletter/unsubscribe", "/api/whatsapp/webhook", "/api/hooks/github"]);
+
+/** A write from another site? The browser's Sec-Fetch-Site header decides when present; otherwise the Origin header
+ *  (a missing Origin is a server-to-server call or an old browser, which can't carry our SameSite session cookie). */
+function crossSite(req: Request, url: URL): boolean {
+  const site = req.headers.get("sec-fetch-site");
+  if (site === "cross-site") return true;
+  const origin = req.headers.get("origin");
+  if (!origin) return false;
+  try { return new URL(origin).host !== url.host; } catch { return true; }   // "null" or garbage: treat as foreign
+}
+
+/** Every API response: no MIME sniffing, no framing, no referrer leaks; anything that could render (HTML, SVG) is sandboxed. */
+function harden(res: Response): Response {
+  const h = new Headers(res.headers);
+  if (!h.has("X-Content-Type-Options")) h.set("X-Content-Type-Options", "nosniff");
+  if (!h.has("Referrer-Policy")) h.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (!h.has("X-Frame-Options")) h.set("X-Frame-Options", "SAMEORIGIN");
+  const type = (h.get("Content-Type") || "").toLowerCase();
+  if (!h.has("Content-Security-Policy") && /text\/html|image\/svg|xml/.test(type)) h.set("Content-Security-Policy", "default-src 'none'; img-src 'self' data: https:; style-src 'unsafe-inline'; sandbox");
+  if (!h.has("Cache-Control")) h.set("Cache-Control", "no-store");
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+}
 
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -58,9 +80,8 @@ export default {
       return env.ASSETS.fetch(req);
     }
 
-    if (req.method !== "GET" && req.method !== "HEAD" && !CROSS_SITE_OK.has(url.pathname)) {
-      const origin = req.headers.get("origin");
-      if (origin && new URL(origin).host !== url.host) return errorResponse(new HttpError(403, "Cross-site request blocked."));
+    if (req.method !== "GET" && req.method !== "HEAD" && !CROSS_SITE_OK.has(url.pathname) && crossSite(req, url)) {
+      return harden(errorResponse(new HttpError(403, "Cross-site request blocked.")));
     }
 
     try {
@@ -85,9 +106,9 @@ export default {
       pushRoutes(router, env);
       chatRoutes(router, env);
       const res = await router.handle(req, ctx);
-      return res ?? json({ ok: false, error: "Not found." }, 404);
+      return harden(res ?? json({ ok: false, error: "Not found." }, 404));
     } catch (err) {
-      return errorResponse(err);
+      return harden(errorResponse(err));
     }
   },
 

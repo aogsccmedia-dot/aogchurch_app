@@ -52,25 +52,53 @@ async function person(env: Env, id: string) {
       FROM users u LEFT JOIN members m ON m.user_id = u.id WHERE u.id = ?`).bind(id).first<{ id: string; first: string; name: string; picture: string | null; email: string }>();
 }
 
+type Who = { name: string; picture: string | null; email: string; badge: "super" | "admin" | "member" | null };
+/** Names, photos and verified badges for many people in one query per 90 people (instead of two or three each). */
+async function people(env: Env, ids: string[]): Promise<Map<string, Who>> {
+  const out = new Map<string, Who>();
+  const uniq = [...new Set(ids)];
+  for (let i = 0; i < uniq.length; i += 90) {
+    const part = uniq.slice(i, i + 90);
+    const { results } = await env.DB.prepare(`SELECT u.id, u.email, u.picture,
+        COALESCE((SELECT COALESCE(m.preferred_name || ' ' || m.last_name, m.first_name || ' ' || m.last_name) FROM members m WHERE m.user_id = u.id LIMIT 1), u.name, u.email) AS name,
+        (SELECT role FROM admin_roles r WHERE r.user_id = u.id) AS role,
+        EXISTS (SELECT 1 FROM members mm WHERE (mm.user_id = u.id OR lower(mm.email) = lower(u.email)) AND mm.status = 'member') AS member
+      FROM users u WHERE u.id IN (${part.map(() => "?").join(",")})`).bind(...part).all<{ id: string; email: string; picture: string | null; name: string; role: string | null; member: number }>();
+    for (const r of results) out.set(r.id, { name: r.name, picture: r.picture, email: r.email,
+      badge: isAdminEmail(env, r.email) ? "super" : r.role === "admin" ? "admin" : r.role || r.member ? "member" : null });
+  }
+  return out;
+}
+
 export function chatRoutes(router: Router, env: Env): void {
   router.get("/api/chat/leaders", async (req) => {
     const s = await me(env, req);
     const q = (new URL(req.url).searchParams.get("q") || "").trim().toLowerCase();
     const list = (await leaders(env)).filter((l) => l.id !== s.user.id && (!q || `${l.name} ${l.role}`.toLowerCase().includes(q)));
-    const out = await Promise.all(list.map(async ({ email, ...l }) => ({ ...l, badge: await badge(env, l.id, email) })));
+    const who = await people(env, list.map((l) => l.id));
+    const out = list.map(({ email: _e, ...l }) => ({ ...l, badge: who.get(l.id)?.badge ?? null }));
     return json({ ok: true, leaders: out });
+  });
+  // Just the unread count (the home screen's badge): one small query instead of the whole conversation list.
+  router.get("/api/chat/unread", async (req) => {
+    const s = await me(env, req);
+    const r = await env.DB.prepare(`SELECT COALESCE(SUM(CASE WHEN starter_id = ?1 THEN starter_unread ELSE leader_unread END), 0) AS n
+      FROM chat_threads WHERE starter_id = ?1 OR leader_id = ?1`).bind(s.user.id).first<{ n: number }>();
+    return json({ ok: true, unread: Number(r?.n) || 0 }, 200, { "Cache-Control": "no-store" });
   });
 
   router.get("/api/chat", async (req) => {
     const s = await me(env, req);
     const { results } = await env.DB.prepare("SELECT * FROM chat_threads WHERE starter_id = ? OR leader_id = ? ORDER BY last_at DESC LIMIT 100").bind(s.user.id, s.user.id).all<Record<string, string | number | null>>();
     const ls = await leaders(env);
-    const threads = await Promise.all(results.map(async (t) => {
+    const others = results.map((t) => String(t.starter_id === s.user.id ? t.leader_id : t.starter_id));
+    const who = await people(env, others);
+    const threads = results.map((t) => {
       const mine = t.starter_id === s.user.id, other = String(mine ? t.leader_id : t.starter_id);
-      const lead = ls.find((l) => l.id === other), p = lead ? null : await person(env, other);
-      return { id: t.id, with: { id: other, name: lead?.name || p?.name || "Member", picture: lead?.picture ?? p?.picture ?? null, role: lead?.role || "Member", badge: await badge(env, other, lead?.email ?? p?.email) },
+      const lead = ls.find((l) => l.id === other), p = who.get(other);
+      return { id: t.id, with: { id: other, name: lead?.name || p?.name || "Member", picture: lead?.picture ?? p?.picture ?? null, role: lead?.role || "Member", badge: p?.badge ?? null },
         last_at: t.last_at, preview: t.last_preview, from_me: t.last_sender === s.user.id, unread: Number(mine ? t.starter_unread : t.leader_unread) || 0 };
-    }));
+    });
     return json({ ok: true, threads, unread: threads.reduce((n, t) => n + t.unread, 0), am_leader: ls.some((l) => l.id === s.user.id) }, 200, { "Cache-Control": "no-store" });
   });
 

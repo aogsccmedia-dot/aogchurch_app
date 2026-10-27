@@ -88,8 +88,8 @@ def head(title, desc, canonical=None, noindex=False, extra=""):
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="alternate" type="text/plain" title="Church summary for AI assistants" href="/llms.txt">
   <link rel="preconnect" href="https://accounts.google.com">
-  <link rel="stylesheet" href="/css/base.css?v={ver('css/base.css')}">
-  <link rel="stylesheet" href="/css/pages.css?v={ver('css/pages.css')}">
+  <link rel="stylesheet" href="/css/base.min.css?v={ver('css/base.min.css')}">
+  <link rel="stylesheet" href="/css/pages.min.css?v={ver('css/pages.min.css')}">
   <script src="/js/switch-boot.js?v={ver('js/switch-boot.js')}"></script>
   <script type="speculationrules">{SPECULATION}</script>{extra}
 </head>'''
@@ -304,15 +304,62 @@ def legal_page(body):
     return body.replace("<!--LEGAL-->", f'<aside class="legal-nav"><p class="eyebrow">On this page</p><nav>{toc}</nav><p class="eyebrow">Policies</p><nav class="policy-links">{others}</nav></aside>')
 
 
+IMPORT_RE = re.compile(r"""^\s*(?:import|export)\b[^;(]*?from\s*["']\./([\w.-]+\.js)["']|^\s*import\s*["']\./([\w.-]+\.js)["']""", re.M)
+
+
+def js_deps(entries):
+    """Every module the entry scripts load up front (static imports only, not lazy import()), so the browser can
+    fetch them all at once instead of discovering them one level at a time."""
+    seen, todo = [], list(entries)
+    while todo:
+        f = todo.pop(0)
+        path = ROOT / "js" / f
+        if not path.exists():
+            continue
+        for a, b in IMPORT_RE.findall(path.read_text()):
+            d = a or b
+            if d not in seen and d not in entries:
+                seen.append(d)
+                todo.append(d)
+    return seen
+
+
+def preloads(entries):
+    return "".join(f'  <link rel="modulepreload" href="/js/{d}">\n' for d in js_deps(entries))
+
+
+def minify_css(css):
+    """Strip comments and spacing, leaving quoted strings (content text, inline SVG images) exactly as written."""
+    parts = re.split(r'("(?:[^"\\\n]|\\.)*"|\'(?:[^\'\\\n]|\\.)*\')', css)
+    out = []
+    for i, p in enumerate(parts):
+        if i % 2:
+            out.append(p)
+            continue
+        p = re.sub(r'/\*.*?\*/', '', p, flags=re.S)
+        p = re.sub(r'\s+', ' ', p)
+        p = re.sub(r'\s*([{};,>])\s*', r'\1', p)
+        p = re.sub(r'(?<=[;{]) |(?<=[^\s(]):\s+(?=[^\s{])', lambda m: '' if m.group(0) == ' ' else ':', p)
+        out.append(p)
+    return "".join(out).replace(";}", "}").strip() + "\n"
+
+
+def build_css():
+    """Pages load minified copies of the stylesheets; the readable sources stay as they are for editing."""
+    for n in ("base", "pages", "admin"):
+        src = ROOT / "css" / f"{n}.css"
+        (ROOT / "css" / f"{n}.min.css").write_text(minify_css(src.read_text()))
+
+
 def main():
+    build_css()
     for name, o in PAGES.items():
         body = legal_page((HERE / "pages" / f"{name}.html").read_text())
         # {{inc:name}} pulls in a shared snippet from tools/site/partials (e.g. the evangelism map).
         body = re.sub(r"\{\{inc:([\w-]+)\}\}", lambda m: (HERE / "partials" / f"{m.group(1)}.html").read_text(), body)
         scripts = "\n".join(f'  <script type="module" src="/js/{s}?v={ver("js/" + s)}"></script>' for s in o["scripts"])
-        # Fetch auth.js's own imports in parallel instead of one after the other.
-        if "auth.js" in o["scripts"]:
-            scripts = '  <link rel="modulepreload" href="/js/switcher.js">\n  <link rel="modulepreload" href="/js/otp.js">\n' + scripts
+        # Fetch every module the page needs in parallel instead of one import level after another.
+        scripts = preloads(o["scripts"]) + scripts
         extra = o.get("extra", "") + crumbs_ld(o.get("canonical"), o.get("crumb", ""))
         html = (head(o["title"].replace("&", "&amp;"), o["desc"], o.get("canonical"), o.get("noindex", False), extra) + (f'\n<body class="{o["body"]}">' if o.get("body") else "\n<body>") + header()
                 + body.replace("  </main>\n", "  </main>\n" + pager(o.get("canonical")), 1) + footer() + TABBAR + scripts + "\n</body>\n</html>\n")
@@ -321,7 +368,12 @@ def main():
     # The admin page isn't generated, but gets the same cache-busting versions.
     adm = ROOT / "admin/index.html"
     a = adm.read_text()
+    a = re.sub(r'href="/css/(base|pages|admin)\.css', r'href="/css/\1.min.css', a)
     a = re.sub(r'(href|src)="/(css/[\w.-]+\.css|js/[\w.-]+\.js)(\?v=\w+)?"', lambda m: f'{m.group(1)}="/{m.group(2)}?v={ver(m.group(2))}"', a)
+    a = re.sub(r'  <link rel="modulepreload" href="/js/[\w.-]+\.js">\n', "", a)
+    entry = re.findall(r'<script type="module" src="/js/([\w.-]+\.js)', a)
+    if entry:
+        a = re.sub(r'(\s*)(<script type="module" src="/js/' + re.escape(entry[0]) + ')', lambda m: "\n" + preloads(entry).rstrip("\n") + m.group(1) + m.group(2), a, count=1)
     adm.write_text(a)
     pri = {"/": "1.0", "/events": "0.9", "/about": "0.8", "/visit": "0.8", "/join": "0.8"}
     urls = [o["canonical"] for o in PAGES.values() if o.get("canonical")]

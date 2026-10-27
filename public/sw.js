@@ -3,8 +3,8 @@
 // - CSS/JS: network first (so a new release is picked up straight away), cached copy when offline.
 // - Photos/logos: cache first.
 // - /api and /admin are never cached.
-const VERSION = "scc-v48";
-const SHELL = ["/", "/offline", "/css/base.css", "/css/pages.css", "/js/site.js", "/js/auth.js", "/js/icons.js", "/js/install.js",
+const VERSION = "scc-v49";
+const SHELL = ["/", "/offline", "/js/site.js", "/js/auth.js", "/js/icons.js", "/js/install.js",
   "/assets/logo-64.png", "/assets/logo-192.png", "/manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {

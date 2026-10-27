@@ -83,7 +83,7 @@ function paint(me, d, fromCache) {
   pill.hidden = !upcoming.length;
   $("me-tix-n").textContent = upcoming.length || "";
   if (!upcoming.length) { $("me-tix").hidden = true; pill.setAttribute("aria-expanded", "false"); }
-  if (!fromCache && !me.visitor) fetch("/api/chat", { cache: "no-store" }).then((r) => r.json()).then((c) => { const b = $("me-msg-n"); b.hidden = !c.unread; b.textContent = c.unread || ""; }).catch(() => {});
+  if (!fromCache && !me.visitor) fetch("/api/chat/unread", { cache: "no-store" }).then((r) => r.json()).then((c) => { const b = $("me-msg-n"); b.hidden = !c.unread; b.textContent = c.unread || ""; }).catch(() => {});
   loadUpcoming(fromCache); loadKnow(fromCache);
   if (!fromCache) wordThumb();
 }

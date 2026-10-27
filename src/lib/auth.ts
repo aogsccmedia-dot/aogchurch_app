@@ -99,7 +99,8 @@ export async function verifyGoogleToken(env: Env, token: string): Promise<Google
   if (!env.GOOGLE_CLIENT_ID) throw new HttpError(503, "Google sign-in isn't switched on yet.");
   const parts = token.split(".");
   if (parts.length !== 3) throw new HttpError(401, "Invalid Google credential.");
-  const header = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[0]))) as { kid?: string; alg?: string };
+  let header: { kid?: string; alg?: string };
+  try { header = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[0]))); } catch { throw new HttpError(401, "Invalid Google credential."); }
   if (header.alg !== "RS256") throw new HttpError(401, "Invalid Google credential.");
   const jwk = (await googleKeys()).find((k) => k.kid === header.kid);
   if (!jwk) { jwksCache = null; throw new HttpError(401, "Google key not recognised. Please try again."); }
@@ -108,11 +109,14 @@ export async function verifyGoogleToken(env: Env, token: string): Promise<Google
   const ok = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, b64urlToBytes(parts[2]) as BufferSource,
     new TextEncoder().encode(`${parts[0]}.${parts[1]}`));
   if (!ok) throw new HttpError(401, "Invalid Google credential.");
-  const c = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[1]))) as Record<string, unknown>;
+  let c: Record<string, unknown>;
+  try { c = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[1]))); } catch { throw new HttpError(401, "Invalid Google credential."); }
   const now = Math.floor(Date.now() / 1000);
   if (!["accounts.google.com", "https://accounts.google.com"].includes(String(c.iss))) throw new HttpError(401, "Invalid Google credential.");
   if (c.aud !== env.GOOGLE_CLIENT_ID) throw new HttpError(401, "Invalid Google credential.");
   if (typeof c.exp !== "number" || c.exp < now - 30) throw new HttpError(401, "Your Google sign-in expired. Please try again.");
+  if (typeof c.nbf === "number" && c.nbf > now + 60) throw new HttpError(401, "Invalid Google credential.");
+  if (typeof c.iat === "number" && c.iat > now + 300) throw new HttpError(401, "Invalid Google credential.");
   if (c.email_verified !== true && c.email_verified !== "true") throw new HttpError(401, "Please use a Google account with a verified email.");
   return { sub: String(c.sub), email: String(c.email).toLowerCase(), name: c.name as string, given_name: c.given_name as string, family_name: c.family_name as string, picture: c.picture as string };
 }
@@ -156,7 +160,14 @@ export function clearSessionCookie(req: Request) {
   return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure ? "; Secure" : ""}`;
 }
 
-export async function getSession(env: Env, req: Request): Promise<Session | null> {
+// One lookup per request: the visitor guard, the route and its helpers all ask, and all get the same answer.
+const sessionMemo = new WeakMap<Request, Promise<Session | null>>();
+export function getSession(env: Env, req: Request): Promise<Session | null> {
+  let p = sessionMemo.get(req);
+  if (!p) { p = loadSession(env, req); sessionMemo.set(req, p); p.catch(() => sessionMemo.delete(req)); }
+  return p;
+}
+async function loadSession(env: Env, req: Request): Promise<Session | null> {
   const token = getCookie(req, SESSION_COOKIE);
   if (!token) return null;
   const hash = await sha256Hex(token);
@@ -247,29 +258,39 @@ export async function consumeAdminCode(env: Env, id: string, code: string): Prom
   const { results } = await env.DB.prepare("SELECT id, email, user_id, code_hash, attempts FROM login_codes WHERE email = ? AND consumed_at IS NULL AND expires_at > ? ORDER BY created_at DESC LIMIT 5")
     .bind(first.email, now).all<{ id: string; email: string; user_id: string | null; code_hash: string; attempts: number }>();
   if (!results.length) throw new HttpError(400, "That code has expired. Tap Resend for a new one.");
-  const tries = results.reduce((n, r) => Math.max(n, r.attempts), 0);
+  // Count this guess against every live code for the address first (atomically), so parallel guesses can't slip past the limit.
+  const counted = await env.DB.prepare("UPDATE login_codes SET attempts = attempts + 1 WHERE email = ? AND consumed_at IS NULL AND expires_at > ? RETURNING attempts").bind(first.email, now).all<{ attempts: number }>();
+  const tries = counted.results.reduce((n, r) => Math.max(n, r.attempts), 0) - 1;
   if (tries >= MAX_ATTEMPTS * 2) throw new HttpError(429, "Too many attempts. Tap Resend for a new code.");
   for (const r of results) {
     if ((await sha256Hex(`${r.id}:${clean}`)) === r.code_hash) {
-      await env.DB.prepare("UPDATE login_codes SET consumed_at = ? WHERE email = ? AND consumed_at IS NULL").bind(now, r.email).run();
+      const used = await env.DB.prepare("UPDATE login_codes SET consumed_at = ? WHERE email = ? AND consumed_at IS NULL RETURNING id").bind(now, r.email).all();
+      if (!used.results.length) throw new HttpError(400, "That code has already been used. Tap Resend for a new one.");
       return { email: r.email, user_id: r.user_id };
     }
   }
-  await env.DB.prepare("UPDATE login_codes SET attempts = attempts + 1 WHERE email = ? AND consumed_at IS NULL").bind(first.email).run();
   const left = MAX_ATTEMPTS * 2 - tries - 1;
   throw new HttpError(400, left > 0 ? `That code isn't right. ${left} attempt${left === 1 ? "" : "s"} left.` : "Too many attempts. Tap Resend for a new code.");
 }
 
 export async function consumeLoginCode(env: Env, id: string, code: string): Promise<{ email: string; user_id: string | null }> {
-  const row = await env.DB.prepare("SELECT * FROM login_codes WHERE id = ?").bind(id)
-    .first<{ id: string; email: string; user_id: string | null; code_hash: string; attempts: number; expires_at: string; consumed_at: string | null }>();
-  if (!row || row.consumed_at || row.expires_at < new Date().toISOString()) throw new HttpError(400, "That code has expired. Please request a new one.");
-  if (row.attempts >= MAX_ATTEMPTS) throw new HttpError(429, "Too many attempts. Please request a new code.");
-  const clean = code.replace(/\D/g, "");
-  if ((await sha256Hex(`${id}:${clean}`)) !== row.code_hash) {
-    await env.DB.prepare("UPDATE login_codes SET attempts = attempts + 1 WHERE id = ?").bind(id).run();
-    throw new HttpError(400, `That code isn't right. ${MAX_ATTEMPTS - row.attempts - 1} attempt(s) left.`);
+  const now = new Date().toISOString();
+  const clean = String(code || "").replace(/\D/g, "");
+  // Count the guess first, atomically, so parallel guesses can't get past the limit.
+  const row = await env.DB.prepare(
+    "UPDATE login_codes SET attempts = attempts + 1 WHERE id = ? AND consumed_at IS NULL AND expires_at > ? AND attempts < ? RETURNING email, user_id, code_hash, attempts")
+    .bind(id, now, MAX_ATTEMPTS).first<{ email: string; user_id: string | null; code_hash: string; attempts: number }>();
+  if (!row) {
+    const r = await env.DB.prepare("SELECT attempts, consumed_at, expires_at FROM login_codes WHERE id = ?").bind(id).first<{ attempts: number; consumed_at: string | null; expires_at: string }>();
+    if (r && !r.consumed_at && r.expires_at > now && r.attempts >= MAX_ATTEMPTS) throw new HttpError(429, "Too many attempts. Please request a new code.");
+    throw new HttpError(400, "That code has expired. Please request a new one.");
   }
-  await env.DB.prepare("UPDATE login_codes SET consumed_at = ? WHERE id = ?").bind(new Date().toISOString(), id).run();
+  if (clean.length !== 6 || (await sha256Hex(`${id}:${clean}`)) !== row.code_hash) {
+    const left = MAX_ATTEMPTS - row.attempts;
+    throw new HttpError(left > 0 ? 400 : 429, left > 0 ? `That code isn't right. ${left} attempt${left === 1 ? "" : "s"} left.` : "Too many attempts. Please request a new code.");
+  }
+  // Use it once: only the first request to get here wins.
+  const used = await env.DB.prepare("UPDATE login_codes SET consumed_at = ? WHERE id = ? AND consumed_at IS NULL RETURNING id").bind(now, id).first();
+  if (!used) throw new HttpError(400, "That code has already been used. Please request a new one.");
   return { email: row.email, user_id: row.user_id };
 }

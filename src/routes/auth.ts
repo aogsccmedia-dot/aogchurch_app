@@ -150,8 +150,9 @@ export function authRoutes(router: Router, env: Env): void {
     await rateLimit(env, "pw-confirm", clientIp(req), 15, 900);
     const b = await readJson<{ challenge?: string; code?: string; password?: string }>(req);
     if (!b.challenge || !b.code) throw new HttpError(400, "Enter the 6-digit code from your email.");
-    const row = await env.DB.prepare("SELECT purpose, payload FROM login_codes WHERE id = ?").bind(b.challenge).first<{ purpose: string | null; payload: string | null }>();
+    const row = await env.DB.prepare("SELECT purpose, payload, email FROM login_codes WHERE id = ?").bind(String(b.challenge)).first<{ purpose: string | null; payload: string | null; email: string }>();
     if (!row) throw new HttpError(400, "That code has expired. Please ask for a new one.");
+    await rateLimit(env, "pw-confirm-acct", row.email.toLowerCase(), 12, 3600);   // guesses per email, whatever the network
     if (row.purpose === "reset") { const problem = passwordProblem(String(b.password || "")); if (problem) throw new HttpError(422, problem); }
     const r = await consumeLoginCode(env, b.challenge, b.code);
     const email = r.email.toLowerCase();
@@ -171,6 +172,8 @@ export function authRoutes(router: Router, env: Env): void {
       u = { id };
     } else {
       await env.DB.prepare("UPDATE users SET password_hash = COALESCE(?, password_hash), email_verified_at = COALESCE(email_verified_at, ?), visitor = 0 WHERE id = ?").bind(hash, new Date().toISOString(), u.id).run();
+      // A new password signs out every other device (whoever knew the old one is out).
+      if (row.purpose === "reset") await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(u.id).run();
     }
     return signIn(req, u.id, email);
   });

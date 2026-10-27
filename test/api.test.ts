@@ -1208,6 +1208,8 @@ describe("Ask SCC, youth tickets, event updates, prayer list and access requests
     assert.ok(env.EMAIL.outbox.slice(before).some((m) => JSON.stringify(m.to).includes("leader@example.com") && /New message from/.test(m.subject)), "leader emailed");
     const inbox = await (await call("/api/chat", { headers: { cookie: youth } })).json() as { unread: number; threads: { id: string }[] };
     assert.equal(inbox.unread, 1);
+    const quick = await (await call("/api/chat/unread", { headers: { cookie: youth } })).json() as { unread: number };
+    assert.equal(quick.unread, 1, "the light unread count matches the full inbox");
     assert.equal((await post(`/api/chat/${id}`, { body: "Hi! Happy to help." }, W(youth))).status, 200);
     const t = await (await call(`/api/chat/${id}`, { headers: { cookie: member } })).json() as { messages: { body: string; mine: boolean }[] };
     assert.deepEqual(t.messages.map((m) => [m.body, m.mine]), [["Hello leader", true], ["Hi! Happy to help.", false]]);
@@ -1565,5 +1567,43 @@ describe("Ticket emails say when entry starts", () => {
       calendarUrl: "#", eventUrl: "#", tickets: { count: 1, url: "#" }, entry: "17:30" });
     assert.match(m.html, /Entry from 17:30: tickets are scanned at the door from 17:30/);
     assert.match(m.text, /Entry from 17:30/);
+  });
+});
+
+describe("Security hardening", () => {
+  test("cross-site and malformed origins are refused cleanly, API responses carry safety headers", async () => {
+    const r1 = await call("/api/contact", { method: "POST", headers: { ...JSONH, origin: "null" }, body: "{}" });
+    assert.equal(r1.status, 403, "an opaque origin is treated as another site (and doesn't crash)");
+    const r2 = await call("/api/contact", { method: "POST", headers: { ...JSONH, "sec-fetch-site": "cross-site" }, body: "{}" });
+    assert.equal(r2.status, 403, "the browser says it's from another site");
+    const r3 = await call("/api/contact", { method: "POST", headers: { ...JSONH, origin: "https://evil.example" }, body: "{}" });
+    assert.equal(r3.status, 403);
+    const ok = await call("/api/health");
+    assert.equal(ok.headers.get("x-content-type-options"), "nosniff");
+    assert.equal(ok.headers.get("x-frame-options"), "SAMEORIGIN");
+    assert.equal((await call("/api/events/%E0%A4%A")).status, 400, "a broken address is a 400, not a server error");
+  });
+  test("emailed codes: parallel guessing can't beat the attempt limit, a code works once, a reset signs out other devices", async () => {
+    const e = await makeEnv();
+    const su = await post("/api/auth/password/signup", { name: "Thandi Dube", email: "thandi@example.com", password: "first-pass-123" }, {}, e);
+    const other = cookieOf(su);   // another device, signed in with the old password
+    const f = await (await post("/api/auth/password/forgot", { email: "thandi@example.com" }, {}, e)).json() as { challenge: string };
+    const code = /(\d{6})/.exec(e.EMAIL.outbox.at(-1)!.text!)![1];
+    const wrong = code === "000000" ? "111111" : "000000";
+    const guesses = await Promise.all(Array.from({ length: 8 }, () => post("/api/auth/password/confirm", { challenge: f.challenge, code: wrong, password: "new-pass-456" }, {}, e)));
+    assert.ok(guesses.every((g) => g.status === 400 || g.status === 429));
+    const n = e.DB._db.prepare("SELECT attempts FROM login_codes WHERE id = ?").get(f.challenge).attempts;
+    assert.ok(n <= 5, `attempts stop at the limit (got ${n})`);
+    assert.equal((await post("/api/auth/password/confirm", { challenge: f.challenge, code, password: "new-pass-456" }, {}, e)).status, 429, "after five wrong guesses even the right code is refused");
+    // A fresh code works once, and resetting signs the other device out.
+    const f2 = await (await post("/api/auth/password/forgot", { email: "thandi@example.com" }, {}, e)).json() as { challenge: string };
+    const code2 = /(\d{6})/.exec(e.EMAIL.outbox.at(-1)!.text!)![1];
+    const done = await post("/api/auth/password/confirm", { challenge: f2.challenge, code: code2, password: "new-pass-456" }, {}, e);
+    assert.equal(done.status, 200);
+    assert.equal((await post("/api/auth/password/confirm", { challenge: f2.challenge, code: code2, password: "again-pass-789" }, {}, e)).status, 400, "used once only");
+    const meOld = await (await call("/api/auth/me", { headers: { cookie: other } }, e)).json() as { user: unknown };
+    assert.equal(meOld.user, null, "the other device was signed out");
+    const meNew = await (await call("/api/auth/me", { headers: { cookie: cookieOf(done) } }, e)).json() as { user: { email: string } };
+    assert.equal(meNew.user.email, "thandi@example.com", "this device stays signed in");
   });
 });

@@ -80,7 +80,7 @@ export class Router {
       let ok = true;
       for (let i = 0; i < r.parts.length; i++) {
         const p = r.parts[i];
-        if (p.startsWith(":")) params[p.slice(1)] = decodeURIComponent(segs[i]);
+        if (p.startsWith(":")) { try { params[p.slice(1)] = decodeURIComponent(segs[i]); } catch { throw new HttpError(400, "Bad address."); } }
         else if (p !== segs[i]) { ok = false; break; }
       }
       if (!ok) continue;
