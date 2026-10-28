@@ -36,6 +36,7 @@ import { chatRoutes } from "./routes/chat.ts";
 import { processAnnouncements } from "./lib/newsletter.ts";
 import { processCheckins, processWelcomes } from "./lib/membership.ts";
 import { processServiceReminders } from "./lib/reminders.ts";
+import { processEventReminders } from "./lib/event-reminders.ts";
 import { backfillLeaders, processFollowups } from "./lib/leaders.ts";
 import { nextSundayAfternoon } from "./lib/time.ts";
 import { sendMail } from "./lib/email.ts";
@@ -125,6 +126,7 @@ export default {
       await processCheckins(env, now);
       await processWelcomes(env, now);
       await processServiceReminders(env, now).catch((e) => console.error("service reminders failed", e));
+      await processEventReminders(env, now).catch((e) => console.error("event ticket reminders failed", e));
       await backfillLeaders(env).catch((e) => console.error("leader catch-up failed", e));
       await processFollowups(env, now).catch((e) => console.error("leader follow-ups failed", e));
       await processFridayReminder(env, now).catch((e) => console.error("friday reminder failed", e));

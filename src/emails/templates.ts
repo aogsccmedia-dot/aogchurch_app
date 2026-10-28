@@ -884,3 +884,31 @@ export function whatsNew(b: Brand, o: { name: string | null; leader: boolean }) 
       all.map((x) => `• ${x}`).join("\n") + `\n\n${b.site}/me` + textFooter(b),
   };
 }
+
+/** Every Wednesday at 12:00 (SAST) until the event: to each person holding a ticket. */
+export function eventWeeklyReminder(b: Brand, o: { name: string; title: string; when: string; location: string | null; ref: string; cover?: string | null;
+  countdown: string; entry: string | null; tickets: number; ticketUrl: string; pdfUrl: string | null; eventUrl: string; calendarUrl: string; message?: string | null }) {
+  const many = o.tickets > 1;
+  return {
+    subject: `${o.countdown[0].toUpperCase()}${o.countdown.slice(1)}: ${o.title} 🎟`,
+    html: layout(b, {
+      preheader: `${o.title} is ${o.countdown}. Your ${many ? "tickets are" : "ticket is"} ready${o.entry ? `, doors from ${o.entry}` : ""}.`,
+      eyebrow: "Your ticket · reminder",
+      heading: `${esc(o.title)} is ${esc(o.countdown)}!`,
+      content: p(`Hi ${esc(o.name)},`) +
+        p(`Just a friendly reminder that you have ${many ? `<strong>${o.tickets} tickets</strong>` : "a <strong>ticket</strong>"} for <strong>${esc(o.title)}</strong>. We can't wait to see you there!`) +
+        eventBox({ title: o.title, when: o.when, location: o.location, ref: o.ref, cover: o.cover }) +
+        (o.message ? p(esc(o.message)) : "") +
+        `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 16px"><tr><td style="padding:16px 18px;border-radius:14px;background:#111111">
+          <p style="margin:0 0 4px;font:600 11px/1 ${SANS};letter-spacing:.2em;text-transform:uppercase;color:#ffffff">🎟 Your ${many ? `${o.tickets} tickets` : "ticket"}</p>
+          ${o.entry ? `<p style="margin:0 0 10px;font:600 16px/1.5 ${SANS};color:#ffffff">Entry from ${esc(o.entry)}: tickets are scanned at the door from ${esc(o.entry)}.</p>` : ""}
+          <p style="margin:0 0 14px;font:15px/1.6 ${SANS};color:#e8e8e8">Have ${many ? "them" : "it"} ready on your phone, or print ${many ? "them" : "it"}: ${many ? "each person needs their own QR code" : "the QR code is scanned at the door"}.</p>
+          ${o.pdfUrl ? `<a href="${esc(o.pdfUrl)}" style="display:inline-block;margin:0 8px 8px 0;padding:13px 20px;border-radius:9px;background:#ffffff;font:600 15px/1 ${SANS};color:#1a1206;text-decoration:none">Download ${many ? "tickets" : "ticket"} (PDF)</a>` : ""}
+          <a href="${esc(o.ticketUrl)}" style="display:inline-block;margin:0 0 8px;padding:12px 18px;border-radius:9px;border:1px solid #5a5a5a;font:600 14px/1 ${SANS};color:#ffffff;text-decoration:none">Show on my phone</a></td></tr></table>` +
+        p(`<a href="${esc(o.calendarUrl)}" style="color:${C.goldText}">Add it to your calendar</a> · bring a friend, there's room for everyone.`) +
+        button(o.eventUrl, "View event details"),
+      footerNote: "You're getting this because you have a ticket for this event. We send a short reminder every Wednesday until the day.",
+    }),
+    text: `Hi ${o.name},\n\n${o.title} is ${o.countdown}: ${o.when}${o.location ? `, ${o.location}` : ""}.\nYou have ${many ? `${o.tickets} tickets` : "a ticket"} (ref ${o.ref}).${o.entry ? `\nEntry from ${o.entry}: tickets are scanned at the door from ${o.entry}.` : ""}\n\nYour ${many ? "tickets" : "ticket"}: ${o.pdfUrl || o.ticketUrl}\nEvent details: ${o.eventUrl}\n\nSee you there!\nAOG Sandton City Church`,
+  };
+}

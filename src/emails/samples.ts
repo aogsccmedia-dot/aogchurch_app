@@ -17,6 +17,8 @@ export const SAMPLES: Sample[] = [
   { key: "event_approved", group: "Events", when: "You approve their payment — “Congratulations, you're confirmed”, with ticket and calendar invite.",
     render: (s) => T.eventConfirmation({ site: s }, { ...ev(s), status: "confirmed", approved: true, price: "R150 per person", message: null,
       calendarUrl: "https://calendar.google.com", outlookUrl: "https://outlook.live.com", icsUrl: `${s}/api/events/youth-worship-night-2026/calendar.ics` }) },
+  { key: "event_weekly_reminder", group: "Events", when: "Every Wednesday at 12:00 until the event — to everyone holding a ticket, with their own ticket links.",
+    render: (s) => T.eventWeeklyReminder({ site: s }, { ...ev(s), countdown: "in 4 weeks", entry: "17:30", tickets: 2, ticketUrl: `${s}/ticket?c=SAMPLE`, pdfUrl: `${s}/event?e=youth-worship-night-2026`, calendarUrl: "https://calendar.google.com" }) },
   { key: "event_confirmation", group: "Events", when: "Someone registers for a free event (confirmed straight away).",
     render: (s) => T.eventConfirmation({ site: s }, { ...ev(s), status: "confirmed", price: null, message: "Doors open at 18:00. Bring a friend!",
       calendarUrl: "https://calendar.google.com", outlookUrl: "https://outlook.live.com", icsUrl: `${s}/api/events/youth-worship-night-2026/calendar.ics` }) },

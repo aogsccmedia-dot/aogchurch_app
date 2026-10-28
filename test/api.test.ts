@@ -1607,3 +1607,45 @@ describe("Security hardening", () => {
     assert.equal(meNew.user.email, "thandi@example.com", "this device stays signed in");
   });
 });
+
+describe("Weekly ticket reminders", () => {
+  test("Wednesdays from 12:00 SAST: each ticket holder once a week with their own links, nobody else", async () => {
+    const e = await makeEnv();
+    const c = await adminCookie(e);
+    const mk = await post("/api/admin/events", { title: "Reminder Night", ministry_group: "youth", starts_at: "2030-11-29T15:30:00Z", is_published: true, rsvp_enabled: true, collect_phone: true }, A(c), e);
+    assert.equal(mk.status, 201);
+    const { slug } = await mk.json() as { slug: string };
+    const reg = (name: string, email: string, guests = "0") => { const fd = new FormData(); Object.entries({ name, email, phone: "0821234567", guests }).forEach(([k, v]) => fd.append(k, v)); return call(`/api/events/${slug}/register`, { method: "POST", body: fd }, e); };
+    assert.equal((await reg("Lerato Khumalo", "lerato@example.com", "1")).status, 201);
+    assert.equal((await reg("Bongani Dlamini", "bongani@example.com")).status, 201);
+    e.DB._db.prepare("UPDATE event_registrations SET status = 'cancelled' WHERE email = 'bongani@example.com'").run();
+    const { processEventReminders, countdown } = await import("../src/lib/event-reminders.ts");
+    const n0 = e.EMAIL.outbox.length;
+    assert.equal(await processEventReminders(e, new Date("2030-11-06T09:50:00Z")), 0, "Wednesday 11:50 SAST: not yet");
+    assert.equal(await processEventReminders(e, new Date("2030-11-07T10:10:00Z")), 0, "Thursday: no");
+    assert.equal(await processEventReminders(e, new Date("2030-11-06T10:05:00Z")), 1, "Wednesday 12:05 SAST: the one ticket holder");
+    const m = e.EMAIL.outbox.at(-1)!;
+    assert.match(JSON.stringify(m.to), /lerato@example\.com/);
+    assert.match(m.subject!, /Reminder Night/);
+    assert.match(m.html!, /2 tickets/);
+    assert.match(m.html!, /Entry from 17:30/);
+    assert.match(m.html!, /\/ticket\?c=[A-Z0-9]{16}/, "their own ticket link");
+    assert.ok(!e.EMAIL.outbox.slice(n0).some((x) => JSON.stringify(x.to).includes("bongani")), "cancelled bookings get nothing");
+    assert.equal(await processEventReminders(e, new Date("2030-11-06T10:15:00Z")), 0, "only once that week");
+    assert.equal(await processEventReminders(e, new Date("2030-11-13T10:01:00Z")), 1, "again the next Wednesday");
+    assert.equal(await processEventReminders(e, new Date("2030-12-04T10:01:00Z")), 0, "not after the event");
+    assert.equal(countdown("2030-11-29T15:30:00Z", new Date("2030-11-27T10:00:00Z")), "this Friday");
+    assert.equal(countdown("2030-11-29T15:30:00Z", new Date("2030-11-20T10:00:00Z")), "next Friday");
+    assert.equal(countdown("2030-11-29T15:30:00Z", new Date("2030-11-06T10:00:00Z")), "in 3 weeks");
+    // The admin can switch them off.
+    e.DB._db.prepare("INSERT INTO settings (key, value) VALUES ('event_weekly_reminders', '0')").run();
+    assert.equal(await processEventReminders(e, new Date("2030-11-20T10:01:00Z")), 0);
+    // A test of the real next event goes to the main admin inbox, once.
+    e.DB._db.prepare("INSERT INTO settings (key, value) VALUES ('event_reminder_test', '1')").run();
+    await processEventReminders(e, new Date("2030-11-21T08:00:00Z"));
+    const t = e.EMAIL.outbox.at(-1)!;
+    assert.match(JSON.stringify(t.to), /aogsccmedia@gmail\.com/);
+    assert.match(t.subject!, /^\[Test\] .*Reminder Night/);
+    assert.equal(e.DB._db.prepare("SELECT COUNT(*) AS n FROM settings WHERE key = 'event_reminder_test'").get().n, 0);
+  });
+});
