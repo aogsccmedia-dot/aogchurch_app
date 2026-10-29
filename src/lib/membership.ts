@@ -18,7 +18,13 @@ const BATCH = 25;
 
 export interface MemberRow { id: string; ref_code: string; first_name: string; preferred_name: string | null; last_name: string; email: string | null; status: string; created_at: string; next_checkin_at: string | null; last_confirmed_at: string | null; revoked_at: string | null }
 
-export const addMonths = (d: Date, n: number) => { const x = new Date(d); x.setUTCMonth(x.getUTCMonth() + n); return x; };
+/** n calendar months later, staying in that month (31 Oct + 4 months = 28/29 Feb, not 3 March). */
+export const addMonths = (d: Date, n: number) => {
+  const x = new Date(d), day = x.getUTCDate();
+  x.setUTCDate(1); x.setUTCMonth(x.getUTCMonth() + n);
+  x.setUTCDate(Math.min(day, new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + 1, 0)).getUTCDate()));
+  return x;
+};
 const firstName = (m: MemberRow) => m.preferred_name || m.first_name;
 
 async function sendCheckin(env: Env, m: MemberRow, reminder: boolean, now: Date) {

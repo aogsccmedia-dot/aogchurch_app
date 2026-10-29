@@ -68,7 +68,7 @@ async function load() {
     // The promo video plays here; its Get Ticket button jumps to the ticket form on this page.
     const { promoHtml, initPromos } = await import("./promo.js");
     const fig = $("ev-cover"); fig.classList.remove("cover-square", "alive", "photo"); fig.classList.add("cover-video");
-    fig.innerHTML = promoHtml(event, { ticket: event.registration_open, href: "#reg-card" });
+    fig.innerHTML = promoHtml(event, { ticket: event.registration_open, href: "#reg-card", reel: true });
     initPromos(fig, { sound: true });
   } else if (event.cover_url) $("ev-cover").innerHTML = `<img src="${esc(event.cover_url)}" alt="${esc(event.title)} poster">`;
   if (event.capacity) { $("ev-cap-row").hidden = false; $("ev-cap").textContent = event.spots_left > 0 ? `${event.spots_left} of ${event.capacity} spots left` : "Fully booked — join the waitlist"; }

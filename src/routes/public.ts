@@ -30,11 +30,20 @@ async function eventCounts(env: Env, id: string) {
   return { people: await seatsTaken(env, id) };
 }
 
+/** Extra clips the event page rotates after the main promo (only our own /assets/events videos). */
+function playlist(e: EventRow): { src: string; label: string }[] {
+  try {
+    const v = JSON.parse(e.video_playlist || "[]") as { src?: unknown; label?: unknown }[];
+    return (Array.isArray(v) ? v : []).filter((x) => typeof x?.src === "string" && /^\/assets\/events\/[\w-]+$/.test(x.src))
+      .slice(0, 12).map((x) => ({ src: String(x.src), label: String(x.label || "").slice(0, 60) }));
+  } catch { return []; }
+}
+
 function publicEvent(e: EventRow, counts: { people: number }) {
   const closed = !e.rsvp_enabled || (e.registration_closes_at ? e.registration_closes_at < new Date().toISOString() : false) || e.starts_at < new Date(Date.now() - 3 * 3600_000).toISOString();
   return {
     id: e.id, slug: e.slug, title: e.title, category: e.category, description: e.description, starts_at: e.starts_at, ends_at: e.ends_at,
-    location: e.location, cover_video: e.cover_video || null, cover_url: e.cover_attachment_id ? `/api/media/${e.cover_attachment_id}` : e.cover_image || null, price_label: e.price_label,
+    location: e.location, cover_video: e.cover_video || null, videos: playlist(e), cover_url: e.cover_attachment_id ? `/api/media/${e.cover_attachment_id}` : e.cover_image || null, price_label: e.price_label,
     ticket_price: e.ticket_price || null, requires_pop: !!e.requires_pop, auto_approve: !!e.auto_approve,
     registration_open: !closed, capacity: e.capacity, spots_left: e.capacity ? Math.max(0, e.capacity - counts.people) : null,
     collect_phone: !!e.collect_phone,

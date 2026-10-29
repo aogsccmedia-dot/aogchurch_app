@@ -2439,3 +2439,23 @@ section, .block, .panel, .card { min-width: 0; }
 .bank-rows :is(dt, dd, b, span, div), .pay-head :is(b, span), .reg-done * { overflow-wrap: anywhere; }
 .reg-card form > .btn { width: 100%; justify-content: center; }
 .bank-row { grid-template-columns: minmax(90px, 38%) minmax(0, 1fr); }
+
+/* Event page reel: the promo and the team's clips, one after another, crossfading with a gentle zoom */
+.promo.reel .reel-v { position: absolute; inset: 0; opacity: 0; transform: scale(1.045); transition: opacity .7s ease, transform 7s cubic-bezier(.2, .7, .2, 1); }
+.promo.reel .reel-v.on { opacity: 1; transform: scale(1); z-index: 1; }
+.promo.reel::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 26%; z-index: 2; pointer-events: none; background: linear-gradient(rgba(0, 0, 0, .42), transparent); }
+.promo.reel::after { z-index: 2; }
+.reel-bars { position: absolute; z-index: 3; top: clamp(8px, 1.6vw, 14px); left: clamp(10px, 2vw, 18px); right: clamp(10px, 2vw, 18px); display: flex; gap: 5px; }
+.reel-bar { flex: 1; min-width: 0; height: 16px; padding: 6px 0; border: 0; background: none; cursor: pointer; }
+.reel-bar i { display: block; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, .38); overflow: hidden; position: relative; }
+.reel-bar i::after { content: ""; position: absolute; inset: 0; width: var(--p, 0%); background: #fff; border-radius: inherit; transition: width .25s linear; }
+.reel-bar:hover i { background: rgba(255, 255, 255, .6); }
+.reel-bar:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 4px; }
+.reel-name { position: absolute; z-index: 3; top: clamp(26px, 3.6vw, 34px); left: clamp(10px, 2vw, 18px); max-width: 70%; padding: 4px 10px; border-radius: 999px;
+  background: rgba(0, 0, 0, .35); backdrop-filter: blur(6px); color: #fff; font-size: 12.5px; font-weight: 500; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: opacity .25s ease, transform .25s ease; }
+.reel-name.swap { opacity: 0; transform: translateY(-4px); }
+.promo.reel .promo-sound, .promo.reel .promo-ticket { z-index: 3; }
+@media (prefers-reduced-motion: reduce) { .promo.reel .reel-v { transition: opacity .3s ease; transform: none; } }
+.reel-name { left: auto; right: clamp(10px, 2vw, 18px); max-width: 55%; }
+@media (max-width: 600px) { .reel-name { display: none; } }
