@@ -1,0 +1,22 @@
+# FreeCreator UX: every day, researches how the best presentation and production tools work and ships one polished
+# improvement that makes FreeCreator Online easier for church volunteers. See .agents/freecreator/MISSION.md.
+name: "Agent: FreeCreator UX"
+
+on:
+  schedule:
+    - cron: "41 3 * * *"   # 05:41 South African time, daily
+  workflow_dispatch:
+
+concurrency: { group: agent-freecreator, cancel-in-progress: false }
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+  issues: write
+
+jobs:
+  run:
+    uses: ./.github/workflows/agent-run.yml
+    with: { agent: freecreator, max_turns: 180 }
+    secrets: inherit

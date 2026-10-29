@@ -1,0 +1,52 @@
+# Production watch (no AI): every hour, checks that the live site works and its protections are in place.
+# Something broken → opens (or updates) an issue and asks the Guardian agent to look straight away.
+# Fixed again → closes the issue.
+name: Production watch
+
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+concurrency: { group: prod-watch, cancel-in-progress: true }
+
+permissions:
+  contents: read
+  issues: write
+  actions: write
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Check production
+        id: smoke
+        run: |
+          set +e
+          node tools/agents/smoke.mjs https://aogchurch-app.aogsccmedia.workers.dev --json report.json | tee smoke.txt
+          code=${PIPESTATUS[0]}
+          if [ $code -ne 0 ]; then sleep 90; node tools/agents/smoke.mjs https://aogchurch-app.aogsccmedia.workers.dev --json report.json | tee smoke.txt; code=${PIPESTATUS[0]}; fi
+          echo "failed=$([ $code -ne 0 ] && echo 1 || echo 0)" >> "$GITHUB_OUTPUT"
+          tail -1 smoke.txt >> "$GITHUB_STEP_SUMMARY"
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FAILED: ${{ steps.smoke.outputs.failed }}
+        run: |
+          gh label create prod-down --color b4321f --description "Production check failing" --force > /dev/null 2>&1 || true
+          open=$(gh issue list --label prod-down --state open --json number -q '.[0].number')
+          if [ "$FAILED" = 1 ]; then
+            body=$(printf "The hourly production check is failing (checked twice, 90 s apart).\n\n\`\`\`\n%s\n\`\`\`\nRun: %s/%s/actions/runs/%s" "$(grep -E '^✗|checks passed' smoke.txt | head -40)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+            if [ -n "$open" ]; then gh issue comment "$open" --body "$body"
+            else
+              gh issue create --title "Production check failing" --label prod-down --body "$body"
+              gh workflow run agent-guardian.yml --ref main || true   # ask the Guardian to fix it now (skips quietly without credits)
+            fi
+            exit 1
+          elif [ -n "$open" ]; then
+            gh issue close "$open" --comment "✅ Production checks pass again ($(date -u +%Y-%m-%dT%H:%MZ))."
+          fi

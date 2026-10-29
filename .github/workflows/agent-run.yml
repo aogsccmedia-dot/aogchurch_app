@@ -1,0 +1,185 @@
+# One autonomous agent run (used by agent-guardian.yml and agent-freecreator.yml).
+#
+# Three jobs, so neither the AI nor the agent's code ever holds write access:
+#   think  — Claude Code works on a checkout with a read-only token and no deploy secrets, and produces a patch.
+#   verify — no AI, no secrets, read-only: applies the patch to fresh main, rebuilds, type-checks, runs the tests and the
+#            Worker build, and runs the safety gate (tools/agents/gate.mjs, taken from main, not from the patch).
+#   ship   — no AI, and none of the agent's code runs here: applies the verified patch, opens a pull request, and only if
+#            verify said so merges, deploys, smoke-tests production and rolls back automatically if production got worse.
+#
+# Needs ONE of these repository secrets (Settings → Secrets and variables → Actions):
+#   ANTHROPIC_API_KEY        — an Anthropic API key (console.anthropic.com), billed per use; or
+#   CLAUDE_CODE_OAUTH_TOKEN  — from `claude setup-token`, uses a Claude Pro/Max subscription's allowance.
+# Without either, runs skip quietly. When the credits/allowance run out, that day's run stops and the next one tries again.
+# Optional: FREECREATOR_REPO_TOKEN (fine-grained token with Contents: write on aogsccmedia-dot/scc-presenter) lets the
+# FreeCreator agent improve the desktop app's shared screens too; without it, it improves the online-only parts.
+# Optional repository variable AGENT_MODEL (e.g. claude-opus-5-5) to pick the model.
+name: Agent run
+
+on:
+  workflow_call:
+    inputs:
+      agent: { type: string, required: true }        # guardian | freecreator
+      max_turns: { type: number, default: 120 }
+
+env:
+  SMOKE_URL: https://aogchurch-app.aogsccmedia.workers.dev   # aogsccyouth.com blocks GitHub's machines; this is the same Worker
+
+jobs:
+  think:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    outputs:
+      ready: ${{ steps.key.outputs.ready }}
+      mode: ${{ steps.mode.outputs.mode }}
+      changed: ${{ steps.patch.outputs.changed }}
+    steps:
+      - name: Credits available?
+        id: key
+        env:
+          A: ${{ secrets.ANTHROPIC_API_KEY }}
+          O: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -n "$A$O" ]; then echo "ready=1" >> "$GITHUB_OUTPUT"
+          else echo "::notice title=Agent skipped::Add ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN as a repository secret to switch the ${{ inputs.agent }} agent on."; echo "ready=0" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.ready == '1'
+        with: { fetch-depth: 0, persist-credentials: false }
+
+      - uses: actions/setup-node@v4
+        if: steps.key.outputs.ready == '1'
+        with: { node-version: 22 }
+
+      - name: Install
+        if: steps.key.outputs.ready == '1'
+        run: npm install --no-audit --no-fund
+
+      - name: Which FreeCreator mode?
+        id: mode
+        if: steps.key.outputs.ready == '1'
+        env:
+          T: ${{ secrets.FREECREATOR_REPO_TOKEN }}
+        run: |
+          mode=online
+          if [ "${{ inputs.agent }}" = freecreator ] && [ -n "$T" ]; then
+            git clone -q --depth 50 https://github.com/aogsccmedia-dot/scc-presenter ../scc-presenter && mode=full
+            # Start from the desktop app's latest screens.
+            [ "$mode" = full ] && python3 tools/freecreator/sync.py ../scc-presenter
+          fi
+          echo "$mode" > RUN_MODE.txt
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+
+      - name: Production check before starting
+        if: steps.key.outputs.ready == '1'
+        run: |
+          node tools/agents/smoke.mjs "$SMOKE_URL" --json PRODUCTION_REPORT.json || true
+          mkdir -p "$RUNNER_TEMP/out" && cp PRODUCTION_REPORT.json "$RUNNER_TEMP/out/baseline.json"
+
+      - name: Browser for checking the UI
+        if: steps.key.outputs.ready == '1'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pw" --no-audit --no-fund playwright@1.49.1 > /dev/null
+          npx --prefix "$RUNNER_TEMP/pw" playwright install --with-deps chromium > /dev/null
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/pw/node_modules/playwright/index.mjs" >> "$GITHUB_ENV"
+
+      - name: Agent at work
+        id: claude
+        if: steps.key.outputs.ready == '1'
+        continue-on-error: true   # out of credits or a hiccup: ship whatever finished, try again tomorrow
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          prompt: |
+            You are the ${{ inputs.agent }} agent for the AOG Sandton City Church website (repository ${{ github.repository }}).
+            Use `date -u` for today's date.
+            1. Read CLAUDE.md (the rules you must never break).
+            2. Read .agents/${{ inputs.agent }}/MISSION.md and follow it exactly. Your notes from earlier days are in .agents/${{ inputs.agent }}/JOURNAL.md.
+            RUN_MODE.txt and PRODUCTION_REPORT.json in the repo root describe today's setup and production health (don't commit them).
+            A headless Chromium is installed: import Playwright from the path in the PLAYWRIGHT_MODULE environment variable.
+            You have no way to push, merge or deploy: when you finish, a separate automatic step checks your work and ships it if every check passes.
+          claude_args: |
+            --max-turns ${{ inputs.max_turns }}
+            ${{ vars.AGENT_MODEL && format('--model {0}', vars.AGENT_MODEL) || '' }}
+            --allowedTools "Read,Write,Edit,MultiEdit,Glob,Grep,LS,TodoWrite,WebSearch,WebFetch,Bash(npm test),Bash(npm test:*),Bash(npm run typecheck),Bash(python3 tools/site/build.py),Bash(python3 tools/freecreator/sync.py:*),Bash(node:*),Bash(npx:*),Bash(cd:*),Bash(git diff:*),Bash(git status:*),Bash(git log:*),Bash(git show:*),Bash(ls:*),Bash(cat:*),Bash(head:*),Bash(tail:*),Bash(grep:*),Bash(wc:*),Bash(date:*),Bash(mkdir:*)"
+
+      - name: Package the change
+        id: patch
+        if: steps.key.outputs.ready == '1'
+        run: |
+          rm -f PRODUCTION_REPORT.json RUN_MODE.txt
+          rm -rf dist .wrangler
+          git add -A
+          git diff --cached --binary origin/main > "$RUNNER_TEMP/out/app.patch" || true
+          if [ -d ../scc-presenter ]; then (cd ../scc-presenter && git add -A && git diff --cached --binary > "$RUNNER_TEMP/out/scc.patch") || true; fi
+          cp ".agents/${{ inputs.agent }}/LAST_RUN.md" "$RUNNER_TEMP/out/LAST_RUN.md" 2>/dev/null || echo "Automated ${{ inputs.agent }} run." > "$RUNNER_TEMP/out/LAST_RUN.md"
+          if [ -s "$RUNNER_TEMP/out/app.patch" ] || [ -s "$RUNNER_TEMP/out/scc.patch" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
+          echo "### ${{ inputs.agent }}: $(git diff --cached --stat origin/main | tail -1)" >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/out/LAST_RUN.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.patch.outputs.changed == '1'
+        with:
+          name: agent-${{ inputs.agent }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/out
+          retention-days: 30
+
+  verify:
+    needs: think
+    if: needs.think.outputs.changed == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, ref: main, persist-credentials: false }
+      - name: Keep a trusted copy of the agent tools (from main, before any change is applied)
+        run: cp -r tools/agents "$RUNNER_TEMP/trusted"
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install --no-audit --no-fund
+      - uses: actions/download-artifact@v4
+        with:
+          name: agent-${{ inputs.agent }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/in
+      - name: Build, type-check, test, gate (no AI, no secrets)
+        run: bash "$RUNNER_TEMP/trusted/verify.sh" "${{ inputs.agent }}" "${{ needs.think.outputs.mode || 'online' }}" "$RUNNER_TEMP/in" "$RUNNER_TEMP/verified" "$RUNNER_TEMP/trusted"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-${{ inputs.agent }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/verified
+          retention-days: 30
+
+  ship:
+    needs: [think, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency: { group: agent-ship, cancel-in-progress: false }   # one agent ships at a time
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, ref: main }
+      - name: Trusted agent tools (from main)
+        run: cp -r tools/agents "$RUNNER_TEMP/trusted"
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-${{ inputs.agent }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/verified
+      - name: Ship, deploy, check production, roll back if worse (no AI)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SCC_TOKEN: ${{ secrets.FREECREATOR_REPO_TOKEN }}
+        run: bash "$RUNNER_TEMP/trusted/ship.sh" "${{ inputs.agent }}" "$RUNNER_TEMP/verified" "$RUNNER_TEMP/trusted"

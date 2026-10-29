@@ -1,0 +1,22 @@
+# The Guardian: every day, audits a slice of the site for security holes and broken behaviour, fixes what it finds
+# (with tests), and ships the fix only if every automatic check passes. See .agents/guardian/MISSION.md.
+name: "Agent: Guardian (security & reliability)"
+
+on:
+  schedule:
+    - cron: "17 1 * * *"   # 03:17 South African time, daily
+  workflow_dispatch:       # Actions → this workflow → Run workflow (also started by the production watch when something breaks)
+
+concurrency: { group: agent-guardian, cancel-in-progress: false }
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+  issues: write
+
+jobs:
+  run:
+    uses: ./.github/workflows/agent-run.yml
+    with: { agent: guardian, max_turns: 150 }
+    secrets: inherit
