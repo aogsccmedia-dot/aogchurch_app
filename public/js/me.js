@@ -162,6 +162,7 @@ async function loadUpcoming(fromCache) {
       <span class="ev-body"><b>${esc(e.title)}</b><small>${esc(fmt(e.starts_at))}${e.price_label ? ` · ${esc(e.price_label)}` : ""}</small>
       ${e.registration_open ? `<span class="btn btn-sm btn-gold btn-glow">${icon("ticket")} Get Ticket</span>` : ""}</span></a>`).join("")
     : `<div class="slide empty-slide"><b>Nothing new just yet</b><p class="muted-text">New events appear here first.</p></div>`;
+  const n = $("me-upcoming-n"); if (n) n.textContent = list.length ? `${list.length} ${list.length === 1 ? "event" : "events"}` : "";
 }
 
 // What to know: service times and the next vote.
@@ -176,3 +177,13 @@ async function loadKnow(fromCache) {
   const open = (v?.polls || []).find((x) => x.state === "open"), next = (v?.polls || []).find((x) => x.state === "upcoming");
   s.textContent = v?.member === false ? "For confirmed members" : open ? `Voting is open: ${open.title}` : next ? `Next: ${next.title}, ${new Date(next.opens_at).toLocaleDateString("en-ZA", { day: "numeric", month: "long" })}` : v ? `No votes planned yet in ${new Date().getFullYear()}` : "For confirmed members";
 }
+
+// Service times and Coming up are fold-outs: each person's choice (open or closed) is remembered on this device.
+for (const d of document.querySelectorAll("details[data-remember]")) {
+  const k = "scc-open:" + d.dataset.remember;
+  try { if (localStorage.getItem(k) === "1") d.open = true; } catch { /* storage blocked */ }
+  d.addEventListener("toggle", () => { try { localStorage.setItem(k, d.open ? "1" : "0"); } catch { /* storage blocked */ } });
+}
+// "Get Ticket" and other links to #upcoming open it first.
+document.addEventListener("click", (e) => { const a = e.target.closest?.('a[href="#upcoming"]'); if (a) { const d = document.getElementById("upcoming"); if (d) d.open = true; } });
+if (location.hash === "#upcoming") { const d = document.getElementById("upcoming"); if (d) d.open = true; }

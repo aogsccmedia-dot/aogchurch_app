@@ -25,15 +25,15 @@
       </section>
       <div id="me-member"></div>
       <a class="goye-card member-only" href="/go"><span class="goye-ico">{{i:globe}}</span><span class="goye-txt"><small>Go Ye · our main calling</small><b>Share the good news this week</b><em>Met someone? Log them here and the Call Office follows up.</em></span><span class="goye-go">{{arrow}}</span></a>
-      <section class="me-section">
-        <div class="me-head"><h2>Service times</h2></div>
+      <details class="me-section me-drop" id="me-times" data-remember="me-times">
+        <summary class="me-head"><h2>{{i:clock}} Service times</h2><span class="me-drop-hint">Every week</span></summary>
         <div class="svc-list" id="svc-list"><small>Loading…</small></div>
-      </section>
-      <section class="me-section" id="upcoming">
-        <div class="me-head"><h2>Coming up at church</h2></div>
+      </details>
+      <details class="me-section me-drop" id="upcoming" data-remember="me-upcoming">
+        <summary class="me-head"><h2>{{i:calendar}} Coming up at church</h2><span class="me-drop-hint" id="me-upcoming-n"></span></summary>
         <div class="promo-slot" id="me-promo" hidden></div>
         <div id="me-upcoming" class="slider" aria-label="Upcoming events"></div>
-      </section>
+      </details>
       <section class="me-section tp-wrap" id="tp-me" hidden></section>
       <section class="me-section" id="me-tools" hidden>
         <div class="me-head"><h2>Your tools</h2><span class="me-more" id="me-tools-role"></span></div>
