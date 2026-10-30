@@ -8,8 +8,8 @@
   <meta name="theme-color" content="#f7f7fb">
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="stylesheet" href="/css/base.min.css?v=cd4a0a5c77">
-  <link rel="stylesheet" href="/css/pages.min.css?v=3dfce4f506">
-  <link rel="stylesheet" href="/css/admin.min.css?v=a0b1f6132c">
+  <link rel="stylesheet" href="/css/pages.min.css?v=c04d11f938">
+  <link rel="stylesheet" href="/css/admin.min.css?v=887311ffae">
   <script src="/js/switch-boot.js?v=945410a364"></script>
 </head>
 <body class="admin">
@@ -69,7 +69,6 @@
         <p class="nav-group">Settings</p>
         <button data-tab="settings" data-tone="slate">Site settings</button>
         <button data-tab="team" data-tone="slate" data-super>Team &amp; roles <span class="badge" data-count="access_requests"></span></button>
-        <button data-tab="assistant" data-tone="slate" data-super>Ask SCC</button>
         <button data-tab="code" data-tone="slate" data-super>Code changes <span class="badge" id="code-badge"></span></button>
       </nav>
       <a class="side-promo" id="side-promo" href="#calls">
@@ -448,12 +447,6 @@
         <div id="vt-list" class="list"><p class="muted">Loading…</p></div>
       </section>
 
-      <section data-view="assistant" hidden>
-        <header class="vh"><div><p class="eyebrow gold">Members' chat</p><h1>Ask SCC</h1><p class="muted">A concierge and helper agents answer from the church's own data. The AI wording is an open-weight model on Cloudflare, rolled out gradually and widened or rolled back automatically.</p></div>
-          <button class="btn" type="button" id="as-refresh">Refresh</button></header>
-        <div id="as-body"><p class="muted">Loading…</p></div>
-      </section>
-
       <section data-view="team" hidden>
         <header class="vh"><div><p class="eyebrow gold">Main admin only</p><h1>Team &amp; roles</h1><p class="muted"><b>Admins</b> and <b>youth leaders</b> only open what you tick for them (admins start with Reports and Weekly services; only admins can look after members). They use their normal sign-in, with no codes. Only your main account gets an emailed code.</p></div></header>
         <div class="card" id="team-requests-card" hidden><h3>Access requests</h3><div id="team-requests" class="list"></div></div>
@@ -499,10 +492,10 @@
   <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
-  <link rel="modulepreload" href="/js/admin-more.js?v=70d1d106aa">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=12983518cb">
+  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
@@ -512,10 +505,10 @@
   <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
-  <link rel="modulepreload" href="/js/admin-more.js?v=70d1d106aa">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=12983518cb">
+  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
@@ -525,10 +518,10 @@
   <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
-  <link rel="modulepreload" href="/js/admin-more.js?v=70d1d106aa">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=12983518cb">
+  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
@@ -538,10 +531,10 @@
   <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
-  <link rel="modulepreload" href="/js/admin-more.js?v=70d1d106aa">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=12983518cb">
+  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
@@ -551,10 +544,10 @@
   <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
-  <link rel="modulepreload" href="/js/admin-more.js?v=70d1d106aa">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=12983518cb">
+  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
@@ -564,10 +557,10 @@
   <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
-  <link rel="modulepreload" href="/js/admin-more.js?v=70d1d106aa">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=12983518cb">
+  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
@@ -577,10 +570,10 @@
   <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
-  <link rel="modulepreload" href="/js/admin-more.js?v=70d1d106aa">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=12983518cb">
+  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
@@ -590,10 +583,10 @@
   <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
-  <link rel="modulepreload" href="/js/admin-more.js?v=70d1d106aa">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=12983518cb">
+  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
@@ -603,10 +596,88 @@
   <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
-  <link rel="modulepreload" href="/js/admin-more.js?v=70d1d106aa">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=12983518cb">
+  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js">
@@ -622,6 +693,6 @@
   <link rel="modulepreload" href="/js/portal.js">
   <link rel="modulepreload" href="/js/faces.js">
   <link rel="modulepreload" href="/js/site.js">
-  <script type="module" src="/js/admin.js?v=9be22977aa"></script>
+  <script type="module" src="/js/admin.js?v=e34bbb0c7e"></script>
 </body>
 </html>

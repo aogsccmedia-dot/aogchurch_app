@@ -1163,7 +1163,7 @@ describe("youth leaders, Fridays and voting", () => {
   });
 });
 
-describe("Ask SCC, youth tickets, event updates, prayer list and access requests", () => {
+describe("Youth tickets, messages, event updates, prayer list and access requests", () => {
   const db = () => env.DB._db;
   let member = "", youth = "";
   before(async () => {
@@ -1183,19 +1183,6 @@ describe("Ask SCC, youth tickets, event updates, prayer list and access requests
   });
   const H = (cookie: string) => ({ cookie, "x-scc-admin": "1", ...JSONH });
 
-  test("the concierge sends each question to the right agent (eval set)", async () => {
-    const { route } = await import("../src/lib/agents.ts");
-    const cases: [string, string][] = [
-      ["What's coming up this weekend?", "whatson"], ["What's happening this week at church?", "whatson"], ["what's on this month", "whatson"], ["Show me the next events", "events"], ["When is the youth service?", "services"], ["what time does church start on sunday", "services"],
-      ["Do I have a ticket?", "tickets"], ["Where is the church?", "visit"], ["I need prayer", "prayer"],
-      ["Are there any votes open?", "votes"], ["How do I become a member?", "join"], ["hi", "concierge"], ["What's on the programme in November?", "whatson"], ["Show the church programme", "programme"],
-    ];
-    for (const [q, want] of cases) assert.equal(route(q), want, q);
-    const wk = await (await post("/api/assistant/chat", { message: "What's happening this week?" }, { cookie: member })).json() as { reply: { agent: string; cards: { title: string }[] } };
-    assert.equal(wk.reply.agent, "whatson"); assert.ok(wk.reply.cards.some((c) => c.title === "Youth Night"), "pulls this week's events");
-    assert.equal(route("how much is it?", "events"), "events", "follow-ups stay with the last helper");
-  });
-
   test("messages: members write to leaders (not to each other), leaders reply, the other person is emailed", async () => {
     const W = (cookie: string) => ({ cookie, "x-scc-admin": "1" });
     db().prepare("INSERT OR IGNORE INTO users (id, email, name, given_name) VALUES ('msg-other', 'other@example.com', 'Other M', 'Other')").run();
@@ -1214,50 +1201,6 @@ describe("Ask SCC, youth tickets, event updates, prayer list and access requests
     const t = await (await call(`/api/chat/${id}`, { headers: { cookie: member } })).json() as { messages: { body: string; mine: boolean }[] };
     assert.deepEqual(t.messages.map((m) => [m.body, m.mine]), [["Hello leader", true], ["Hi! Happy to help.", false]]);
     assert.equal((await call(`/api/chat/${id}`, { headers: { cookie: "scc_session=nobody" } })).status, 401);
-  });
-
-  test("smart chat streams the answer as it's written; quick questions use the fast model", async () => {
-    const calls: { model: string; stream: boolean }[] = [];
-    const e = env as unknown as { AI?: unknown };
-    e.AI = { run: async (model: string, input: Record<string, unknown>) => {
-      calls.push({ model, stream: !!input.stream });
-      if (input.text) return { data: (input.text as string[]).map(() => Array(8).fill(0.1)) };
-      if (!input.stream) return { response: "Two." };
-      const enc = new TextEncoder();
-      return new ReadableStream({ start(c) { for (const t of ["1 + 1 ", "is **2**."]) c.enqueue(enc.encode(`data: ${JSON.stringify({ response: t })}\n\n`)); c.enqueue(enc.encode("data: [DONE]\n\n")); c.close(); } });
-    } };
-    try {
-      const r = await post("/api/assistant/chat", { message: "What is 1+1?", stream: true }, { cookie: member });
-      assert.match(r.headers.get("content-type") || "", /event-stream/);
-      const body = await r.text();
-      assert.match(body, /event: meta/); assert.match(body, /event: t\ndata: \{"t":"1 \+ 1 "\}/);
-      const done = JSON.parse(/event: done\ndata: (.*)/.exec(body)![1]) as { text: string };
-      assert.equal(done.text, "1 + 1 is 2.");
-      assert.ok(calls.some((c) => c.stream && /8b/.test(c.model)), "simple question → fast model");
-      assert.ok(!calls.some((c) => !c.stream && !c.model.includes("bge")) , "no extra non-stream call");
-      calls.length = 0;
-      await post("/api/assistant/chat", { message: "Explain the meaning of grace in Ephesians 2", stream: true }, { cookie: member }).then((x) => x.text());
-      assert.ok(calls.some((c) => c.stream && /70b/.test(c.model)), "deeper question → big model");
-    } finally { delete e.AI; }
-  });
-
-  test("chat: sign-in required, built-in answers with event cards and calendar links; AI text is cleaned; rollout buckets are stable", async () => {
-    assert.equal((await post("/api/assistant/chat", { message: "hi" })).status, 401);
-    const r = await post("/api/assistant/chat", { message: "What's coming up?" }, { cookie: member });
-    assert.equal(r.status, 200);
-    const d = await r.json() as { id: string; reply: { agent: string; cards: { kind: string; title: string; google: string; ics: string }[] } };
-    assert.equal(d.reply.agent, "events");
-    const yn = d.reply.cards.find((c) => c.title === "Youth Night")!;
-    assert.match(yn.google, /calendar\.google\.com/); assert.match(yn.ics, /calendar\.ics$/);
-    assert.equal((await post("/api/assistant/feedback", { id: d.id, rating: 1 }, { cookie: member })).status, 200);
-    const tk = await (await post("/api/assistant/chat", { message: "Do I have a ticket?" }, { cookie: member })).json() as { reply: { agent: string } };
-    assert.equal(tk.reply.agent, "tickets");
-    const { cleanAi, bucket } = await import("../src/routes/assistant.ts");
-    assert.equal(cleanAi("**See** [the page](https://evil.example) at https://x.y now"), "See the page at  now");
-    assert.equal(bucket("user-1"), bucket("user-1"));
-    const cal = await call("/api/calendar/church.ics");
-    const ics = await cal.text();
-    assert.match(ics, /BEGIN:VCALENDAR/); assert.match(ics, /RRULE:FREQ=WEEKLY/); assert.match(ics, /Youth Night/);
   });
 
   test("youth leaders approve tickets for youth events only, and can tell ticket holders about a change", async () => {
@@ -1471,7 +1414,7 @@ describe("Visitors", () => {
     assert.equal(me.visitor, true); assert.equal(me.is_admin, false); assert.equal(me.member, null);
     assert.equal((await call("/api/events", { headers: { cookie: c } }, g)).status, 200, "events are open to visitors");
     assert.equal((await call("/api/me", { headers: { cookie: c } }, g)).status, 200, "their own tickets");
-    for (const [path, method] of [["/api/chat", "GET"], ["/api/chat/start", "POST"], ["/api/me/complaints", "POST"], ["/api/votes", "GET"], ["/api/assistant/chat", "POST"], ["/api/poster/options", "GET"], ["/api/freecreator/access", "GET"], ["/api/admin/stats", "GET"]] as const) {
+    for (const [path, method] of [["/api/chat", "GET"], ["/api/chat/start", "POST"], ["/api/me/complaints", "POST"], ["/api/votes", "GET"], ["/api/poster/options", "GET"], ["/api/freecreator/access", "GET"], ["/api/admin/stats", "GET"]] as const) {
       const r = await call(path, { method, headers: { cookie: c, "x-scc-admin": "1", "Content-Type": "application/json" }, body: method === "POST" ? "{}" : undefined }, g);
       assert.equal(r.status, 403, `${method} ${path} is closed to visitors`);
     }
@@ -1524,19 +1467,6 @@ describe("Messages are live", () => {
     assert.ok(mine.seen_at, "the member sees “Seen” once the leader has the message");
     const v = await post("/api/auth/visitor", { name: "Visi", email: "visi.chat@gmail.com" }, {}, g);
     assert.equal((await call(`/api/chat/${id}/live?wait=0`, { headers: { cookie: cookieOf(v) } }, g)).status, 403);
-  });
-});
-
-describe("Ask SCC and prayer", () => {
-  test("never prays: verses plus a real leader to pray with", async () => {
-    const { prayerish } = await import("../src/routes/assistant.ts");
-    assert.ok(prayerish("Dear Lord, please help Sipho. Amen.")); assert.ok(prayerish("Let us pray together")); assert.ok(!prayerish("Philippians 4:6 says do not be anxious."));
-    const c = await adminCookie();
-    const r = await (await post("/api/assistant/chat", { message: "Please pray with me, I'm anxious about exams" }, A(c))).json() as { reply: { agent: string; text: string; cards: { lines: string[] }[]; actions: { href: string }[] } };
-    assert.equal(r.reply.agent, "prayer");
-    assert.ok(!prayerish(r.reply.text), "no prayer written");
-    assert.ok(r.reply.cards[0].lines.some((l) => /\d+:\d+/.test(l)), "verses suggested");
-    assert.ok(r.reply.actions.some((a) => a.href.startsWith("/messages?to=") || a.href === "/prayer"), "handed to a leader");
   });
 });
 

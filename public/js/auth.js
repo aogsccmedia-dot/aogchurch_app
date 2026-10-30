@@ -38,7 +38,7 @@ export function onSignInDone(fn) { customDone = fn; }
 export async function finishSignIn(result) {
   document.querySelectorAll(".gsi-waiting").forEach((el) => el.classList.remove("gsi-waiting"));
   const here = location.pathname.replace(/\.html$/, "");
-  const onMe = here === "/me" || here === "/assistant", midTask = /^\/(join|event|membership|ticket|presenter)$/.test(here);
+  const onMe = here === "/me", midTask = /^\/(join|event|membership|ticket|presenter)$/.test(here);
   veilShow(onMe ? "Preparing your member page…" : "Signing you in…");
   try {
     await (typeof result === "function" ? result() : result);
@@ -183,7 +183,6 @@ export function renderHeaderUser(me) {
     <div class="user-pop"><b>${esc(u.name || u.email)}${badgeHtml(me, 16)}</b><small>${esc(u.email)}</small>
       ${me.admin_account ? "" : `<a href="/me">Home</a>`}
       <a href="/devotions">Devotions</a>
-      <a href="/assistant">Ask SCC</a>
       <a href="/vote">Vote</a>
       ${me.admin_account ? `<a href="/admin/">Admin</a>` : ""}
       <a href="/settings">Settings</a>

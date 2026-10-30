@@ -36,9 +36,9 @@ This file is read by every Claude session and by the two autonomous agents (see 
 7. Poster photos are never altered or sent to AI.
 8. No emails are imported from spreadsheets. WhatsApp only to people who opted in.
 9. Visitors (guest sign-in) are never verified and can only use events, registration and their tickets — no messaging
-   leaders, complaints, voting, Ask SCC, member tools or admin (`src/lib/visitors.ts`). An existing account's email can't be
+   leaders, complaints, voting, member tools or admin (`src/lib/visitors.ts`). An existing account's email can't be
    used as a visitor; known emails need an emailed code. Existing members can't sign up again.
-10. Ask SCC never prays for people: it suggests scriptures and hands the person to a leader.
+10. There is no AI chat for members (Ask SCC was removed on purpose). Don't add one back.
 11. FreeCreator: free for anyone on a computer with no account (work saved in their browser). Church workspaces are strictly
     church-scoped — churches never see each other's data or streams; one church per person. Phones/tablets are sent to
     "use a computer", except phone cameras for the accounts the main admin allows.

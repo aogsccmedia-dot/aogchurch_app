@@ -218,36 +218,6 @@ export function initMore(ctx) {
     dlg.showModal(); dlg.querySelector("textarea").focus();
   }
 
-  // ------------------------------------------------------------ Ask SCC (main admin)
-  async function loadAssistant() {
-    const d = await api("/api/admin/assistant");
-    const ai = (d.by_mode || []).find((m) => m.mode === "ai") || {}, rules = (d.by_mode || []).find((m) => m.mode === "rules") || {};
-    const total = (ai.n || 0) + (rules.n || 0);
-    const pct = (a, b) => b ? Math.round((a / b) * 100) + "%" : "—";
-    $("#as-body").innerHTML = `
-      <div class="card as-controls">
-        <label class="toggle-row"><input type="checkbox" id="as-enabled" ${d.enabled ? "checked" : ""}> <b>Ask SCC is on</b></label>
-        <div><b>AI answers reach</b> <span class="as-pct">${d.ai_pct}%</span> of members ${d.ai_ready ? "" : `<span class="pill">AI not connected: built-in answers only</span>`}
-          <div class="seg as-steps">${d.steps.map((x) => `<button data-pct="${x}" class="${x === d.ai_pct ? "on" : ""}">${x}%</button>`).join("")}</div></div>
-        <label class="toggle-row"><input type="checkbox" id="as-auto" ${d.auto ? "checked" : ""}> Widen automatically while healthy, roll back if answers fail (checked daily at 07:00)</label>
-        ${d.last_change ? `<p class="muted">Last change: ${esc(d.last_change)}</p>` : ""}
-        <p class="muted">Model: ${esc(d.models[0])} (fallback ${esc(d.models[1])}) · prompt ${esc(d.prompt_version)}</p>
-      </div>
-      <div class="kpis">
-        <div class="kpi"><b>${total}</b><span>Questions (7 days)</span></div>
-        <div class="kpi"><b>${d.last24?.people || 0}</b><span>People (24 h)</span></div>
-        <div class="kpi"><b>${pct(ai.errors || 0, ai.n || 0)}</b><span>AI fallbacks</span></div>
-        <div class="kpi"><b>${pct((ai.up || 0) + (rules.up || 0), (ai.up || 0) + (rules.up || 0) + (ai.down || 0) + (rules.down || 0))}</b><span>Helpful</span></div>
-        <div class="kpi"><b>${ai.ms || rules.ms || 0} ms</b><span>Average answer time</span></div>
-      </div>
-      <div class="card"><h3>Which helpers people use</h3>${(d.by_agent || []).length ? d.by_agent.map((a) => `<div class="bar"><span>${esc(a.label)}</span><span class="track"><i style="width:${Math.round((a.n / Math.max(1, d.by_agent[0].n)) * 100)}%"></i></span><b>${a.n}</b></div>`).join("") : `<p class="muted">No questions yet.</p>`}</div>`;
-    const save = (body) => api("/api/admin/assistant", { method: "PATCH", body }).then(() => { toast("Saved"); loadAssistant(); }).catch((e) => toast(e.message));
-    $("#as-enabled").addEventListener("change", (e) => save({ enabled: e.target.checked }));
-    $("#as-auto").addEventListener("change", (e) => save({ auto: e.target.checked }));
-    $$(".as-steps [data-pct]").forEach((b) => b.addEventListener("click", () => save({ ai_pct: Number(b.dataset.pct) })));
-  }
-  loaders.assistant = () => loadAssistant();
-  $("#as-refresh").addEventListener("click", () => safe(loadAssistant)());
 
   return { loadApprovals, notifyHolders };
 }

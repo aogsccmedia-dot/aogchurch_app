@@ -3,7 +3,7 @@
 // - CSS/JS: network first (so a new release is picked up straight away), cached copy when offline.
 // - Photos/logos: cache first.
 // - /api and /admin are never cached.
-const VERSION = "scc-v51";
+const VERSION = "scc-v52";
 const SHELL = ["/", "/offline", "/js/site.js", "/js/auth.js", "/js/icons.js", "/js/install.js",
   "/assets/logo-64.png", "/assets/logo-192.png", "/manifest.webmanifest"];
 
@@ -24,7 +24,7 @@ self.addEventListener("fetch", (e) => {
   if (url.origin !== location.origin || url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin")) return;
 
   // App pages open instantly from the last copy, and refresh in the background for next time.
-  const APP = /^\/(me|devotions|assistant|vote|store|settings|welcome-pack|go|pamphlet|messages|poster)(\.html)?\/?$/;
+  const APP = /^\/(me|devotions|vote|store|settings|welcome-pack|go|pamphlet|messages|poster)(\.html)?\/?$/;
   if (req.mode === "navigate" && APP.test(url.pathname)) {
     e.respondWith(caches.match(req, { ignoreSearch: true }).then((hit) => {
       const net = fetch(req).then((res) => put(req, res)).catch(() => null);

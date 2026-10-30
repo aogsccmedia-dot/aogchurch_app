@@ -1,4 +1,4 @@
-// One portal for everyone who signs in: Home (tickets, what's coming up, what to know), Devotions, Ask SCC, Vote, Store, Settings; people the main admin has
+// One portal for everyone who signs in: Home (tickets, what's coming up, what to know), Messages, Devotions, Vote, Store, Settings; people the main admin has
 // given a role also see their Admin (or Youth leader) tab, on the same sign-in, with no switching and no codes.
 // After signing in, a short black welcome greets them by name and role.
 import { icon } from "./icons.js";
@@ -13,7 +13,7 @@ export function mainTabs(me) {
   if (me?.visitor) return [["/me", "home", "Home"], ["/me#upcoming", "calendar", "Events"], ["/devotions", "bookOpen", "Devotions"]];
   return [
     me.admin_account ? ["/admin/", "layoutDashboard", "Admin"] : ["/me", "home", "Home"],
-    ["/assistant", "sparkles", "Ask SCC"],
+    ["/messages", "messageCircle", "Messages"],
     ["/devotions", "bookOpen", "Devotions"],
   ];
 }
@@ -42,7 +42,6 @@ export function moreTabs(me) {
   if (me?.visitor) return [["/join", "userCheck", "Join the church family"], ["/help", "shield", "Help"]];
   const role = roleName(me);
   return [
-    ["/messages", "messageCircle", "Messages"],
     ["/go", "globe", "Go Ye (evangelism)"],
     ["/poster", "palette", "Poster maker"],
     ["/freecreator", "monitor", "FreeCreator (presentation & live)"],
@@ -138,12 +137,12 @@ const inMore = (me) => moreTabs(me).some(([h]) => isOn(h)) || toolsFor(me).some(
 const onAdmin = () => location.pathname.startsWith("/admin");
 function barHtml(me) {
   const more = inMore(me);
-  // In the admin portal the bar is the only navigation: Dashboard (or Home), all your Tools, Ask SCC and More.
+  // In the admin portal the bar is the only navigation: Dashboard (or Home), all your Tools, Messages and More.
   if (onAdmin()) {
     const tab = location.hash.slice(1).split(":")[0] || "overview";
     const dash = me.admin_account ? `<a href="/admin/#overview"${tab === "overview" ? ' class="on" aria-current="page"' : ""}>${icon("gauge")}<span>Dashboard</span></a>` : link("/me", "home", "Home");
     // One menu for everything (tools + your own pages + sign out), like members' "More".
-    return dash + link("/assistant", "sparkles", "Ask SCC") + link("/devotions", "bookOpen", "Devotions")
+    return dash + link("/messages", "messageCircle", "Messages") + link("/devotions", "bookOpen", "Devotions")
       + `<button type="button" class="${tab !== "overview" || !me.admin_account ? "on" : ""}" data-admin-tools aria-haspopup="dialog">${icon("grid")}<span>Menu</span></button>`;
   }
   return mainTabs(me).map(([h, i, l]) => link(h, i, l)).join("")

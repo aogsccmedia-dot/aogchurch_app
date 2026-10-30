@@ -166,7 +166,7 @@ export async function llms(env: Env, full: boolean): Promise<string> {
     out.push("", "## Public website text", "");
     const seen = new Set<string>();
     for (const k of KB) {
-      if (/^\/(me|admin|messages|assistant|vote|poster|ticket|settings)/.test(k.url)) continue;
+      if (/^\/(me|admin|messages|vote|poster|ticket|settings)/.test(k.url)) continue;
       const key = `${k.url}|${k.title}`; if (seen.has(key)) continue; seen.add(key);
       out.push(`### ${k.title} (${site}${k.url})`, k.text.replace(/\n\s+/g, "\n").trim(), "");
     }

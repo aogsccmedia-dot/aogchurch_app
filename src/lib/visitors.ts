@@ -6,10 +6,10 @@ import { HttpError } from "./http.ts";
 import { getSession } from "./auth.ts";
 import type { Env } from "../env.ts";
 
-/** Member-only features: messaging leaders, complaints, Ask SCC, voting, the prayer wall, member tools and settings.
+/** Member-only features: messaging leaders, complaints, voting, the prayer wall, member tools and settings.
  * (FreeCreator Online itself is free for anyone, visitors included; its church library and phone cameras are not.) */
 const BLOCKED = [
-  /^\/api\/chat(\/|$)/, /^\/api\/me\/complaints/, /^\/api\/assistant\/(chat|feedback)/, /^\/api\/votes/, /^\/api\/poster\//, /^\/api\/freecreator\/(lib|cam|church|access)/,
+  /^\/api\/chat(\/|$)/, /^\/api\/me\/complaints/, /^\/api\/votes/, /^\/api\/poster\//, /^\/api\/freecreator\/(lib|cam|church|access)/,
   /^\/api\/wall(\/|$)/, /^\/api\/go\/contacts/, /^\/api\/me\/(letter|prayer-weekly|membership)/,
   /^\/api\/admin\//,
 ];

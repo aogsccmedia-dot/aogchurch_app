@@ -8,7 +8,6 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /me
 Disallow: /messages
-Disallow: /assistant
 Disallow: /settings
 Disallow: /vote
 Disallow: /poster
@@ -39,7 +38,6 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /me
 Disallow: /messages
-Disallow: /assistant
 Disallow: /settings
 Disallow: /vote
 Disallow: /poster

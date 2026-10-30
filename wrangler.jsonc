@@ -33,8 +33,8 @@
     }
   ],
 
-  // Workers AI: open-weight models (Llama) for the Ask SCC member chat. Billed per use; the free daily allowance
-  // covers a church's traffic. The chat falls back to built-in answers if AI is unavailable.
+  // Workers AI: open-weight models for FreeCreator's AI help, Today's Word art and poster ideas. Billed per use; the free
+  // daily allowance covers a church's traffic. Each feature falls back to built-in behaviour if AI is unavailable.
   "ai": { "binding": "AI" },
 
   // File uploads (photos, documents). KV today; switch to R2 when enabled.

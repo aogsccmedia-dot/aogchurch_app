@@ -262,8 +262,7 @@ PAGES = {
     "complaints": dict(title="Complaints policy" + T, crumb="Complaints policy", desc="How to raise a complaint at Sandton City Church and what to expect: acknowledgement, a response within 7 working days, confidentiality.", canonical="/complaints", scripts=["site.js", "auth.js"]),
     "data-protection": dict(title="Data protection, POPIA & PAIA" + T, crumb="Data protection", desc="Sandton City Church's data protection standards: Information Officer, security, retention, breach notification and your POPIA/PAIA rights.", canonical="/data-protection", scripts=["site.js", "auth.js"]),
     "presenter": dict(title="FreeCreator (Beta) · Free church presentation software" + T, crumb="FreeCreator", desc="FreeCreator: free, open-source presentation software for churches. Songs, scripture, video, stage screen, phone remote and OBS output for Windows and Mac. Beta open to the first 20 testers.", canonical="/presenter", scripts=["site.js", "auth.js", "presenter.js"]),
-    "assistant": dict(title="Ask SCC" + T, body="portal ask", desc="Ask SCC: the members' chat for AOG Sandton City Church. Events, service times, your tickets and the church calendar.", noindex=True, scripts=["site.js", "auth.js", "assistant.js"]),
-    "help": dict(title="How to use the app" + T, crumb="Help", canonical="/help", desc="Simple, step-by-step help with pictures: signing in, tickets, devotions, Ask SCC, prayer, voting and putting the app on your phone.", scripts=["site.js", "auth.js"]),
+    "help": dict(title="How to use the app" + T, crumb="Help", canonical="/help", desc="Simple, step-by-step help with pictures: signing in, tickets, devotions, messages, prayer, voting and putting the app on your phone.", scripts=["site.js", "auth.js"]),
     "welcome-pack": dict(title="Welcome pack" + T, body="portal wp", canonical="/welcome-pack", desc="Who we are: from Azusa Street to Nicholas Bhengu and the birth of AOG Sandton City Church. Read or share our welcome pack.", scripts=["site.js", "auth.js", "welcome-pack.js"]),
     "go-ye": dict(title="Go Ye: good news, made simple" + T, crumb="Go Ye", canonical="/go-ye", desc="The gospel in four simple steps, a prayer to receive Jesus, a printable Good News pamphlet, and how our evangelism team goes from Sandton to all of South Africa.", scripts=["site.js", "auth.js", "evangelism.js"]),
     "pamphlet": dict(title="Good News pamphlet" + T, body="portal wp", crumb="Pamphlet", canonical="/pamphlet", desc="Good news for you: the gospel in four simple steps. Read, share on WhatsApp, or print the pamphlet from AOG Sandton City Church.", scripts=["site.js", "auth.js", "welcome-pack.js"]),
@@ -380,7 +379,7 @@ def main():
     (ROOT / "sitemap-pages.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         + "".join(f"  <url><loc>{SITE}{u}</loc><changefreq>weekly</changefreq><priority>{pri.get(u, '0.5')}</priority></url>\n" for u in urls) + "</urlset>\n")
     print("wrote sitemap-pages.xml (the live /sitemap.xml adds event pages)")
-    # Ask SCC's knowledge base follows the website's own words.
+    # The church summary for search engines and AI crawlers (llms-full.txt) follows the website's own words.
     import runpy; runpy.run_path(str(HERE / "kb.py"), run_name="__main__")
 
 

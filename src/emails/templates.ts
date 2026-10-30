@@ -490,7 +490,7 @@ export function memberVerified(b: Brand, o: { name: string; ref: string; leader?
 
 const box = (html: string) => `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:6px 0 18px"><tr><td style="padding:16px 18px;border-radius:6px;background:#f4f4f4;font:15px/1.7 ${SANS};color:${C.ink}">${html}</td></tr></table>`;
 const bullets = (items: string[]) => items.map((x) => `• ${esc(x)}`).join("<br>");
-const MEMBER_CAN = ["Your profile, tickets and QR codes", "Events and Get Ticket", "Devotions and the prayer wall", "Ask SCC, the church chat", "Voting (for confirmed members)"];
+const MEMBER_CAN = ["Your profile, tickets and QR codes", "Events and Get Ticket", "Devotions and the prayer wall", "Messages to church leaders", "Voting (for confirmed members)"];
 const SIGN_IN = `<strong>How to sign in</strong><br>Sign in on aogsccyouth.com as you always do (Google, or email and password). Your <strong>Admin</strong> tab appears at the top of your profile. No extra codes, no switching.`;
 
 export function youthLeaderGranted(b: Brand, o: { name: string; can: string[] }) {
@@ -856,7 +856,6 @@ export function whatsNew(b: Brand, o: { name: string | null; leader: boolean }) 
   const all = [
     "Sign in your way: one tap with Google, or with your email and a password",
     "Go Ye: our map of where we share the gospel, with tips and a simple pamphlet to share",
-    "Ask SCC: ask anything about the church, the Bible or life, any time",
     "Message a leader: talk to your leader privately from the app",
     "Today's verse every morning as a gentle phone notification (if you allow it)",
     "Your Home: welcome pack, service times, what's coming up and your tickets in one place",

@@ -3,6 +3,7 @@
 // iPhone/iPad browsers get step-by-step Add to Home Screen guides; in-app browsers
 // (Instagram, Facebook, TikTok…) are told to open the page in Safari/Chrome first.
 import { icon } from "./icons.js";
+import { popupOpen, whenNoPopup } from "./prompts.js";
 
 const ua = navigator.userAgent || "";
 const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -89,6 +90,8 @@ async function maybeBanner() {
   if (!consentGiven()) { addEventListener("scc:consent", () => setTimeout(maybeBanner, 4000), { once: true }); return; }
   if (!functionalAllowed()) return;
   if (detected || installed() || !(isIOS || isAndroid) || document.body.classList.contains("admin")) return;
+  if (document.querySelector(".app-tip")) return;
+  if (popupOpen()) { whenNoPopup(maybeBanner, { delay: 3000 }); return; }   // one pop-up at a time
   try {
     const until = Number(localStorage.getItem("scc-app-tip") || 0);
     if (until > Date.now()) return;

@@ -53,7 +53,7 @@ export interface Env {
   ANTHROPIC_API_KEY?: string;
   /** Optional GitHub fine-grained token (Contents + Pull requests: read & write on the two repos) so the main admin can approve and merge from the admin portal. */
   GITHUB_TOKEN?: string;
-  /** Cloudflare Workers AI (open-weight models such as Llama) for Ask SCC. Optional: built-in answers work without it. */
+  /** Cloudflare Workers AI (open-weight models) for FreeCreator's AI help, Today's Word art and poster ideas. Optional. */
   AI?: { run(model: string, input: Record<string, unknown>): Promise<unknown> };
   /** Google Identity Services web client ID (public). Empty = Google sign-in hidden. */
   GOOGLE_CLIENT_ID?: string;

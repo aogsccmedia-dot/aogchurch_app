@@ -1,10 +1,10 @@
-// Search anything in the app: leaders to message, pages, upcoming events, or ask Ask SCC.
+// Search anything in the app: leaders to message, pages and upcoming events.
 import { icon } from "./icons.js";
 import { faceInner } from "./faces.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const PAGES = [
-  ["/me", "home", "Home", "tickets events services"], ["/assistant", "sparkles", "Ask SCC", "ai chat questions help"], ["/devotions", "bookOpen", "Devotions", "verse bible daily word"],
+  ["/me", "home", "Home", "tickets events services"], ["/devotions", "bookOpen", "Devotions", "verse bible daily word"],
   ["/messages", "messageCircle", "Messages", "chat leader pastor talk"], ["/go", "globe", "Go Ye: log someone you met", "evangelism outreach"], ["/go-ye", "globe", "Go Ye: the good news", "gospel salvation evangelism"],
   ["/pamphlet", "fileText", "Good News pamphlet", "print share gospel"], ["/discipleship", "bookOpen", "Discipleship classes", "baptism foundations class"],
   ["/welcome-pack", "bookOpen", "Welcome pack", "history azusa bhengu"], ["/vote", "vote", "Vote", "elections voting"], ["/store", "landmark", "Store", "books"],
@@ -37,8 +37,7 @@ export function openSearch() {
     const ev = (evs || []).filter((e) => lq && `${e.title} ${e.location || ""}`.toLowerCase().includes(lq)).slice(0, 5);
     body.innerHTML = `${people.length ? `<p class="ts-label">${lq ? "Leaders" : "Message a leader"}</p>${people.map((l) => `<a class="srch-row" href="/messages?to=${encodeURIComponent(l.id)}"><span class="avatar">${faceInner(l)}</span><span><b>${esc(l.name)}</b><small>${esc(l.role)}</small></span><em>Message</em></a>`).join("")}` : ""}
       ${ev.length ? `<p class="ts-label">Events</p>${ev.map((e) => `<a class="srch-row" href="/event?e=${encodeURIComponent(e.slug)}"><span class="srch-ico">${icon("ticket")}</span><span><b>${esc(e.title)}</b><small>${esc(new Date(e.starts_at).toLocaleDateString("en-ZA", { weekday: "short", day: "numeric", month: "short" }))}</small></span></a>`).join("")}` : ""}
-      ${pages.length ? `<p class="ts-label">${lq ? "Pages" : "Go to"}</p>${pages.map(([h, i, l]) => `<a class="srch-row" href="${h}"><span class="srch-ico">${icon(i)}</span><span><b>${esc(l)}</b></span></a>`).join("")}` : ""}
-      ${q ? `<a class="srch-row ask" href="/assistant?q=${encodeURIComponent(q)}"><span class="srch-ico">${icon("sparkles")}</span><span><b>Ask SCC: “${esc(q)}”</b><small>Get an answer from the church assistant</small></span></a>` : ""}`;
+      ${pages.length ? `<p class="ts-label">${lq ? "Pages" : "Go to"}</p>${pages.map(([h, i, l]) => `<a class="srch-row" href="${h}"><span class="srch-ico">${icon(i)}</span><span><b>${esc(l)}</b></span></a>`).join("")}` : ""}`;
   };
   input.addEventListener("input", () => { clearTimeout(t); t = setTimeout(draw, 160); });
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") { const a = body.querySelector(".srch-row"); if (a) location.href = a.href; } });

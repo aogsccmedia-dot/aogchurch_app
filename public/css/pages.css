@@ -1257,44 +1257,6 @@ dialog.ob-sheet { width: min(520px, calc(100% - 24px)); max-height: calc(100dvh 
 .soon-card img { height: 120px !important; width: 120px; }
 @media (max-width: 760px) { .soon-card picture, .soon-card img { height: 92px !important; } }
 
-/* ---------------------------------------------------------------- Ask SCC (members' chat) */
-.ask-page { padding: 28px 0 140px; }
-.ask-wrap { max-width: 760px; }
-.ask-head { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; }
-.ask-head h1 { margin: 2px 0 0; font-size: clamp(28px, 5vw, 38px); }
-.ask-mark { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: linear-gradient(135deg, #f6f0e6, #f7f2e9 50%, #f6f1e8); box-shadow: 0 8px 24px rgba(226, 209, 180, .25); }
-.ask-mark .i { width: 26px; height: 26px; color: #7a623f; }
-.ask-hello { font-size: 17px; color: var(--text-2); margin: 0 0 14px; }
-.ask-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-.ask-tiles button { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; padding: 14px; border-radius: 16px; border: 1px solid var(--line); background: rgba(255, 255, 255, .78); cursor: pointer; text-align: left; font-weight: 500; transition: transform .15s, box-shadow .15s; }
-.ask-tiles button:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(110, 86, 50, .09); }
-.ask-tiles .i { width: 22px; height: 22px; color: var(--gold); }
-.ask-agents { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; align-items: center; scrollbar-width: none; }
-.ask-agents > span { font-size: 12px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); margin-right: 4px; flex: none; }
-.ask-agents button { flex: none; display: inline-flex; gap: 6px; align-items: center; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, .7); cursor: pointer; font-size: 14px; }
-.ask-agents button .i { width: 15px; height: 15px; }
-.ask-agents button.on { background: var(--text); color: #fff; border-color: var(--text); }
-.ask-thread { display: flex; flex-direction: column; gap: 12px; margin: 14px 0 12px; height: clamp(300px, calc(100dvh - 430px), 640px); overflow-y: auto; overscroll-behavior: contain; padding: 14px; border-radius: 22px; background: rgba(255, 255, 255, .45); border: 1px solid var(--line); scroll-padding: 8px; position: relative; }
-.ask-msg { max-width: 92%; padding: 12px 16px; border-radius: 18px; animation: ask-in .25s ease-out; }
-.ask-msg p { margin: 0; line-height: 1.55; }
-.ask-msg.me { align-self: flex-end; background: var(--text); color: #fff; border-bottom-right-radius: 6px; }
-.ask-msg.bot { align-self: flex-start; background: rgba(255, 255, 255, .9); border: 1px solid var(--line); border-bottom-left-radius: 6px; box-shadow: 0 4px 16px rgba(110, 86, 50, .05); }
-.ask-who { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #96784c; margin-bottom: 6px; }
-.ask-who .i { width: 15px; height: 15px; }
-.ask-cards { display: grid; gap: 8px; margin-top: 12px; }
-.ask-ev { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-radius: 14px; background: linear-gradient(110deg, #fdfbf9, #fcfbf8 55%, #fcfbf8); }
-.ask-ev b { display: block; }
-.ask-ev span { font-size: 14px; color: var(--text-2); }
-.ask-ev-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.ask-info { padding: 12px 14px; border-radius: 14px; background: var(--surface); }
-.ask-info ul { margin: 6px 0 0; padding-left: 18px; font-size: 14.5px; color: var(--text-2); }
-.ask-actions, .ask-sugg { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-.ask-sugg button { padding: 6px 12px; border-radius: 999px; border: 1px dashed var(--line-strong); background: transparent; font-size: 13.5px; cursor: pointer; color: var(--text-2); }
-.ask-sugg button:hover { border-style: solid; color: var(--text); }
-.ask-rate { display: flex; gap: 4px; margin-top: 10px; }
-.ask-rate button { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
-.ask-rate button .i { width: 16px; height: 16px; }
-.ask-rate button.on { background: var(--surface-2); color: var(--text); }
 .cal-menu { position: relative; }
 .cal-menu summary { list-style: none; cursor: pointer; }
 .cal-menu summary::-webkit-details-marker { display: none; }
@@ -1310,10 +1272,8 @@ dialog.ob-sheet { width: min(520px, calc(100% - 24px)); max-height: calc(100dvh 
 .dots i { width: 7px; height: 7px; border-radius: 50%; background: #e6d7bd; animation: dot 1s infinite ease-in-out; }
 .dots i:nth-child(2) { animation-delay: .15s; } .dots i:nth-child(3) { animation-delay: .3s; }
 @keyframes dot { 50% { transform: translateY(-4px); opacity: .5; } }
-@keyframes ask-in { from { opacity: 0; transform: translateY(6px); } }
 
-@media (max-width: 560px) { .ask-tiles { grid-template-columns: repeat(3, 1fr); gap: 8px; } .ask-tiles button { padding: 11px 10px; font-size: 13.5px; } .ask-msg { max-width: 100%; } }
-@media (prefers-reduced-motion: reduce) { .ask-msg, .dots i { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .dots i { animation: none; } }
 
 /* ---------------------------------------------------------------- member home, devotions, settings */
 .me-home { display: grid; gap: clamp(26px, 4vw, 40px); max-width: 980px; }
@@ -1445,8 +1405,8 @@ a.know:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(110, 86
 /* ---------------------------------------------------------------- Buttons stay put: feedback by colour and shade, never by moving */
 a:hover, a:active, button:hover, button:active, .btn:hover, .btn:active, summary:active, [role="button"]:active,
 .event-card:hover, .ministry:hover, .explore-card:hover, .pager-link:hover, .presenter-teaser:hover, .tool-card:hover, .pick-person:hover,
-.soon-card:hover, .ask-tiles button:hover, .me-quick a:hover, .dev-link:hover, a.know:hover { transform: none !important; }
-.btn:active, button:active, .ask-tiles button:active, a.know:active, .slide:active, .pick-person:active { filter: brightness(.95); }
+.soon-card:hover, .me-quick a:hover, .dev-link:hover, a.know:hover { transform: none !important; }
+.btn:active, button:active, a.know:active, .slide:active, .pick-person:active { filter: brightness(.95); }
 .btn { transition: background-color .15s, color .15s, opacity .15s, box-shadow .15s, filter .1s; }
 .main-nav.portal-nav a:hover, .main-nav.portal-nav a[aria-current] { text-decoration: none; }
 
@@ -1492,8 +1452,8 @@ html.signed-in .app-bar { display: block; position: sticky; top: 0; z-index: 60;
 .app-me { display: flex; align-items: center; gap: 8px; }
 .app-me .avatar { width: 34px; height: 34px; font-size: 14px; }
 html.signed-in main { padding-top: clamp(18px, 3vw, 30px); }
-html.signed-in .me-hero h1, html.signed-in .ask-head h1, html.signed-in .dev-page h1, html.signed-in .store-hero h1 { font-size: clamp(28px, 4vw, 38px); }
-html.signed-in .st-card, html.signed-in .know, html.signed-in .slide, html.signed-in .vote-card, html.signed-in .vote-role, html.signed-in .ask-thread { background: #fff; }
+html.signed-in .me-hero h1, html.signed-in .dev-page h1, html.signed-in .store-hero h1 { font-size: clamp(28px, 4vw, 38px); }
+html.signed-in .st-card, html.signed-in .know, html.signed-in .slide, html.signed-in .vote-card, html.signed-in .vote-role { background: #fff; }
 @media (max-width: 1100px) { .app-tabs a .i { display: none; } }
 @media (max-width: 860px) {
   .app-bar-in { grid-template-columns: auto 1fr; grid-template-areas: "brand me" "tabs tabs"; gap: 8px 10px; padding-bottom: 8px; }
@@ -1550,10 +1510,10 @@ html.signed-in body:not(.admin) h2 { font-size: clamp(19px, 2.2vw, 22px); }
 html.signed-in body:not(.admin) h3 { font-size: 17px; }
 html.signed-in .eyebrow { font-size: 12px; letter-spacing: .14em; color: var(--muted); font-weight: 600; }
 html.signed-in .serif, html.signed-in em.serif { font-family: var(--font-sans); font-style: normal; color: inherit; }
-html.signed-in :is(.slide, .know, .st-card, .vote-card, .vote-role, .ask-thread, .ask-ev, .ask-info, .pick-person, .ask-tiles button, .store-empty) {
+html.signed-in :is(.slide, .know, .st-card, .vote-card, .vote-role, .pick-person, .store-empty) {
   border-radius: 14px !important; border: 1px solid rgba(52, 42, 28, .09) !important; box-shadow: none !important; }
-html.signed-in :is(a.know, .slide, .ask-tiles button, .pick-person):hover { border-color: rgba(52, 42, 28, .2) !important; background: #fff; }
-html.signed-in .know span, html.signed-in .ask-tiles .i { border-radius: 10px; }
+html.signed-in :is(a.know, .slide, .pick-person):hover { border-color: rgba(52, 42, 28, .2) !important; background: #fff; }
+html.signed-in .know span { border-radius: 10px; }
 html.signed-in #know-pack { background: #fff; color: var(--text); }
 html.signed-in #know-pack small { color: var(--muted); }
 html.signed-in .muted-text, html.signed-in .know small, html.signed-in .slide .meta { color: #5d5a6b; }
@@ -1584,7 +1544,7 @@ html.signed-in .muted-text, html.signed-in .know small, html.signed-in .slide .m
 .app-tabs a { font-size: 15px; padding: 9px 14px; }
 @media (max-width: 860px) { .app-tabs-wrap { grid-area: tabs; justify-self: stretch; } .app-tabs { width: 100%; } .app-tabs a { font-size: 15px; padding: 10px 13px; } }
 
-/* ---- Signed in: four big buttons fixed at the bottom of every screen (Home · Ask SCC · Devotions · More) ---- */
+/* ---- Signed in: four big buttons fixed at the bottom of every screen (Home · Messages · Devotions · More) ---- */
 .app-bottom { display: none; }
 .app-gap { min-width: 0; }
 html.signed-in .app-bar-in { grid-template-columns: auto 1fr auto; grid-template-areas: none; padding-bottom: 10px; }
@@ -1630,7 +1590,6 @@ html.signed-in .wp-bar { top: 62px !important; }
 .portal-tabs.four a, .portal-tabs.four button { display: grid; justify-items: center; gap: 3px; padding: 8px 4px; border: 0; background: none; font: inherit; font-size: 13px; color: var(--text-2); border-radius: 13px; cursor: pointer; }
 .portal-tabs.four .i { width: 21px; height: 21px; }
 .portal-tabs.four a.on, .portal-tabs.four button.on { background: #161410; color: #fff; }
-html.signed-in .ask-thread { height: clamp(260px, calc(100dvh - 520px), 640px); }
 
 /* Pages softly fade into the bottom bar as you scroll (the bar itself always stays put) */
 html.signed-in .app-fade {
@@ -1643,8 +1602,6 @@ html.signed-in .app-bottom { background: rgba(255, 255, 255, .9); }
 
 /* Things you type into stay crisp above the fade */
 html.signed-in .ask-form { position: relative; z-index: 66; }
-html.signed-in .ask-thread { height: clamp(240px, calc(100dvh - 560px), 640px); }
-@media (min-width: 861px) { html.signed-in .ask-thread { height: clamp(220px, calc(100dvh - 630px), 640px); } }
 
 /* Your tools (for people with a role): on Home and in More */
 .tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 10px; }
@@ -2266,18 +2223,6 @@ html:has(body.si-open) { overflow-x: clip; }
 .welcome-screen.done .welcome-art .w-word { animation: none !important; stroke-dashoffset: 0; opacity: 1; }
 .welcome-screen.done .welcome-title, .welcome-screen.done .welcome-line { animation: none !important; opacity: 1; transform: none; }
 .fc-in .fc-hero { max-width: none; width: 100%; margin-inline: auto; }
-/* Ask SCC, simplified: a greeting, three suggestions, the chat and the box */
-.ask-head { margin-bottom: 6px; }
-html.signed-in .ask-head h1, .ask-head h1 { font-size: clamp(24px, 3.4vw, 30px); }
-html.signed-in .ask-thread, .ask-thread { height: clamp(300px, calc(100dvh - 340px), 720px); background: transparent !important; border: 0 !important; padding: 6px 2px; }
-@media (min-width: 861px) { html.signed-in .ask-thread { height: clamp(320px, calc(100dvh - 300px), 720px); } }
-.ask-hello { margin: auto 0; display: grid; justify-items: center; text-align: center; gap: 14px; padding: 12px; transition: opacity .25s, transform .25s; }
-.ask-hello h2 { margin: 0; font-size: clamp(22px, 3.6vw, 28px); font-weight: 500; color: var(--text); }
-.ask-hello .ask-sugg { justify-content: center; margin: 0; }
-.ask-hello .ask-sugg button { border-style: solid; background: #fff; padding: 9px 14px; font-size: 14.5px; color: var(--text); }
-.ask-hello.gone { display: none; }
-.ask-msg.bot { box-shadow: none; }
-.ask-rate { opacity: .45; transition: opacity .15s; } .ask-msg:hover .ask-rate, .ask-rate:focus-within { opacity: 1; }
 /* How voting works: real screens, step by step */
 .vote-guide { margin-top: 20px; padding: 18px; border-radius: 22px; background: #fff; border: 1px solid var(--line); }
 .vote-guide > summary { cursor: pointer; list-style: none; display: flex; gap: 10px; align-items: center; font-size: 18px; font-weight: 500; }
@@ -2306,7 +2251,6 @@ html.signed-in .ask-thread, .ask-thread { height: clamp(300px, calc(100dvh - 340
 .visitor-card .btn { margin-left: auto; flex: none; }
 .vg-steps figure { aspect-ratio: auto; place-items: center; }
 .vg-steps img { width: auto; height: auto; max-width: 100%; max-height: 440px; }
-html.signed-in .ask-page .ask-thread { border: 0 !important; box-shadow: none !important; background: transparent !important; }
 /* Sign-in card: a full-size Google button */
 .si-social { display: block; }
 .si-g { width: 100%; height: auto; min-height: 44px; min-width: 0; border-radius: 999px; overflow: visible; display: flex; justify-content: center; }
@@ -2459,3 +2403,47 @@ section, .block, .panel, .card { min-width: 0; }
 @media (prefers-reduced-motion: reduce) { .promo.reel .reel-v { transition: opacity .3s ease; transform: none; } }
 .reel-name { left: auto; right: clamp(10px, 2vw, 18px); max-width: 55%; }
 @media (max-width: 600px) { .reel-name { display: none; } }
+
+/* ===================================================================== One kind of pop-up, centred, easy to read
+   Menus, search, "Ask for more access", the daily-verse offer, the cookie notice and the install tip all open in the
+   middle of the screen over a softly dimmed page, one at a time (prompts.js), with big clear buttons. */
+.app-sheet, .app-sheet.search-sheet { align-items: center !important; justify-items: center; padding: 16px !important; }
+.app-sheet .sheet-card { width: min(520px, 100%); max-height: min(86dvh, 760px); overflow-y: auto; transform: scale(.96); }
+.app-sheet.open .sheet-card { transform: none; }
+.app-sheet.search-sheet .sheet-card { max-height: min(80dvh, 680px); }
+.push-offer, .consent, .app-tip {
+  position: fixed !important; left: 50% !important; right: auto !important; top: 50% !important; bottom: auto !important; margin: 0 !important;
+  width: min(460px, calc(100% - 32px)); max-width: none; max-height: calc(100dvh - 32px); overflow-y: auto; z-index: 96;
+  border-radius: 22px; border: 1px solid var(--line); background: #fff;
+  box-shadow: 0 0 0 100vmax rgba(34, 28, 18, .38), 0 24px 70px rgba(34, 28, 18, .3);
+  transform: translate(-50%, -46%) !important; opacity: 0; transition: transform .22s var(--ease), opacity .22s; }
+.push-offer.in, .consent.show, .app-tip.show { transform: translate(-50%, -50%) !important; opacity: 1; }
+/* Daily verse and install tip: icon, then the words, then full-width buttons */
+.push-offer, .app-tip { display: grid; grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 12px; padding: 24px 22px 20px; }
+.push-offer .po-ico { width: 56px; height: 56px; border-radius: 16px; }
+.push-offer .po-ico .i { width: 28px; height: 28px; }
+.push-offer b, .app-tip b { font-size: 19px !important; font-weight: 600; }
+.push-offer span, .app-tip span { font-size: 15px !important; line-height: 1.5; }
+.push-offer .po-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.push-offer .btn, .app-tip .btn { width: 100%; min-height: 48px; justify-content: center; font-size: 16px; }
+.app-tip img { width: 56px; height: 56px; }
+.app-tip [data-tip-close] { position: absolute; top: 10px; right: 10px; }
+.app-tip { position: fixed; }
+.consent { padding: 22px; }
+.consent-actions { justify-content: stretch; }
+.consent-actions .btn { flex: 1 1 140px; min-height: 48px; justify-content: center; }
+/* The More menu: big, clear rows with a chevron, so every option reads as something to tap */
+.sheet-links { gap: 4px; }
+.sheet-links a { min-height: 54px; padding: 12px 14px; font-weight: 500; color: var(--text); border: 1px solid transparent; }
+.sheet-links a::after { content: "›"; margin-left: auto; font-size: 22px; line-height: 1; color: #c8b48e; }
+.sheet-links a:hover, .sheet-links a:focus-visible { background: #faf7f1; border-color: #efe6d6; }
+.sheet-links a.on { background: #f7f1e6; border-color: #eadcc2; }
+.sheet-links a .i { color: #b08a4a; }
+.sheet-x, .ts-x { width: 44px; height: 44px; }
+/* The bottom bar: clear labels, and the page you're on is obvious */
+.app-bottom a, .app-bottom button { font-size: 12.5px; font-weight: 500; }
+.app-bottom a.on, .app-bottom button.on { color: var(--text); }
+/* While a pop-up is open, everything else (the bottom bar too) sits behind its dimmed backdrop, and prompts step aside for menus */
+body:has(.app-sheet, .tools-sheet, .push-offer.in, .consent.show, .app-tip.show, dialog[open]) .app-bottom,
+body:has(.app-sheet, .tools-sheet, .push-offer.in, .consent.show, .app-tip.show, dialog[open]) .app-fade { z-index: 1 !important; }
+body:has(.app-sheet, .tools-sheet, dialog[open]) :is(.push-offer, .app-tip) { display: none !important; }

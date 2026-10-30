@@ -1,4 +1,5 @@
 import { icon } from "./icons.js";
+import { popupOpen, whenNoPopup } from "./prompts.js";
 // Phone notifications for the church app (daily verse by default). We always ask first, kindly, and once.
 // iPhone: works when the app has been added to the Home Screen (iOS 16.4+). Android and computers: in the browser too.
 const ok = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
@@ -46,7 +47,8 @@ export async function offerOnce() {
   if (ok() && Notification.permission === "denied") return;
   let seen = null; try { seen = localStorage.getItem(KEY); } catch { return; }
   if (seen === "done" || (seen && Date.now() - Number(seen) < 14 * 86400_000)) return;
-  if (document.querySelector(".push-offer, .hello-black")) return;
+  if (document.querySelector(".push-offer")) return;
+  if (popupOpen()) { whenNoPopup(() => offerOnce(), { delay: 2500 }); return; }   // one pop-up at a time
   const el = document.createElement("div");
   el.className = "push-offer"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Daily verse notifications");
   el.innerHTML = needsInstall()

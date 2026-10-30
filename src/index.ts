@@ -24,14 +24,12 @@ import { presenterRoutes } from "./routes/presenter.ts";
 import { codeRoutes } from "./routes/code.ts";
 import { fridayRoutes, processFridayReminder } from "./routes/fridays.ts";
 import { processBetaLaunch } from "./routes/presenter.ts";
-import { assistantRoutes, processAssistantRollout } from "./routes/assistant.ts";
 import { processPrayerWeekly } from "./lib/prayer-weekly.ts";
 import { processElections } from "./routes/votes.ts";
 import { voteRoutes } from "./routes/votes.ts";
 import { outreachRoutes } from "./routes/outreach.ts";
 import { analyticsRoutes } from "./routes/analytics.ts";
 import { pushRoutes, processDailyVerse } from "./routes/push.ts";
-import { retrieve } from "./lib/rag.ts";
 import { chatRoutes } from "./routes/chat.ts";
 import { processAnnouncements } from "./lib/newsletter.ts";
 import { processCheckins, processWelcomes } from "./lib/membership.ts";
@@ -98,7 +96,6 @@ export default {
       programmeRoutes(router, env);
       insightsRoutes(router, env);
       presenterRoutes(router, env);
-      assistantRoutes(router, env);
       codeRoutes(router, env);
       fridayRoutes(router, env);
       voteRoutes(router, env);
@@ -131,13 +128,11 @@ export default {
       await processFollowups(env, now).catch((e) => console.error("leader follow-ups failed", e));
       await processFridayReminder(env, now).catch((e) => console.error("friday reminder failed", e));
       await processBetaLaunch(env, now).catch((e) => console.error("beta launch email failed", e));
-      await processAssistantRollout(env, now).catch((e) => console.error("assistant rollout check failed", e));
       await processPrayerWeekly(env, now).catch((e) => console.error("weekly prayer email failed", e));
       await processElections(env, now).catch((e) => console.error("elections failed", e));
       await processDailyVerse(env, now).catch((e) => console.error("daily verse push failed", e));
       await prepareWordArt(env, now).catch((e) => console.error("word art failed", e));
       await processWhatsNew(env).catch((e) => console.error("what's new email failed", e));
-      await retrieve(env, "service times", 1).catch(() => {});   // keep Ask SCC's church knowledge ready, so the first question is fast
 
       const h = now.getUTCHours(), m = now.getUTCMinutes();
       if (now.getUTCDay() === 6 && h === 8 && m < 10) {
@@ -155,6 +150,9 @@ export default {
           env.DB.prepare("DELETE FROM email_log WHERE created_at < ?").bind(new Date(now.getTime() - 90 * 86400_000).toISOString()),
           env.DB.prepare("DELETE FROM analytics_events WHERE day < ?").bind(new Date(now.getTime() - 400 * 86400_000).toISOString().slice(0, 10)),
         ]);
+        // Ask SCC was removed: clear any search data it left in KV (it would expire on its own, this just tidies sooner).
+        const old = await env.FILES_KV?.list({ prefix: "rag:" }).catch(() => null);
+        for (const k of old?.keys || []) await env.FILES_KV?.delete(k.name).catch(() => {});
       }
     })());
   },

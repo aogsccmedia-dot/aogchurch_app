@@ -169,7 +169,7 @@ async function refreshBadges() {
 const NAVI = { overview: "layoutDashboard", approvals: "ticketCheck", fridays: "calendar", scan: "scan", events: "ticket", services: "clock", programme: "calendarPlus",
   votes: "vote", members: "users", people: "userCheck", calls: "smartphone", prayers: "handHeart", messages: "inbox", complaints: "alert", analytics: "chartColumn",
   insights: "trendingUp", report: "fileText", letters: "mail", subscribers: "megaphone", templates: "palette", emails: "send", settings: "settings", team: "shield",
-  assistant: "sparkle", code: "code" };
+  code: "code" };
 function dressSide(r, role) {
   $$("#nav button[data-tab]").forEach((b) => {
     if (b.dataset.dressed) return; b.dataset.dressed = "1";

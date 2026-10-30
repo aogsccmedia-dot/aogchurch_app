@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds Ask SCC's church knowledge base from the website's own pages (so answers always match the site).
+"""Builds the church knowledge text (llms-full.txt for search engines and AI crawlers) from the website's own pages.
 Each page is split into short chunks by heading; written to src/lib/kb.generated.ts. Run by build.py."""
 import html, json, pathlib, re
 

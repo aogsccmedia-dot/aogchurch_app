@@ -699,17 +699,12 @@ dialog.drawer { background: #fff; }
 }
 @media (max-width: 1180px) and (min-width: 861px) { .shell { grid-template-columns: 220px minmax(0, 1fr); } }
 
-/* ---------- one portal: tabs at the top of the admin workspace, access requests, Ask SCC panel */
+/* ---------- one portal: tabs at the top of the admin workspace, access requests */
 .admin-portal-tabs { margin: 0 0 22px; position: sticky; top: 10px; z-index: 6; box-shadow: 0 8px 24px rgba(80, 60, 30, .08); }
 @media (max-width: 900px) { .admin-portal-tabs { top: 6px; margin-bottom: 16px; } }
 .ap-events { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .ap-scope { margin: 0 0 10px; }
 .notify-form { padding: 22px; max-width: 520px; }
-.as-controls { display: grid; gap: 14px; margin-bottom: 16px; }
-.as-controls .toggle-row { display: flex; gap: 10px; align-items: center; }
-.as-pct { font-size: 22px; font-weight: 600; margin: 0 4px; }
-.as-steps { margin-top: 8px; }
-.as-steps button.on { background: #161410; color: #fff; }
 #team-requests .team-row { background: #fff8ec; border-radius: 12px; }
 .vt-roles { display: grid; gap: 8px; margin-bottom: 8px; }
 .vt-role { display: grid; grid-template-columns: 1fr 1.6fr 130px auto; gap: 8px; align-items: center; }
@@ -894,7 +889,7 @@ body.admin { --ink-0: #342a1c; --tint-panel: #fbf9f6; --tile: #ffffff; --tile-li
 
 /* ==========================================================================
    v4.1 — easier to move around: compact sidebar (recent tools as tiles, the rest as a tidy list) on computers;
-   on phones the bottom bar is the only navigation (Dashboard · Tools · Ask SCC · More), nothing on top.
+   on phones the bottom bar is the only navigation (Dashboard · Messages · Devotions · Menu), nothing on top.
    ========================================================================== */
 .side { grid-template-rows: auto auto auto 1fr auto; }
 .side-recent .nav-group { margin: 6px 4px 8px; }
@@ -1098,3 +1093,7 @@ body.admin .main { background: #ffffff; }
 body.admin .login, .login { background: #ffffff; }
 /* One beige accent for every admin page (no purple or pastel themes) */
 body.admin, body.admin[data-view], [data-tone] { --tint: #f7f1e6 !important; --ink: #8a5c14 !important; }
+/* The admin Menu opens in the middle of the screen too */
+.tools-sheet { align-items: center !important; padding: 16px !important; }
+.ts-card { max-height: min(86dvh, 820px); }
+.ts-grab { display: none; }
