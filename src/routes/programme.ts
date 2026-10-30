@@ -18,17 +18,18 @@ export function programmeRoutes(router: Router, env: Env): void {
     const from = /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get("from") || "") ? url.searchParams.get("from")! : today();
     const limit = Math.min(300, Math.max(1, Number(url.searchParams.get("limit") || 120)));
     const s = await getSession(env, req);
-    let member = false;
-    if (s) {
-      if (s.kind === "admin") member = true;
-      else member = !!(await env.DB.prepare("SELECT 1 FROM members WHERE (user_id = ? OR email = ?) AND status != 'revoked'").bind(s.user.id, s.user.email).first());
-    }
-    const audiences = member ? ["public", "members"] : ["public"];
-    const { results } = await env.DB.prepare(
-      `SELECT id, source, audience, start_date, end_date, time_label, title, department, venue, notes FROM church_programme
-        WHERE audience IN (${audiences.map(() => "?").join(",")}) AND COALESCE(end_date, start_date) >= ? ORDER BY start_date, title LIMIT ?`)
-      .bind(...audiences, from, limit).all<ProgrammeRow>();
-    return json({ ok: true, member, weekly: await publicWeekly(env), items: results.map((p) => ({ ...p, when: programmeWhen(p) })) });
+    // Who they are, the dates and the weekly services: all asked at once. Members-only dates are dropped below for others.
+    const [isMember, { results: all }, weekly] = await Promise.all([
+      !s ? false : s.kind === "admin" ? true : env.DB.prepare("SELECT 1 FROM members WHERE (user_id = ? OR email = ?) AND status != 'revoked'").bind(s.user.id, s.user.email).first().then((r) => !!r),
+      env.DB.prepare(
+        `SELECT id, source, audience, start_date, end_date, time_label, title, department, venue, notes FROM church_programme
+          WHERE audience IN ('public', 'members') AND COALESCE(end_date, start_date) >= ? ORDER BY start_date, title LIMIT ?`)
+        .bind(from, limit * 2).all<ProgrammeRow>(),
+      publicWeekly(env),
+    ]);
+    const member = !!isMember;
+    const results = all.filter((p) => member || p.audience === "public").slice(0, limit);
+    return json({ ok: true, member, weekly, items: results.map((p) => ({ ...p, when: programmeWhen(p) })) });
   });
 
   // ---------- admin ----------

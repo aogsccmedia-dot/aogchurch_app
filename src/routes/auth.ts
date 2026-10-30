@@ -23,11 +23,13 @@ export function authRoutes(router: Router, env: Env): void {
   router.get("/api/auth/me", async (req) => {
     const s = await getSession(env, req);
     if (!s) return json({ ok: true, user: null, google_client_id: env.GOOGLE_CLIENT_ID || null });
-    const member = await env.DB.prepare("SELECT ref_code, status, first_name, preferred_name, created_at FROM members WHERE (user_id = ? OR email = ?) AND status != 'revoked' ORDER BY created_at DESC LIMIT 1")
-      .bind(s.user.id, s.user.email).first();
-    const sub = await env.DB.prepare("SELECT status FROM subscribers WHERE email = ?").bind(s.user.email).first<{ status: string }>();
+    // One trip for both (they don't depend on each other). Whether they can open the admin portal is already in the session.
+    const [member, sub] = await Promise.all([
+      env.DB.prepare("SELECT ref_code, status, first_name, preferred_name, created_at FROM members WHERE (user_id = ? OR email = ?) AND status != 'revoked' ORDER BY created_at DESC LIMIT 1").bind(s.user.id, s.user.email).first(),
+      env.DB.prepare("SELECT status FROM subscribers WHERE email = ?").bind(s.user.email).first<{ status: string }>(),
+    ]);
     if (s.visitor) return json({ ok: true, user: s.user, visitor: true, is_admin: false, admin_role: null, admin_perms: null, can_admin: false, admin_account: false, member: null, subscribed: false, google_client_id: env.GOOGLE_CLIENT_ID || null });
-    return json({ ok: true, user: s.user, is_admin: s.kind === "admin", admin_role: s.role ?? null, admin_perms: s.role && s.role !== "super" ? s.perms : null, can_admin: await canAdmin(env, s.user), admin_account: isAdminEmail(env, s.user.email),
+    return json({ ok: true, user: s.user, is_admin: s.kind === "admin", admin_role: s.role ?? null, admin_perms: s.role && s.role !== "super" ? s.perms : null, can_admin: s.kind === "admin", admin_account: isAdminEmail(env, s.user.email),
       pastor: !!s.pastor, member, subscribed: sub?.status === "active", google_client_id: env.GOOGLE_CLIENT_ID || null });
   });
 
@@ -187,18 +189,22 @@ export function authRoutes(router: Router, env: Env): void {
   router.get("/api/me", async (req) => {
     const s = await getSession(env, req);
     if (!s) throw new HttpError(401, "Please sign in.");
-    const member = await env.DB.prepare(
-      `SELECT ref_code, status, membership_type, first_name, last_name, preferred_name, phone, email, suburb, interests, created_at,
-              last_confirmed_at, next_checkin_at, revoked_at
-         FROM members WHERE user_id = ? OR email = ? ORDER BY created_at DESC LIMIT 1`).bind(s.user.id, s.user.email).first();
-    const { results: registrations } = await env.DB.prepare(
-      `SELECT r.ref_code, r.status, r.created_at, r.guests, e.title, e.slug, e.starts_at, e.ends_at, e.location,
-              (SELECT code FROM tickets t WHERE t.registration_id = r.id AND t.status = 'valid' ORDER BY seq LIMIT 1) AS ticket_code FROM event_registrations r
-         JOIN events e ON e.id = r.event_id WHERE (r.user_id = ? OR r.email = ?) AND r.status NOT IN ('cancelled') ORDER BY e.starts_at DESC LIMIT 50`,
-    ).bind(s.user.id, s.user.email).all();
-    const sub = await env.DB.prepare("SELECT status FROM subscribers WHERE email = ?").bind(s.user.email).first<{ status: string }>();
-    const pw = await env.DB.prepare("SELECT opted_out FROM prayer_weekly WHERE email = ?").bind(s.user.email.toLowerCase()).first<{ opted_out: number }>();
-    return json({ ok: true, user: s.user, member, registrations, subscribed: sub?.status === "active", service_reminders: await remindersOn(env, s.user.email), prayer_weekly: !pw?.opted_out, is_admin: s.kind === "admin" });
+    // Five independent lookups, sent together: the page waits for one trip, not five.
+    const [member, { results: registrations }, sub, pw, reminders] = await Promise.all([
+      env.DB.prepare(
+        `SELECT ref_code, status, membership_type, first_name, last_name, preferred_name, phone, email, suburb, interests, created_at,
+                last_confirmed_at, next_checkin_at, revoked_at
+           FROM members WHERE user_id = ? OR email = ? ORDER BY created_at DESC LIMIT 1`).bind(s.user.id, s.user.email).first(),
+      env.DB.prepare(
+        `SELECT r.ref_code, r.status, r.created_at, r.guests, e.title, e.slug, e.starts_at, e.ends_at, e.location,
+                (SELECT code FROM tickets t WHERE t.registration_id = r.id AND t.status = 'valid' ORDER BY seq LIMIT 1) AS ticket_code FROM event_registrations r
+           JOIN events e ON e.id = r.event_id WHERE (r.user_id = ? OR r.email = ?) AND r.status NOT IN ('cancelled') ORDER BY e.starts_at DESC LIMIT 50`,
+      ).bind(s.user.id, s.user.email).all(),
+      env.DB.prepare("SELECT status FROM subscribers WHERE email = ?").bind(s.user.email).first<{ status: string }>(),
+      env.DB.prepare("SELECT opted_out FROM prayer_weekly WHERE email = ?").bind(s.user.email.toLowerCase()).first<{ opted_out: number }>(),
+      remindersOn(env, s.user.email),
+    ]);
+    return json({ ok: true, user: s.user, member, registrations, subscribed: sub?.status === "active", service_reminders: reminders, prayer_weekly: !pw?.opted_out, is_admin: s.kind === "admin" });
   });
 
   // The Monday prayer-wall email: on unless switched off here or from the link in the email.

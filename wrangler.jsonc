@@ -15,6 +15,10 @@
     { "pattern": "www.aogsccyouth.com", "custom_domain": true }
   ],
 
+  // Run the Worker next to the database (Western Europe) when that's faster: members in South Africa then wait for one
+  // trip to Europe per button, instead of one per database query. Static files are still served from the nearest city.
+  "placement": { "mode": "smart" },
+
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",

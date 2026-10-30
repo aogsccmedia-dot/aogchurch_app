@@ -174,11 +174,14 @@ async function loadSession(env: Env, req: Request): Promise<Session | null> {
   const hash = await sha256Hex(token);
   const now = Date.now();
   const row = await env.DB.prepare(
-    `SELECT s.kind, s.admin_until, u.id, u.email, u.name, u.given_name, u.family_name, u.picture, u.visitor FROM sessions s JOIN users u ON u.id = s.user_id
+    // Account, role and pastor status in one trip to the database (every signed-in request needs them).
+    `SELECT s.kind, s.admin_until, u.id, u.email, u.name, u.given_name, u.family_name, u.picture, u.visitor,
+            r.role AS role_, r.perms AS perms_, EXISTS (SELECT 1 FROM pastors p WHERE p.user_id = u.id) AS pastor_
+       FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN admin_roles r ON r.user_id = u.id
       WHERE s.token_hash = ? AND s.expires_at > ?`,
-  ).bind(hash, new Date(now).toISOString()).first<User & { kind: "user" | "admin"; admin_until: string | null; visitor: number | null }>();
+  ).bind(hash, new Date(now).toISOString()).first<User & { kind: "user" | "admin"; admin_until: string | null; visitor: number | null; role_: string | null; perms_: string | null; pastor_: number }>();
   if (!row) return null;
-  const { kind, admin_until, visitor, ...user } = row;
+  const { kind, admin_until, visitor, role_, perms_, pastor_, ...user } = row;
   // Visitors (guest sign-in): never admins, never members; see lib/visitors.ts for what they can use.
   if (visitor && !isAdminEmail(env, user.email)) return { user, kind: "user", visitor: true };
   // The main (super) admin account still needs the emailed code after Google: its powers only come with a
@@ -187,8 +190,7 @@ async function loadSession(env: Env, req: Request): Promise<Session | null> {
   if (isAdminEmail(env, user.email)) { void kind; void admin_until; return { user, kind: "admin", role: "super" }; }
   // Everyone else: one account. Admins and youth leaders get exactly the parts the main admin ticked for them,
   // on their normal sign-in, with no switching and no codes. Remove the role and it's a member's sign-in again.
-  const r = await env.DB.prepare(`SELECT (SELECT role FROM admin_roles WHERE user_id = ?1) AS role, (SELECT perms FROM admin_roles WHERE user_id = ?1) AS perms,
-      EXISTS (SELECT 1 FROM pastors WHERE user_id = ?1) AS pastor`).bind(user.id).first<{ role: string | null; perms: string | null; pastor: number }>();
+  const r = { role: role_, perms: perms_, pastor: pastor_ };
   // Verified pastors (marked by the main admin) always look after discipleship classes, on top of any other role.
   const pastor = !!r?.pastor;
   const plus = (list: string[]) => (pastor ? [...new Set([...list, "discipleship"])] : list);

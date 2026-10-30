@@ -45,8 +45,8 @@ async function tellCallOffice(env: Env, subject: string, lines: string[]) {
 export function outreachRoutes(router: Router, env: Env): void {
   // ---------- public: the Evangelism page ----------
   router.get("/api/evangelism", async (req) => {
-    const show = await canSeeLeaders(env, req);
-    return json({ ok: true, whatsapp: await setting(env, "whatsapp_number"), email: await setting(env, "contact_email"), leaders: show ? await leaders(env) : null });
+    const [show, whatsapp, email] = await Promise.all([canSeeLeaders(env, req), setting(env, "whatsapp_number"), setting(env, "contact_email")]);
+    return json({ ok: true, whatsapp, email, leaders: show ? await leaders(env) : null });
   });
 
   router.post("/api/evangelism/respond", async (req) => {
@@ -93,10 +93,13 @@ export function outreachRoutes(router: Router, env: Env): void {
     const s = await getSession(env, req);
     if (!s) throw new HttpError(401, "Please sign in first.");
     const month = new Date().toISOString().slice(0, 7);
-    const mine = await env.DB.prepare("SELECT id, name, area, decision, status, created_at FROM outreach_contacts WHERE brought_by = ? ORDER BY created_at DESC LIMIT 30").bind(s.user.id).all();
-    const team = await env.DB.prepare("SELECT COUNT(*) AS n, SUM(decision = 'prayed') AS saved FROM outreach_contacts WHERE substr(created_at, 1, 7) = ?").bind(month).first<{ n: number; saved: number | null }>();
-    return json({ ok: true, mine: mine.results, team: { contacts: team?.n ?? 0, saved: team?.saved ?? 0 }, leaders: (await canSeeLeaders(env, req)) ? await leaders(env) : null,
-      whatsapp: await setting(env, "whatsapp_number") });
+    const [mine, team, show, wa] = await Promise.all([
+      env.DB.prepare("SELECT id, name, area, decision, status, created_at FROM outreach_contacts WHERE brought_by = ? ORDER BY created_at DESC LIMIT 30").bind(s.user.id).all(),
+      env.DB.prepare("SELECT COUNT(*) AS n, SUM(decision = 'prayed') AS saved FROM outreach_contacts WHERE substr(created_at, 1, 7) = ?").bind(month).first<{ n: number; saved: number | null }>(),
+      canSeeLeaders(env, req),
+      setting(env, "whatsapp_number"),
+    ]);
+    return json({ ok: true, mine: mine.results, team: { contacts: team?.n ?? 0, saved: team?.saved ?? 0 }, leaders: show ? await leaders(env) : null, whatsapp: wa });
   });
 
   router.post("/api/go/contacts", async (req) => {
@@ -121,16 +124,18 @@ export function outreachRoutes(router: Router, env: Env): void {
   // ---------- Call Office (permission "calls") ----------
   router.get("/api/admin/calls", async (req) => {
     await requireAdmin(env, req);
-    const contacts = await env.DB.prepare(`SELECT * FROM outreach_contacts WHERE status != 'closed' ORDER BY CASE status WHEN 'new' THEN 0 WHEN 'no_answer' THEN 1 ELSE 2 END, created_at DESC LIMIT 200`).all();
-    const brethren = await env.DB.prepare(
+    const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
+    const [contacts, brethren, classes, done] = await Promise.all([
+      env.DB.prepare(`SELECT * FROM outreach_contacts WHERE status != 'closed' ORDER BY CASE status WHEN 'new' THEN 0 WHEN 'no_answer' THEN 1 ELSE 2 END, created_at DESC LIMIT 200`).all(),
+      env.DB.prepare(
       `SELECT m.id, COALESCE(m.preferred_name, m.first_name) AS first, m.last_name AS last, m.phone, m.status, m.ref_code,
               (SELECT MAX(created_at) FROM care_calls c WHERE c.member_id = m.id) AS last_call,
               (SELECT outcome FROM care_calls c WHERE c.member_id = m.id ORDER BY created_at DESC LIMIT 1) AS last_outcome
          FROM members m WHERE m.status IN ('member','welcomed','contacted','new')
-        ORDER BY last_call IS NOT NULL, last_call LIMIT 150`).all();
-    const classes = await env.DB.prepare("SELECT * FROM discipleship_signups WHERE status != 'done' ORDER BY created_at DESC LIMIT 100").all();
-    const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
-    const done = await env.DB.prepare("SELECT COUNT(*) AS n FROM care_calls WHERE created_at >= ?").bind(weekAgo).first<{ n: number }>();
+        ORDER BY last_call IS NOT NULL, last_call LIMIT 150`).all(),
+      env.DB.prepare("SELECT * FROM discipleship_signups WHERE status != 'done' ORDER BY created_at DESC LIMIT 100").all(),
+      env.DB.prepare("SELECT COUNT(*) AS n FROM care_calls WHERE created_at >= ?").bind(weekAgo).first<{ n: number }>(),
+    ]);
     return json({ ok: true, contacts: contacts.results, brethren: brethren.results, classes: classes.results, calls_this_week: done?.n ?? 0, labels: LABEL });
   });
 

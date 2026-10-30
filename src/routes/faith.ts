@@ -18,9 +18,12 @@ const needUser = async (env: Env, req: Request) => {
 };
 
 async function wordState(env: Env, userId: string | null, today: string) {
-  const readers = await env.DB.prepare("SELECT COUNT(*) AS n FROM word_checkins WHERE day = ?").bind(today).first<{ n: number }>();
-  if (!userId) return { readers_today: readers?.n ?? 0, me: null };
-  const { results } = await env.DB.prepare("SELECT day FROM word_checkins WHERE user_id = ? ORDER BY day DESC LIMIT 400").bind(userId).all<{ day: string }>();
+  const [readers, mine] = await Promise.all([
+    env.DB.prepare("SELECT COUNT(*) AS n FROM word_checkins WHERE day = ?").bind(today).first<{ n: number }>(),
+    userId ? env.DB.prepare("SELECT day FROM word_checkins WHERE user_id = ? ORDER BY day DESC LIMIT 400").bind(userId).all<{ day: string }>() : null,
+  ]);
+  if (!userId || !mine) return { readers_today: readers?.n ?? 0, me: null };
+  const { results } = mine;
   const s = streakFrom(results.map((r) => r.day), today);
   return { readers_today: readers?.n ?? 0, me: { done: results.some((r) => r.day === today), ...s } };
 }
@@ -60,12 +63,15 @@ export function faithRoutes(router: Router, env: Env): void {
   router.get("/api/wall", async (req) => {
     const s = await getSession(env, req);
     const uid = s?.user.id ?? "";
-    const { results } = await env.DB.prepare(
-      `SELECT w.id, w.display_name, w.request, w.prayed_count, w.answered, w.answered_note, w.created_at, w.user_id = ? AS mine,
-              EXISTS (SELECT 1 FROM prayer_wall_prayers p WHERE p.post_id = w.id AND p.user_id = ?) AS prayed
-         FROM prayer_wall w WHERE w.status = 'approved' ORDER BY w.answered, w.created_at DESC LIMIT 60`).bind(uid, uid).all();
-    const mine = s ? (await env.DB.prepare("SELECT id, request, status, prayed_count, answered, created_at FROM prayer_wall WHERE user_id = ? ORDER BY created_at DESC LIMIT 20").bind(uid).all()).results : [];
-    const total = await env.DB.prepare("SELECT COALESCE(SUM(prayed_count), 0) AS n FROM prayer_wall WHERE status = 'approved'").first<{ n: number }>();
+    const [{ results }, mineRows, total] = await Promise.all([
+      env.DB.prepare(
+        `SELECT w.id, w.display_name, w.request, w.prayed_count, w.answered, w.answered_note, w.created_at, w.user_id = ? AS mine,
+                EXISTS (SELECT 1 FROM prayer_wall_prayers p WHERE p.post_id = w.id AND p.user_id = ?) AS prayed
+           FROM prayer_wall w WHERE w.status = 'approved' ORDER BY w.answered, w.created_at DESC LIMIT 60`).bind(uid, uid).all(),
+      s ? env.DB.prepare("SELECT id, request, status, prayed_count, answered, created_at FROM prayer_wall WHERE user_id = ? ORDER BY created_at DESC LIMIT 20").bind(uid).all() : null,
+      env.DB.prepare("SELECT COALESCE(SUM(prayed_count), 0) AS n FROM prayer_wall WHERE status = 'approved'").first<{ n: number }>(),
+    ]);
+    const mine = mineRows?.results ?? [];
     return json({ ok: true, posts: results, mine, prayers_total: total?.n ?? 0, signed_in: !!s });
   });
   router.post("/api/wall", async (req) => {

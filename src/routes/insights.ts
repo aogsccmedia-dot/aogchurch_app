@@ -325,13 +325,14 @@ export function insightsRoutes(router: Router, env: Env): void {
 
   // ---- weekly services
   router.get("/api/admin/services", guard(async () => {
-    const { results } = await env.DB.prepare("SELECT * FROM weekly_services ORDER BY active DESC, CASE day WHEN 0 THEN 7 ELSE day END, sort, title").all<ServiceRow>();
     const today = saToday();
-    const { results: recent } = await env.DB.prepare(
-      "SELECT id, service_id, date, topic, attendance, poster_attachment_id FROM service_sessions WHERE date BETWEEN ? AND ? ORDER BY date")
-      .bind(occurrences(0, 5, 0, today)[0], occurrences(0, 0, 3, today).at(-1)).all<{ id: string; service_id: string; date: string; topic: string; attendance: number | null; poster_attachment_id: string | null }>();
-    const { results: rs } = await env.DB.prepare("SELECT service_id, date, SUM(response = 'yes') AS yes, SUM(response = 'no') AS no FROM service_rsvps WHERE date BETWEEN ? AND ? GROUP BY service_id, date")
-      .bind(occurrences(0, 2, 0, today)[0], occurrences(0, 0, 2, today).at(-1)).all<{ service_id: string; date: string; yes: number; no: number }>();
+    const [{ results }, { results: recent }, { results: rs }] = await Promise.all([
+      env.DB.prepare("SELECT * FROM weekly_services ORDER BY active DESC, CASE day WHEN 0 THEN 7 ELSE day END, sort, title").all<ServiceRow>(),
+      env.DB.prepare("SELECT id, service_id, date, topic, attendance, poster_attachment_id FROM service_sessions WHERE date BETWEEN ? AND ? ORDER BY date")
+        .bind(occurrences(0, 5, 0, today)[0], occurrences(0, 0, 3, today).at(-1)).all<{ id: string; service_id: string; date: string; topic: string; attendance: number | null; poster_attachment_id: string | null }>(),
+      env.DB.prepare("SELECT service_id, date, SUM(response = 'yes') AS yes, SUM(response = 'no') AS no FROM service_rsvps WHERE date BETWEEN ? AND ? GROUP BY service_id, date")
+        .bind(occurrences(0, 2, 0, today)[0], occurrences(0, 0, 2, today).at(-1)).all<{ service_id: string; date: string; yes: number; no: number }>(),
+    ]);
     return json({
       ok: true, today, whatsapp: whatsappEnabled(env),
       services: results.map((s) => ({
@@ -524,12 +525,14 @@ export function insightsRoutes(router: Router, env: Env): void {
 
 /** Public: the weekly services (grouped by day) and topics planned for the coming week. */
 export async function publicWeekly(env: Env) {
-  const { results } = await env.DB.prepare("SELECT * FROM weekly_services WHERE active = 1 ORDER BY CASE day WHEN 0 THEN 7 ELSE day END, sort, title").all<ServiceRow>();
   const today = saToday();
   const weekEnd = occurrences(0, 0, 1, today).at(-1)!;
-  const { results: upcoming } = await env.DB.prepare(
-    `SELECT ss.service_id, ss.date, ss.topic, ss.speaker, ss.poster_attachment_id FROM service_sessions ss JOIN weekly_services ws ON ws.id = ss.service_id
-      WHERE ws.active = 1 AND ss.date BETWEEN ? AND ? ORDER BY ss.date`).bind(today, weekEnd).all<{ service_id: string; date: string; topic: string; speaker: string | null; poster_attachment_id: string | null }>();
+  const [{ results }, { results: upcoming }] = await Promise.all([
+    env.DB.prepare("SELECT * FROM weekly_services WHERE active = 1 ORDER BY CASE day WHEN 0 THEN 7 ELSE day END, sort, title").all<ServiceRow>(),
+    env.DB.prepare(
+      `SELECT ss.service_id, ss.date, ss.topic, ss.speaker, ss.poster_attachment_id FROM service_sessions ss JOIN weekly_services ws ON ws.id = ss.service_id
+        WHERE ws.active = 1 AND ss.date BETWEEN ? AND ? ORDER BY ss.date`).bind(today, weekEnd).all<{ service_id: string; date: string; topic: string; speaker: string | null; poster_attachment_id: string | null }>(),
+  ]);
   return results.map((s) => {
     const next = upcoming.find((u) => u.service_id === s.id && u.date >= today);
     return {

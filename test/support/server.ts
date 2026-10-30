@@ -56,8 +56,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
       method: req.method, headers: req.headers as HeadersInit,
       body: req.method === "GET" || req.method === "HEAD" ? undefined : body,
     });
+    const g = globalThis as { __d1Trips?: number }, t0 = g.__d1Trips || 0;
     const r = await worker.fetch(request, env as never, {} as never);
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { "x-d1-trips": String((g.__d1Trips || 0) - t0) };
     r.headers.forEach((v, k) => { headers[k] = v; });
     res.writeHead(r.status, headers);
     res.end(Buffer.from(await r.arrayBuffer()));

@@ -54,13 +54,14 @@ export async function sendMail(env: Env, mail: Mail): Promise<boolean> {
 export const SETUP_ERRORS = ["E_RECIPIENT_NOT_ALLOWED", "E_SENDER_DOMAIN_NOT_AVAILABLE", "E_SENDER_NOT_VERIFIED", "EMAIL binding not configured"];
 
 export async function emailHealth(env: Env) {
-  const r = await env.DB.prepare(`SELECT
+  const [r, last, lastErr] = await Promise.all([env.DB.prepare(`SELECT
       SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) AS sent,
       SUM(CASE WHEN status IN ('failed','skipped') THEN 1 ELSE 0 END) AS failed,
       SUM(CASE WHEN status IN ('failed','skipped') AND payload IS NOT NULL THEN 1 ELSE 0 END) AS resendable
-    FROM email_log WHERE created_at >= datetime('now', '-30 days')`).first<{ sent: number | null; failed: number | null; resendable: number | null }>();
-  const last = await env.DB.prepare("SELECT status, error, created_at FROM email_log ORDER BY id DESC LIMIT 1").first<{ status: string; error: string | null; created_at: string }>();
-  const lastErr = await env.DB.prepare("SELECT error FROM email_log WHERE status IN ('failed','skipped') ORDER BY id DESC LIMIT 1").first<{ error: string | null }>();
+    FROM email_log WHERE created_at >= datetime('now', '-30 days')`).first<{ sent: number | null; failed: number | null; resendable: number | null }>(),
+    env.DB.prepare("SELECT status, error, created_at FROM email_log ORDER BY id DESC LIMIT 1").first<{ status: string; error: string | null; created_at: string }>(),
+    env.DB.prepare("SELECT error FROM email_log WHERE status IN ('failed','skipped') ORDER BY id DESC LIMIT 1").first<{ error: string | null }>(),
+  ]);
   const needsSetup = !!last && last.status !== "sent" && SETUP_ERRORS.some((c) => (last.error || "").includes(c));
   return { sent: r?.sent ?? 0, failed: r?.failed ?? 0, resendable: r?.resendable ?? 0, last_status: last?.status ?? null, last_error: lastErr?.error ?? null, needs_setup: needsSetup };
 }

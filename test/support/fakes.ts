@@ -9,6 +9,11 @@ import { join, extname } from "node:path";
 
 type Val = string | number | null | Uint8Array;
 
+/** Optional: D1_LATENCY_MS=160 makes every query wait like a real trip from Johannesburg to the database in Europe,
+ * and counts round trips (globalThis.__d1Trips), so we can measure how fast buttons feel to members. */
+const LAT = Number(process.env.D1_LATENCY_MS || 0);
+const trip = async () => { (globalThis as { __d1Trips?: number }).__d1Trips = ((globalThis as { __d1Trips?: number }).__d1Trips || 0) + 1; if (LAT) await new Promise((r) => setTimeout(r, LAT)); };
+
 class Stmt {
   db: DatabaseSync; sql: string; args: Val[];
   constructor(db: DatabaseSync, sql: string, args: Val[] = []) { this.db = db; this.sql = sql; this.args = args; }
@@ -17,12 +22,13 @@ class Stmt {
     return new Stmt(this.db, this.sql, args.map((a) => (typeof a === "boolean" ? (a ? 1 : 0) : a)) as Val[]);
   }
   private returnsRows() { return /^\s*(select|with|pragma)/i.test(this.sql) || /\breturning\b/i.test(this.sql); }
-  async all<T = unknown>() { return this.exec() as { results: T[]; success: true; meta: { changes: number } }; }
+  async all<T = unknown>() { await trip(); return this.exec() as { results: T[]; success: true; meta: { changes: number } }; }
   async first<T = unknown>(col?: string) {
+    await trip();
     const r = (this.exec().results[0] ?? null) as Record<string, unknown> | null;
     return (col && r ? r[col] : r) as T | null;
   }
-  async run() { return this.exec(); }
+  async run() { await trip(); return this.exec(); }
   exec() {
     const p = this.db.prepare(this.sql);
     if (this.returnsRows()) {
@@ -43,6 +49,7 @@ export function fakeD1(migrationsDir: string) {
     _db: db,
     prepare: (sql: string) => new Stmt(db, sql),
     async batch(stmts: Stmt[]) {
+      await trip();
       db.exec("BEGIN");
       try { const out = stmts.map((s) => s.exec()); db.exec("COMMIT"); return out; }
       catch (e) { db.exec("ROLLBACK"); throw e; }

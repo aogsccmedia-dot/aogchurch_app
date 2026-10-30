@@ -396,3 +396,8 @@ body::before, body::after { display: none !important; background: none !importan
 .hb-hi b, .si-art-line b { background: none !important; -webkit-background-clip: initial !important; background-clip: initial !important; color: #9a6a1f !important; }
 .hb-line { background: #d6a650 !important; }
 :focus-visible { outline-color: #c8963e; }
+
+/* Every tap answers straight away, before anything loads */
+.app-bottom a, .app-bottom button, .sheet-links a, .room-btn, #nav button, .tl, .item[data-edit-session], .svc-rec, .dc-class .btn, .ov-black, [data-go-tab] { transition: transform .08s ease, background-color .12s ease; }
+.app-bottom a:active, .app-bottom button:active, .sheet-links a:active, .room-btn:active, #nav button:active, .tl:active, .svc-rec:active, [data-go-tab]:active { transform: scale(.96); }
+@media (prefers-reduced-motion: reduce) { .app-bottom a:active, .app-bottom button:active, .sheet-links a:active, .room-btn:active, #nav button:active, .tl:active, .svc-rec:active, [data-go-tab]:active { transform: none; } }

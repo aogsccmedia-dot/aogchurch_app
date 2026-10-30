@@ -178,13 +178,17 @@ export function classRoutes(router: Router, env: Env): void {
   // ---------- the public page: "Coming soon", or the upcoming classes ----------
   router.get("/api/classes", async (req) => {
     const s = await getSession(env, req);
-    const st = await status(env);
-    const teach = canTeach(s);
-    const show = st === "open" || teach;
-    const { results } = show ? await env.DB.prepare(`SELECT * FROM dc_classes WHERE status != 'cancelled' AND (status != 'ended' OR ended_at >= ?)
-        ORDER BY starts_at LIMIT 30`).bind(new Date(Date.now() - 14 * 86400_000).toISOString()).all<ClassRow>() : { results: [] as ClassRow[] };
-    const joined = s && !s.visitor ? new Set((await env.DB.prepare("SELECT class_id FROM dc_attendance WHERE user_id = ?").bind(s.user.id).all<{ class_id: string }>()).results.map((r) => r.class_id)) : new Set<string>();
-    const up = s && !s.visitor ? teach || await signedUp(env, s) : false;
+    const teach = canTeach(s), member = !!s && !s.visitor;
+    // Everything at once; the classes themselves are only shown when open (or to pastors).
+    const [st, all, att, up] = await Promise.all([
+      status(env),
+      env.DB.prepare(`SELECT * FROM dc_classes WHERE status != 'cancelled' AND (status != 'ended' OR ended_at >= ?)
+        ORDER BY starts_at LIMIT 30`).bind(new Date(Date.now() - 14 * 86400_000).toISOString()).all<ClassRow>(),
+      member ? env.DB.prepare("SELECT class_id FROM dc_attendance WHERE user_id = ?").bind(s!.user.id).all<{ class_id: string }>() : null,
+      member ? (teach ? true : signedUp(env, s!)) : false,
+    ]);
+    const results = st === "open" || teach ? all.results : [];
+    const joined = new Set((att?.results || []).map((r) => r.class_id));
     return json({ ok: true, status: st, can_teach: teach, signed_up: up,
       classes: results.map((c) => ({ ...publicClass(c), joined: joined.has(c.id), can_join: c.mode === "online" && (teach || (up && c.status === "live")) })) });
   });

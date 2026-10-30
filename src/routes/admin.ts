@@ -72,7 +72,8 @@ export function adminRoutes(router: Router, env: Env): void {
     const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
     const now = new Date().toISOString();
     const q = (sql: string, ...a: unknown[]) => env.DB.prepare(sql).bind(...a);
-    const rs = await env.DB.batch([
+    // Everything for the dashboard at once (one trip's wait instead of six).
+    const [rs, interests, next, att, acc, health] = await Promise.all([env.DB.batch([
       q("SELECT COUNT(*) AS n FROM members"),
       q("SELECT COUNT(*) AS n FROM members WHERE status = 'new'"),
       q("SELECT COUNT(*) AS n FROM members WHERE created_at >= ?", weekAgo),
@@ -85,29 +86,30 @@ export function adminRoutes(router: Router, env: Env): void {
       q("SELECT COUNT(*) AS n FROM event_registrations WHERE status = 'pending'"),
       q("SELECT COUNT(*) AS n FROM complaints WHERE status IN ('received','in_review')"),
       q("SELECT COUNT(*) AS n FROM prayer_wall WHERE status = 'pending'"),
-    ]);
-    const n = (i: number) => (rs[i].results[0] as { n: number }).n;
-    const interests = await env.DB.prepare("SELECT j.value AS slug, COUNT(*) AS n FROM members, json_each(members.interests) j GROUP BY j.value ORDER BY n DESC").all();
-    const next = await env.DB.prepare("SELECT id, subject, status, scheduled_for FROM announcements WHERE status IN ('scheduled','sending') ORDER BY scheduled_for LIMIT 1").first();
-    // "Needs attention": newest open complaints, new prayer requests and new messages in one feed.
-    const { results: attention } = await env.DB.prepare(`SELECT * FROM (
+    ]),
+      env.DB.prepare("SELECT j.value AS slug, COUNT(*) AS n FROM members, json_each(members.interests) j GROUP BY j.value ORDER BY n DESC").all(),
+      env.DB.prepare("SELECT id, subject, status, scheduled_for FROM announcements WHERE status IN ('scheduled','sending') ORDER BY scheduled_for LIMIT 1").first(),
+      // "Needs attention": newest open complaints, new prayer requests and new messages in one feed.
+      env.DB.prepare(`SELECT * FROM (
         SELECT 'complaint' AS kind, c.id, c.subject AS title, m.first_name || ' ' || m.last_name AS who, c.created_at, c.confidential AS flag FROM complaints c JOIN members m ON m.id = c.member_id WHERE c.status IN ('received','in_review')
         UNION ALL SELECT 'prayer', id, substr(request, 1, 140), CASE WHEN is_anonymous THEN 'Anonymous' ELSE COALESCE(name, 'Someone') END, created_at, pastors_only FROM prayer_requests WHERE status = 'new'
         UNION ALL SELECT 'wall', id, substr(request, 1, 140), COALESCE(display_name, 'Someone'), created_at, 0 FROM prayer_wall WHERE status = 'pending'
         UNION ALL SELECT 'message', id, COALESCE(subject, substr(message, 1, 100)), name, created_at, 0 FROM contact_messages WHERE status = 'new'
-      ) ORDER BY created_at DESC LIMIT 12`).all();
-    // The main admin sees access requests first, with Approve / Decline right there.
-    const access = sess.role === "super"
-      ? (await env.DB.prepare("SELECT id, email, name, current_role, wants, note, created_at FROM access_requests WHERE status = 'pending' ORDER BY created_at").all<Record<string, unknown>>()).results
-          .map((r) => ({ ...r, wants: (JSON.parse(String(r.wants || "[]")) as string[]).map((k) => k === "admin" ? "Admin role" : permLabels([k])[0]) }))
-      : [];
+      ) ORDER BY created_at DESC LIMIT 12`).all(),
+      // The main admin sees access requests first, with Approve / Decline right there.
+      sess.role === "super" ? env.DB.prepare("SELECT id, email, name, current_role, wants, note, created_at FROM access_requests WHERE status = 'pending' ORDER BY created_at").all<Record<string, unknown>>() : null,
+      emailHealth(env),
+    ]);
+    const n = (i: number) => (rs[i].results[0] as { n: number }).n;
+    const attention = att.results;
+    const access = acc ? acc.results.map((r) => ({ ...r, wants: (JSON.parse(String(r.wants || "[]")) as string[]).map((k) => k === "admin" ? "Admin role" : permLabels([k])[0]) })) : [];
     return json({ ok: true, access, stats: {
       members: n(0), new_members: n(1), this_week: n(2), new_prayers: n(3), new_messages: n(4), upcoming_events: n(5),
       subscribers: n(6), registrations_week: n(7), accounts: n(8), pending_payments: n(9), open_complaints: n(10), wall_pending: n(11), access_requests: access.length,
     }, interests: interests.results, next_letter: next,
       // The team only sees items they can act on (complaints and messages stay with the main admin).
       attention: sess.role === "super" ? attention : (attention as { kind: string }[]).filter((x) => (x.kind === "prayer" || x.kind === "wall") && (sess.perms || []).includes("prayer")),
-      email_enabled: !!env.EMAIL, email_health: await emailHealth(env), google_enabled: !!env.GOOGLE_CLIENT_ID });
+      email_enabled: !!env.EMAIL, email_health: health, google_enabled: !!env.GOOGLE_CLIENT_ID });
   }));
 
   // ---------- members ----------

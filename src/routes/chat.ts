@@ -22,12 +22,13 @@ async function me(env: Env, req: Request) {
 
 /** Everyone people can message: the team (with their ministry title) and the church office. */
 export async function leaders(env: Env): Promise<Leader[]> {
-  const { results } = await env.DB.prepare(
+  const [{ results }, office] = await Promise.all([env.DB.prepare(
     `SELECT u.id, COALESCE(m.preferred_name || ' ' || m.last_name, m.first_name || ' ' || m.last_name, u.name, u.email) AS name, u.picture, u.email,
             COALESCE(p.title, r.title, CASE WHEN p.user_id IS NOT NULL THEN 'Pastor' WHEN r.role = 'youth_leader' THEN 'Youth leader' ELSE 'Church leader' END) AS role
        FROM users u LEFT JOIN admin_roles r ON r.user_id = u.id LEFT JOIN pastors p ON p.user_id = u.id LEFT JOIN members m ON m.user_id = u.id
-      WHERE r.user_id IS NOT NULL OR p.user_id IS NOT NULL GROUP BY u.id ORDER BY name`).all<Leader>();
-  const office = await env.DB.prepare("SELECT id, email, picture FROM users WHERE lower(email) = ?").bind(adminEmail(env)).first<{ id: string; email: string; picture: string | null }>();
+      WHERE r.user_id IS NOT NULL OR p.user_id IS NOT NULL GROUP BY u.id ORDER BY name`).all<Leader>(),
+    env.DB.prepare("SELECT id, email, picture FROM users WHERE lower(email) = ?").bind(adminEmail(env)).first<{ id: string; email: string; picture: string | null }>(),
+  ]);
   const out = results.map((l) => ({ ...l, name: String(l.name || l.email).trim() }));
   if (office && !out.some((l) => l.id === office.id)) out.unshift({ id: office.id, name: "Church office", picture: office.picture, role: "Main admin · AOG Sandton City Church", email: office.email });
   return out;
