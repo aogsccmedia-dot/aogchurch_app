@@ -774,7 +774,7 @@ export function adminRoutes(router: Router, env: Env): void {
     return json({ ok: true, assigned: n });
   }));
 
-  router.get("/api/admin/whoami", guard(async (_req, _p, s) => json({ ok: true, email: s.user.email, name: s.user.name, role: s.role ?? "super", perms: s.role === "super" ? null : s.perms, all_perms: YOUTH_PERMS })));
+  router.get("/api/admin/whoami", guard(async (_req, _p, s) => json({ ok: true, email: s.user.email, name: s.user.name, role: s.role ?? "super", pastor: !!s.pastor, perms: s.role === "super" ? null : s.perms, all_perms: YOUTH_PERMS })));
 
   // ---------- complaints ----------
   router.get("/api/admin/complaints", guard(async (req) => {

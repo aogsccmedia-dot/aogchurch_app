@@ -28,7 +28,7 @@ export function authRoutes(router: Router, env: Env): void {
     const sub = await env.DB.prepare("SELECT status FROM subscribers WHERE email = ?").bind(s.user.email).first<{ status: string }>();
     if (s.visitor) return json({ ok: true, user: s.user, visitor: true, is_admin: false, admin_role: null, admin_perms: null, can_admin: false, admin_account: false, member: null, subscribed: false, google_client_id: env.GOOGLE_CLIENT_ID || null });
     return json({ ok: true, user: s.user, is_admin: s.kind === "admin", admin_role: s.role ?? null, admin_perms: s.role && s.role !== "super" ? s.perms : null, can_admin: await canAdmin(env, s.user), admin_account: isAdminEmail(env, s.user.email),
-      member, subscribed: sub?.status === "active", google_client_id: env.GOOGLE_CLIENT_ID || null });
+      pastor: !!s.pastor, member, subscribed: sub?.status === "active", google_client_id: env.GOOGLE_CLIENT_ID || null });
   });
 
   /** Sign in with Google (everyone). The main admin account goes straight in too: no emailed codes. */

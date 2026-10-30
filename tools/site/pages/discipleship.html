@@ -1,9 +1,18 @@
   <main id="main">
     <section class="wrap page-hero">
       <p class="eyebrow gold">Discipleship classes</p>
+      <span class="dc-soon" id="dc-soon">{{i:calendar}} Coming soon</span>
       <h1>Grow in Jesus, <em>step by step.</em></h1>
-      <p class="lede">Short, friendly classes for new believers and anyone who wants strong foundations. Small groups, real questions, no pressure.</p>
-      <div class="actions"><a class="btn btn-gold btn-lg" href="#signup">Sign me up {{arrow}}</a></div>
+      <p class="lede">Short, friendly classes for new believers and anyone who wants strong foundations. Small groups, real questions, no pressure. In person at church, or online from home.</p>
+      <div class="actions"><a class="btn btn-gold btn-lg" href="#signup" id="dc-cta">Tell me when it starts {{arrow}}</a></div>
+    </section>
+
+    <section class="block" id="dc-classes" aria-labelledby="dc-classes-title" hidden>
+      <div class="wrap">
+        <div class="section-head"><p class="eyebrow gold">Upcoming</p><h2 id="dc-classes-title">Next classes</h2></div>
+        <div class="dc-list" id="dc-list"></div>
+        <p class="muted-text dc-teach" id="dc-teach" hidden>{{i:shield}} You're a pastor: schedule and edit classes in <a href="/admin/#discipleship">Discipleship</a>.</p>
+      </div>
     </section>
 
     <section class="block" aria-labelledby="tracks-title">
@@ -26,9 +35,9 @@
     <section class="block" id="signup" aria-labelledby="signup-title">
       <div class="wrap ev-two">
         <div>
-          <p class="eyebrow gold">Sign up</p>
-          <h2 id="signup-title">Join the next class</h2>
-          <p class="lede">Tell us which track you'd like. We'll let you know the day, time and place of the next class (usually after the Sunday service, or online in the week).</p>
+          <p class="eyebrow gold" id="dc-su-eyebrow">Be the first to know</p>
+          <h2 id="signup-title">Classes are coming soon</h2>
+          <p class="lede" id="dc-su-lede">Tell us which track you'd like and we'll let you know as soon as classes open: the day, the time, and whether it's at church or online.</p>
           <p class="muted-text">“Go ye therefore, and teach all nations… teaching them to observe all things whatsoever I have commanded you.” Matthew 28:19–20</p>
         </div>
         <form class="panel ev-form" id="dc-form" novalidate>
@@ -39,7 +48,7 @@
           <label class="field"><span>Email</span><input class="input" name="email" type="email" autocomplete="email" maxlength="160"></label>
           <label class="field"><span>Anything we should know? (optional)</span><textarea class="input" name="note" rows="2" maxlength="600"></textarea></label>
           <input type="text" name="website" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">
-          <button class="btn btn-gold btn-lg" type="submit">Sign me up {{arrow}}</button>
+          <button class="btn btn-gold btn-lg" type="submit" id="dc-submit">Keep me posted {{arrow}}</button>
         </form>
       </div>
     </section>

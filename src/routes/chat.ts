@@ -24,20 +24,22 @@ async function me(env: Env, req: Request) {
 export async function leaders(env: Env): Promise<Leader[]> {
   const { results } = await env.DB.prepare(
     `SELECT u.id, COALESCE(m.preferred_name || ' ' || m.last_name, m.first_name || ' ' || m.last_name, u.name, u.email) AS name, u.picture, u.email,
-            COALESCE(r.title, CASE r.role WHEN 'youth_leader' THEN 'Youth leader' ELSE 'Church leader' END) AS role
-       FROM admin_roles r JOIN users u ON u.id = r.user_id LEFT JOIN members m ON m.user_id = u.id ORDER BY name`).all<Leader>();
+            COALESCE(p.title, r.title, CASE WHEN p.user_id IS NOT NULL THEN 'Pastor' WHEN r.role = 'youth_leader' THEN 'Youth leader' ELSE 'Church leader' END) AS role
+       FROM users u LEFT JOIN admin_roles r ON r.user_id = u.id LEFT JOIN pastors p ON p.user_id = u.id LEFT JOIN members m ON m.user_id = u.id
+      WHERE r.user_id IS NOT NULL OR p.user_id IS NOT NULL GROUP BY u.id ORDER BY name`).all<Leader>();
   const office = await env.DB.prepare("SELECT id, email, picture FROM users WHERE lower(email) = ?").bind(adminEmail(env)).first<{ id: string; email: string; picture: string | null }>();
   const out = results.map((l) => ({ ...l, name: String(l.name || l.email).trim() }));
   if (office && !out.some((l) => l.id === office.id)) out.unshift({ id: office.id, name: "Church office", picture: office.picture, role: "Main admin · AOG Sandton City Church", email: office.email });
   return out;
 }
-/** The verified sticker next to a name: black for the main admin, blue for admins, gold for leaders and verified members. */
-async function badge(env: Env, id: string, email?: string | null): Promise<"super" | "admin" | "member" | null> {
+/** The verified sticker next to a name: black for the main admin, purple star for verified pastors, blue for admins, gold for leaders and verified members. */
+type Badge = "super" | "pastor" | "admin" | "member" | null;
+async function badge(env: Env, id: string, email?: string | null): Promise<Badge> {
   if (email && isAdminEmail(env, email)) return "super";
-  const r = await env.DB.prepare(`SELECT (SELECT role FROM admin_roles WHERE user_id = ?1) AS role,
-      EXISTS (SELECT 1 FROM members m JOIN users u ON u.id = ?1 WHERE (m.user_id = ?1 OR lower(m.email) = lower(u.email)) AND m.status = 'member') AS member`).bind(id).first<{ role: string | null; member: number }>();
+  const r = await env.DB.prepare(`SELECT (SELECT role FROM admin_roles WHERE user_id = ?1) AS role, EXISTS (SELECT 1 FROM pastors WHERE user_id = ?1) AS pastor,
+      EXISTS (SELECT 1 FROM members m JOIN users u ON u.id = ?1 WHERE (m.user_id = ?1 OR lower(m.email) = lower(u.email)) AND m.status = 'member') AS member`).bind(id).first<{ role: string | null; pastor: number; member: number }>();
   if (!email) { const u = await env.DB.prepare("SELECT email FROM users WHERE id = ?").bind(id).first<{ email: string }>(); if (u && isAdminEmail(env, u.email)) return "super"; }
-  return r?.role === "admin" ? "admin" : r?.role || r?.member ? "member" : null;
+  return r?.pastor ? "pastor" : r?.role === "admin" ? "admin" : r?.role || r?.member ? "member" : null;
 }
 const isLeader = async (env: Env, id: string) => (await leaders(env)).find((l) => l.id === id) || null;
 
@@ -52,7 +54,7 @@ async function person(env: Env, id: string) {
       FROM users u LEFT JOIN members m ON m.user_id = u.id WHERE u.id = ?`).bind(id).first<{ id: string; first: string; name: string; picture: string | null; email: string }>();
 }
 
-type Who = { name: string; picture: string | null; email: string; badge: "super" | "admin" | "member" | null };
+type Who = { name: string; picture: string | null; email: string; badge: Badge };
 /** Names, photos and verified badges for many people in one query per 90 people (instead of two or three each). */
 async function people(env: Env, ids: string[]): Promise<Map<string, Who>> {
   const out = new Map<string, Who>();
@@ -61,11 +63,11 @@ async function people(env: Env, ids: string[]): Promise<Map<string, Who>> {
     const part = uniq.slice(i, i + 90);
     const { results } = await env.DB.prepare(`SELECT u.id, u.email, u.picture,
         COALESCE((SELECT COALESCE(m.preferred_name || ' ' || m.last_name, m.first_name || ' ' || m.last_name) FROM members m WHERE m.user_id = u.id LIMIT 1), u.name, u.email) AS name,
-        (SELECT role FROM admin_roles r WHERE r.user_id = u.id) AS role,
+        (SELECT role FROM admin_roles r WHERE r.user_id = u.id) AS role, EXISTS (SELECT 1 FROM pastors p WHERE p.user_id = u.id) AS pastor,
         EXISTS (SELECT 1 FROM members mm WHERE (mm.user_id = u.id OR lower(mm.email) = lower(u.email)) AND mm.status = 'member') AS member
-      FROM users u WHERE u.id IN (${part.map(() => "?").join(",")})`).bind(...part).all<{ id: string; email: string; picture: string | null; name: string; role: string | null; member: number }>();
+      FROM users u WHERE u.id IN (${part.map(() => "?").join(",")})`).bind(...part).all<{ id: string; email: string; picture: string | null; name: string; role: string | null; pastor: number; member: number }>();
     for (const r of results) out.set(r.id, { name: r.name, picture: r.picture, email: r.email,
-      badge: isAdminEmail(env, r.email) ? "super" : r.role === "admin" ? "admin" : r.role || r.member ? "member" : null });
+      badge: isAdminEmail(env, r.email) ? "super" : r.pastor ? "pastor" : r.role === "admin" ? "admin" : r.role || r.member ? "member" : null });
   }
   return out;
 }

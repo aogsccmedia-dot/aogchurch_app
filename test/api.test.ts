@@ -1579,3 +1579,92 @@ describe("Weekly ticket reminders", () => {
     assert.equal(e.DB._db.prepare("SELECT COUNT(*) AS n FROM settings WHERE key = 'event_reminder_test'").get().n, 0);
   });
 });
+
+describe("Pastors and discipleship classes", () => {
+  test("only the main admin verifies pastors (members only); pastors and the main admin run classes; notes go to attendees as a PDF", async () => {
+    const e = await makeEnv();
+    const sup = await adminCookie(e);
+    const { createHash } = await import("node:crypto");
+    const person = (id: string, email: string, name: string, opts: { member?: boolean; visitor?: boolean; admin?: boolean } = {}) => {
+      const tok = `tok-${id}-aaaaaaaaaaaaaaaaaaaaaaaa`;
+      e.DB._db.prepare("INSERT INTO users (id, email, name, given_name, visitor) VALUES (?, ?, ?, ?, ?)").run(id, email, name, name.split(" ")[0], opts.visitor ? 1 : 0);
+      if (opts.member) e.DB._db.prepare("INSERT INTO members (id, user_id, ref_code, email, first_name, last_name, membership_type, status, date_of_birth, phone, signature_name) VALUES (?, ?, ?, ?, ?, ?, 'new_member', 'member', '1990-01-01', '0820000000', ?)")
+        .run(`m-${id}`, id, `SCC-${id}`, email, name.split(" ")[0], name.split(" ")[1] || "X", name);
+      if (opts.admin) e.DB._db.prepare("INSERT INTO admin_roles (user_id, email, role, granted_by, perms) VALUES (?, ?, 'admin', 'x', '[\"reports\",\"services\"]')").run(id, email);
+      e.DB._db.prepare("INSERT INTO sessions (token_hash, user_id, kind, expires_at) VALUES (?, ?, 'user', '2099-01-01T00:00:00Z')").run(createHash("sha256").update(tok).digest("hex"), id);
+      return { cookie: `scc_session=${tok}`, "x-scc-admin": "1" };
+    };
+    const pastor = person("u-past", "pastor@example.com", "John Mokoena", { member: true });
+    const staff = person("u-staff", "staff@example.com", "Sam Staff", { member: true, admin: true });
+    const thabo = person("u-thabo", "thabo@example.com", "Thabo Nkosi", { member: true });
+    const other = person("u-other", "other@example.com", "Other Person", { member: true });
+    const guest = person("u-guest", "guest@example.com", "Guest Visitor", { visitor: true });
+    person("u-nomem", "nomem@example.com", "Not Member");
+    const as = (h: Record<string, string>, path: string, method = "GET", body?: unknown) => call(path, { method, headers: { ...h, ...JSONH }, body: body === undefined ? undefined : JSON.stringify(body) }, e);
+
+    // Coming soon by default: nothing listed for members.
+    const pub = await (await as(thabo, "/api/classes")).json() as { status: string; classes: unknown[] };
+    assert.equal(pub.status, "soon"); assert.equal(pub.classes.length, 0);
+
+    // Pastors: main admin only, members only.
+    assert.equal((await as(staff, "/api/admin/pastors", "POST", { user_id: "u-past" })).status, 403);
+    assert.equal((await post("/api/admin/pastors", { user_id: "u-nomem" }, A(sup), e)).status, 422);
+    assert.equal((await post("/api/admin/pastors", { user_id: "u-past", title: "Pastor" }, A(sup), e)).status, 200);
+    const pm = await (await as(pastor, "/api/auth/me")).json() as { pastor: boolean; admin_perms: string[] };
+    assert.equal(pm.pastor, true); assert.deepEqual(pm.admin_perms, ["discipleship"]);
+    assert.equal((await as(pastor, "/api/admin/members")).status, 403, "pastors only get discipleship, nothing else");
+    assert.equal((await as(staff, "/api/admin/discipleship")).status, 403, "other admins can't manage classes");
+    assert.equal((await as(staff, "/api/admin/team/u-staff", "PATCH", { perms: ["discipleship"] })).status, 403);
+
+    // Pastors manage: open, schedule.
+    assert.equal((await as(thabo, "/api/admin/discipleship/classes", "POST", { title: "x", starts_local: "2030-11-05T18:00" })).status, 401);
+    const mk = await as(pastor, "/api/admin/discipleship/classes", "POST", { title: "Foundations 1: Salvation", track: "foundations", mode: "online", minutes: 60, starts_local: "2030-11-05T18:00" });
+    assert.equal(mk.status, 201);
+    const { id } = await mk.json() as { id: string };
+    assert.equal(e.DB._db.prepare("SELECT starts_at FROM dc_classes WHERE id = ?").get(id).starts_at, "2030-11-05T16:00:00.000Z", "typed in SAST");
+    assert.equal((await as(pastor, "/api/admin/discipleship/status", "PUT", { status: "open" })).status, 200);
+
+    // Members who signed up can join once the pastor opens the room; others and visitors can't.
+    assert.equal((await as(thabo, "/api/discipleship", "POST", { track: "foundations", name: "Thabo Nkosi", email: "thabo@example.com" })).status, 201);
+    assert.equal((await as(thabo, `/api/classes/${id}/join`, "POST", {})).status, 409, "not started yet");
+    const pj = await (await as(pastor, `/api/classes/${id}/join`, "POST", {})).json() as { me: { teacher: boolean }; ice: unknown[] };
+    assert.equal(pj.me.teacher, true); assert.ok(pj.ice.length);
+    assert.equal((await as(other, `/api/classes/${id}/join`, "POST", {})).status, 403, "not signed up");
+    assert.equal((await as(guest, `/api/classes/${id}/join`, "POST", {})).status, 403, "visitors can't");
+    const tj = await (await as(thabo, `/api/classes/${id}/join`, "POST", {})).json() as { people: { id: string; pastor: boolean }[] };
+    assert.deepEqual(tj.people.map((p) => [p.id, p.pastor]), [["u-past", true]]);
+
+    // Connection messages reach only the person they're for, once.
+    const sdp = "v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\n";
+    assert.equal((await as(thabo, `/api/classes/${id}/signal`, "POST", { to: "u-past", kind: "offer", sdp })).status, 200);
+    assert.equal((await as(thabo, `/api/classes/${id}/signal`, "POST", { to: "u-other", kind: "offer", sdp })).status, 409);
+    const p1 = await (await as(pastor, `/api/classes/${id}/poll`)).json() as { signals: { from: string; kind: string }[]; people: { id: string }[] };
+    assert.deepEqual(p1.signals.map((x) => [x.from, x.kind]), [["u-thabo", "offer"]]);
+    assert.deepEqual(p1.people.map((x) => x.id), ["u-thabo"]);
+    assert.equal(((await (await as(pastor, `/api/classes/${id}/poll`)).json()) as { signals: unknown[] }).signals.length, 0);
+
+    // Notes: only pastors switch them on; each person's own microphone becomes text.
+    e.AI = { run: async (model: string) => model.includes("whisper") ? { text: "Grace means God gives us what we don't deserve. Read Ephesians 2:8." }
+      : { response: JSON.stringify({ summary: "We learned about grace.", points: ["Grace is a gift"], scriptures: ["Ephesians 2:8"], actions: ["Read Ephesians 2"], questions: ["What is grace?"] }) } };
+    const wav = new Uint8Array(1000); wav.set([82, 73, 70, 70]);
+    const chunk = (h: Record<string, string>) => call(`/api/classes/${id}/notes/chunk`, { method: "POST", headers: { ...h, "Content-Type": "audio/wav" }, body: wav }, e);
+    assert.equal(((await (await chunk(pastor)).json()) as { skipped?: boolean }).skipped, true, "nothing while notes are off");
+    assert.equal((await as(thabo, `/api/classes/${id}/notes`, "POST", { on: true })).status, 403);
+    assert.equal((await as(pastor, `/api/classes/${id}/notes`, "POST", { on: true })).status, 200);
+    assert.equal(((await (await as(thabo, `/api/classes/${id}/poll`)).json()) as { notes_on: boolean }).notes_on, true, "everyone sees notes are on");
+    assert.equal((await chunk(pastor)).status, 200);
+    assert.equal((await chunk(other)).status, 403, "only people in the room");
+    assert.equal((await as(thabo, `/api/classes/${id}/end`, "POST", {})).status, 403);
+    const n0 = e.EMAIL.outbox.length;
+    assert.equal((await as(pastor, `/api/classes/${id}/end`, "POST", {})).status, 200);
+    const sent = e.EMAIL.outbox.slice(n0);
+    assert.deepEqual(sent.map((m) => JSON.stringify(m.to)).map((t) => /thabo/.test(t) ? "thabo" : /pastor/.test(t) ? "pastor" : t).sort(), ["pastor", "thabo"]);
+    assert.ok(sent.every((m) => (m as { attachments?: { type: string }[] }).attachments?.[0]?.type === "application/pdf"));
+    assert.match(sent[0].html!, /We learned about grace/);
+    assert.equal((await as(thabo, `/api/classes/${id}/notes.pdf`)).headers.get("content-type"), "application/pdf");
+    assert.equal((await as(other, `/api/classes/${id}/notes.pdf`)).status, 403, "only people who joined");
+    // The main admin removes a pastor; their discipleship access goes with it.
+    assert.equal((await call("/api/admin/pastors/u-past", { method: "DELETE", headers: A(sup) }, e)).status, 200);
+    assert.equal((await as(pastor, "/api/admin/discipleship")).status, 401);
+  });
+});

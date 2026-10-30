@@ -55,6 +55,9 @@ export interface Env {
   GITHUB_TOKEN?: string;
   /** Cloudflare Workers AI (open-weight models) for FreeCreator's AI help, Today's Word art and poster ideas. Optional. */
   AI?: { run(model: string, input: Record<string, unknown>): Promise<unknown> };
+  /** Optional Cloudflare Realtime TURN key, so the discipleship video room also connects on strict networks (STUN only without it). */
+  TURN_KEY_ID?: string;
+  TURN_KEY_API_TOKEN?: string;
   /** Google Identity Services web client ID (public). Empty = Google sign-in hidden. */
   GOOGLE_CLIENT_ID?: string;
 }

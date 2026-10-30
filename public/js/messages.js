@@ -7,7 +7,7 @@ import { faceInner } from "./faces.js";
 import { badgeHtml } from "./portal.js";
 
 // Verified stickers: black main admin, blue admins, gold leaders and verified members.
-const BADGE_ME = { super: { admin_account: true }, admin: { admin_role: "staff" }, member: { member_verified: true } };
+const BADGE_ME = { super: { admin_account: true }, pastor: { pastor: true }, admin: { admin_role: "staff" }, member: { member_verified: true } };
 const badge = (k, size = 16) => (k && BADGE_ME[k] ? badgeHtml({ user: {}, ...BADGE_ME[k] }, size) : "");
 
 const $ = (id) => document.getElementById(id);

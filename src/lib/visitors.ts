@@ -11,7 +11,7 @@ import type { Env } from "../env.ts";
 const BLOCKED = [
   /^\/api\/chat(\/|$)/, /^\/api\/me\/complaints/, /^\/api\/votes/, /^\/api\/poster\//, /^\/api\/freecreator\/(lib|cam|church|access)/,
   /^\/api\/wall(\/|$)/, /^\/api\/go\/contacts/, /^\/api\/me\/(letter|prayer-weekly|membership)/,
-  /^\/api\/admin\//,
+  /^\/api\/admin\//, /^\/api\/classes\/[^/]+\/(join|poll|signal|leave|notes)/,
 ];
 export const visitorBlocked = (path: string) => BLOCKED.some((re) => re.test(path));
 

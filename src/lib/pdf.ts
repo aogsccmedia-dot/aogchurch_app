@@ -89,6 +89,11 @@ function pageContent(t: TicketPage): string {
 
 /** Build a PDF (Uint8Array) with one page per ticket. */
 export function ticketsPdf(pages: TicketPage[]): Uint8Array {
+  return assemble(pages.map(pageContent), W, H);
+}
+
+/** Put page content streams together into one PDF with the church fonts and logo. */
+function assemble(contents: string[], PW: number, PH: number): Uint8Array {
   // PDF content uses single-byte WinAnsi/Latin-1 strings (all text is mapped to <= U+00FF first).
   const enc = { encode: (s: string) => Uint8Array.from(s, (c) => c.charCodeAt(0) & 0xff) };
   const chunks: Uint8Array[] = [];
@@ -101,15 +106,15 @@ export function ticketsPdf(pages: TicketPage[]): Uint8Array {
   const logo = fromB64(LOGO_JPEG_B64);
   // 1 catalog, 2 pages, 3-6 fonts, 7 logo, then (page, content) pairs; font descriptors/files follow at the end.
   const fontDefs: [number, PdfFont][] = [[3, FONT_RES.F], [4, FONT_RES.FB], [5, FONT_RES.FS], [6, FONT_RES.FI]];
-  const kids = pages.map((_, i) => 8 + i * 2);
-  const extra = 8 + pages.length * 2;   // first id after the pages
+  const kids = contents.map((_, i) => 8 + i * 2);
+  const extra = 8 + contents.length * 2;   // first id after the pages
   obj(1, ["<< /Type /Catalog /Pages 2 0 R >>"]);
-  obj(2, [`<< /Type /Pages /Kids [${kids.map((k) => `${k} 0 R`).join(" ")}] /Count ${pages.length} >>`]);
+  obj(2, [`<< /Type /Pages /Kids [${kids.map((k) => `${k} 0 R`).join(" ")}] /Count ${contents.length} >>`]);
   fontDefs.forEach(([id, f], i) => obj(id, [`<< /Type /Font /Subtype /TrueType /BaseFont /${f.name} /FirstChar 32 /LastChar 255 /Widths [${f.widths.join(" ")}] /FontDescriptor ${extra + i * 2} 0 R /Encoding /WinAnsiEncoding >>`]));
   obj(7, [`<< /Type /XObject /Subtype /Image /Width ${LOGO_SIZE} /Height ${LOGO_SIZE} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logo.length} >>\nstream\n`, logo, "\nendstream"]);
-  pages.forEach((p, i) => {
-    const content = enc.encode(pageContent(p));
-    obj(8 + i * 2, [`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Contents ${9 + i * 2} 0 R /Resources << /Font << /F 3 0 R /FB 4 0 R /FS 5 0 R /FI 6 0 R >> /XObject << /Logo 7 0 R >> >> >>`]);
+  contents.forEach((c, i) => {
+    const content = enc.encode(c);
+    obj(8 + i * 2, [`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Contents ${9 + i * 2} 0 R /Resources << /Font << /F 3 0 R /FB 4 0 R /FS 5 0 R /FI 6 0 R >> /XObject << /Logo 7 0 R >> >> >>`]);
     obj(9 + i * 2, [`<< /Length ${content.length} >>\nstream\n`, content, "\nendstream"]);
   });
   fontDefs.forEach(([, f], i) => {
@@ -125,4 +130,57 @@ export function ticketsPdf(pages: TicketPage[]): Uint8Array {
   let o = 0;
   for (const c of chunks) { outBuf.set(c, o); o += c.length; }
   return outBuf;
+}
+
+// ---------------------------------------------------------------- class notes (A4, as many pages as needed)
+export interface NotesDoc {
+  title: string; when: string; teacher: string; attendees: string[];
+  summary: string; points: string[]; scriptures: string[]; actions: string[]; questions: string[];
+  transcript: { name: string; time: string; text: string }[];
+}
+/** Discipleship class notes: summary first, then everything that was said. */
+export function notesPdf(d: NotesDoc): Uint8Array {
+  const PW = 595, PH = 842, M = 54, MAX = PW - M * 2;
+  const pages: string[] = [];
+  let out: string[] = [], y = 0;
+  const text = (x: number, yy: number, s: string, font: string, size: number, color = "#1c1712") =>
+    out.push(`BT ${rgb(color)} rg /${font} ${size} Tf ${x.toFixed(1)} ${yy.toFixed(1)} Td (${pdfText(s)}) Tj ET`);
+  const rect = (x: number, yy: number, w: number, h: number, color: string) => out.push(`${rgb(color)} rg ${x} ${yy} ${w} ${h} re f`);
+  const footer = () => { const n = pages.length + 1; const f = `AOG Sandton City Church · Discipleship class notes · page ${n}`; text((PW - textWidth(f, 8)) / 2, 28, f, "F", 8, "#8a7f72"); };
+  const newPage = (first = false) => {
+    if (out.length) { footer(); pages.push(out.join("\n")); }
+    out = [];
+    rect(0, 0, PW, PH, "#ffffff");
+    if (first) {
+      rect(0, PH - 120, PW, 120, "#fbf7f0"); rect(0, PH - 123, PW, 3, "#d6a650");
+      out.push(`q 44 0 0 44 ${M} ${PH - 84} cm /Logo Do Q`);
+      text(M + 58, PH - 58, "AOG SANDTON CITY CHURCH", "FB", 9, "#9a6a1f");
+      text(M + 58, PH - 76, "Discipleship class notes", "FI", 11, "#4a4137");
+      y = PH - 160;
+    } else y = PH - 60;
+  };
+  const need = (h: number) => { if (y - h < 56) newPage(); };
+  const para = (s: string, size = 11, font = "F", color = "#2b241d", indent = 0, lead = 1.45) => {
+    for (const line of wrap(s, size, MAX - indent, font)) { need(size * lead); text(M + indent, y, line, font, size, color); y -= size * lead; }
+  };
+  const heading = (s: string) => { y -= 10; need(40); text(M, y, s.toUpperCase(), "FB", 9, "#9a6a1f"); y -= 6; out.push(`${rgb("#eadfcd")} RG 0.8 w ${M} ${y} m ${PW - M} ${y} l S`); y -= 18; };
+  const bullets = (list: string[]) => { for (const b of list) { need(16); text(M + 2, y, "·", "FB", 12, "#d6a650"); para(b, 11, "F", "#2b241d", 14); y -= 3; } };
+
+  newPage(true);
+  for (const line of wrap(d.title, 24, MAX, "FS").slice(0, 3)) { text(M, y, line, "FS", 24); y -= 30; }
+  para(d.when, 10.5, "F", "#4a4137");
+  para(`Taught by ${d.teacher}`, 10.5, "F", "#4a4137");
+  if (d.attendees.length) para(`Joined online: ${d.attendees.join(", ")}`, 9.5, "F", "#8a7f72");
+  if (d.summary) { heading("Summary"); para(d.summary); }
+  if (d.points.length) { heading("Key points"); bullets(d.points); }
+  if (d.scriptures.length) { heading("Scriptures"); bullets(d.scriptures); }
+  if (d.actions.length) { heading("To do this week"); bullets(d.actions); }
+  if (d.questions.length) { heading("Questions to think about"); bullets(d.questions); }
+  if (d.transcript.length) {
+    heading("What was said");
+    for (const t of d.transcript) { need(30); text(M, y, `${t.name}  ·  ${t.time}`, "FB", 8.5, "#8a7f72"); y -= 13; para(t.text, 10, "F", "#2b241d", 0, 1.4); y -= 6; }
+  }
+  y -= 8; para("These notes were made automatically from the class and may contain small mistakes.", 8.5, "FI", "#8a7f72");
+  footer(); pages.push(out.join("\n"));
+  return assemble(pages, PW, PH);
 }

@@ -41,3 +41,11 @@
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self' https:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'
   Permissions-Policy: camera=(self), microphone=(self), display-capture=(self), autoplay=(self), fullscreen=(self), window-management=(self)
   Cache-Control: public, max-age=0, must-revalidate
+
+/class
+  ! Permissions-Policy
+  Permissions-Policy: camera=(self), microphone=(self), display-capture=(self), autoplay=(self), fullscreen=(self)
+
+/class.html
+  ! Permissions-Policy
+  Permissions-Policy: camera=(self), microphone=(self), display-capture=(self), autoplay=(self), fullscreen=(self)

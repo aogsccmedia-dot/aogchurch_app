@@ -32,7 +32,7 @@
   <link rel="alternate" type="text/plain" title="Church summary for AI assistants" href="/llms.txt">
   <link rel="preconnect" href="https://accounts.google.com">
   <link rel="stylesheet" href="/css/base.min.css?v=cd4a0a5c77">
-  <link rel="stylesheet" href="/css/pages.min.css?v=bef8e5f656">
+  <link rel="stylesheet" href="/css/pages.min.css?v=602733bb24">
   <script src="/js/switch-boot.js?v=945410a364"></script>
   <script type="speculationrules">{"prerender": [{"where": {"and": [{"href_matches": "/*"}, {"not": {"href_matches": "/admin/*"}}, {"not": {"href_matches": "/api/*"}}]}, "eagerness": "moderate"}]}</script>
   <script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": "https://aogsccyouth.com/"}, {"@type": "ListItem", "position": 2, "name": "Discipleship", "item": "https://aogsccyouth.com/discipleship"}]}]}</script>
@@ -77,9 +77,18 @@
   <main id="main">
     <section class="wrap page-hero">
       <p class="eyebrow gold">Discipleship classes</p>
+      <span class="dc-soon" id="dc-soon"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg> Coming soon</span>
       <h1>Grow in Jesus, <em>step by step.</em></h1>
-      <p class="lede">Short, friendly classes for new believers and anyone who wants strong foundations. Small groups, real questions, no pressure.</p>
-      <div class="actions"><a class="btn btn-gold btn-lg" href="#signup">Sign me up <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></div>
+      <p class="lede">Short, friendly classes for new believers and anyone who wants strong foundations. Small groups, real questions, no pressure. In person at church, or online from home.</p>
+      <div class="actions"><a class="btn btn-gold btn-lg" href="#signup" id="dc-cta">Tell me when it starts <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></div>
+    </section>
+
+    <section class="block" id="dc-classes" aria-labelledby="dc-classes-title" hidden>
+      <div class="wrap">
+        <div class="section-head"><p class="eyebrow gold">Upcoming</p><h2 id="dc-classes-title">Next classes</h2></div>
+        <div class="dc-list" id="dc-list"></div>
+        <p class="muted-text dc-teach" id="dc-teach" hidden><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg> You're a pastor: schedule and edit classes in <a href="/admin/#discipleship">Discipleship</a>.</p>
+      </div>
     </section>
 
     <section class="block" aria-labelledby="tracks-title">
@@ -102,9 +111,9 @@
     <section class="block" id="signup" aria-labelledby="signup-title">
       <div class="wrap ev-two">
         <div>
-          <p class="eyebrow gold">Sign up</p>
-          <h2 id="signup-title">Join the next class</h2>
-          <p class="lede">Tell us which track you'd like. We'll let you know the day, time and place of the next class (usually after the Sunday service, or online in the week).</p>
+          <p class="eyebrow gold" id="dc-su-eyebrow">Be the first to know</p>
+          <h2 id="signup-title">Classes are coming soon</h2>
+          <p class="lede" id="dc-su-lede">Tell us which track you'd like and we'll let you know as soon as classes open: the day, the time, and whether it's at church or online.</p>
           <p class="muted-text">“Go ye therefore, and teach all nations… teaching them to observe all things whatsoever I have commanded you.” Matthew 28:19–20</p>
         </div>
         <form class="panel ev-form" id="dc-form" novalidate>
@@ -115,7 +124,7 @@
           <label class="field"><span>Email</span><input class="input" name="email" type="email" autocomplete="email" maxlength="160"></label>
           <label class="field"><span>Anything we should know? (optional)</span><textarea class="input" name="note" rows="2" maxlength="600"></textarea></label>
           <input type="text" name="website" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">
-          <button class="btn btn-gold btn-lg" type="submit">Sign me up <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+          <button class="btn btn-gold btn-lg" type="submit" id="dc-submit">Keep me posted <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
         </form>
       </div>
     </section>
@@ -159,5 +168,6 @@
   <script type="module" src="/js/site.js?v=46e05eedb0"></script>
   <script type="module" src="/js/auth.js?v=75657300d4"></script>
   <script type="module" src="/js/evangelism.js?v=8f0d86454c"></script>
+  <script type="module" src="/js/classes.js?v=60d7e3d625"></script>
 </body>
 </html>

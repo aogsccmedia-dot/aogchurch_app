@@ -5,7 +5,7 @@ import { icon } from "./icons.js";
 import { faceInner } from "./faces.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-export const roleName = (me) => me?.visitor ? "Visitor" : me?.admin_role === "super" ? "Main admin" : me?.admin_role === "youth" ? "Youth leader" : me?.admin_role ? "Admin" : null;
+export const roleName = (me) => me?.visitor ? "Visitor" : me?.admin_role === "super" ? "Main admin" : me?.pastor ? "Pastor" : me?.admin_role === "youth" ? "Youth leader" : me?.admin_role ? "Admin" : null;
 
 // The bottom bar: four big buttons that always fit, on any screen. Everything else sits under "More".
 export function mainTabs(me) {
@@ -18,24 +18,27 @@ export function mainTabs(me) {
   ];
 }
 /**
- * Verified stickers next to a person's name: black for the main admin, blue for admins, gold for verified members
+ * Verified stickers next to a person's name: black for the main admin, a purple star for verified pastors, blue for admins, gold for verified members
  * (and for everyone else on the team, like youth leaders). Nobody else gets one.
  */
 export function badgeKind(me) {
   if (!me?.user) return null;
   if (me.admin_account || me.admin_role === "super") return "super";
+  if (me.pastor) return "pastor";
   if (me.admin_role === "staff") return "admin";
   if (me.admin_role || me.member_verified || me.member?.status === "member") return "member";
   return null;
 }
 const BADGE = {
-  super: ["#3a3a3a", "#000000", "Main admin"], admin: ["#5aa2ff", "#1d5fe0", "Church admin"], member: ["#ffe08a", "#c8963e", "Verified member"],
+  super: ["#3a3a3a", "#000000", "Main admin"], pastor: ["#a78bfa", "#6d28d9", "Verified pastor"], admin: ["#5aa2ff", "#1d5fe0", "Church admin"], member: ["#ffe08a", "#c8963e", "Verified member"],
 };
 let badgeN = 0;
 export function badgeHtml(me, size = 18) {
   const k = badgeKind(me); if (!k) return "";
   const [a, b, label] = BADGE[k], id = `vb${++badgeN}`;
-  return `<span class="vbadge vb-${k}" title="${label}" role="img" aria-label="${label}"><svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><path fill="url(#${id})" d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m8.6 12.2 2.3 2.3 4.6-4.8" fill="none" stroke="${k === "member" ? "#5a3a08" : "#fff"}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+  return `<span class="vbadge vb-${k}" title="${label}" role="img" aria-label="${label}"><svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>${k === "pastor"
+    ? `<path fill="url(#${id})" d="M12 1.6l2.9 5.9 6.5.95-4.7 4.6 1.1 6.45L12 16.45 6.2 19.5l1.1-6.45-4.7-4.6 6.5-.95Z" stroke="url(#${id})" stroke-width="1.6" stroke-linejoin="round"/><path d="m8.9 11.4 2.1 2.1 4.1-4.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`
+    : `<path fill="url(#${id})" d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m8.6 12.2 2.3 2.3 4.6-4.8" fill="none" stroke="${k === "member" ? "#5a3a08" : "#fff"}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`}</svg></span>`;
 }
 
 export function moreTabs(me) {
@@ -65,6 +68,7 @@ const TOOLS = [
   ["people", "userCheck", "My people", "members|people"],
   ["prayers", "handHeart", "Prayer requests", "prayer"],
   ["calls", "smartphone", "Call Office", "calls"],
+  ["discipleship", "bookOpen", "Discipleship classes", "discipleship"],
   ["report", "layoutDashboard", "Reports", "reports"],
 ];
 export function toolsFor(me) {
@@ -92,7 +96,7 @@ export function cacheMe(me) {
     if (!me?.user) { localStorage.removeItem(KEY); localStorage.removeItem("scc-hello"); return; }
     const u = me.user;
     localStorage.setItem(KEY, JSON.stringify({ user: { id: u.id, email: u.email, given_name: u.given_name, name: u.name, picture: u.picture }, admin_role: me.admin_role || null,
-      admin_account: !!me.admin_account, is_admin: !!me.is_admin, member: !!me.member, member_verified: me.member_verified ?? me.member?.status === "member", admin_perms: me.admin_perms || null, visitor: !!me.visitor }));
+      admin_account: !!me.admin_account, is_admin: !!me.is_admin, member: !!me.member, member_verified: me.member_verified ?? me.member?.status === "member", admin_perms: me.admin_perms || null, visitor: !!me.visitor, pastor: !!me.pastor }));
   } catch { /* storage blocked */ }
 }
 export function cachedMe() { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } }

@@ -28,6 +28,7 @@ import { processPrayerWeekly } from "./lib/prayer-weekly.ts";
 import { processElections } from "./routes/votes.ts";
 import { voteRoutes } from "./routes/votes.ts";
 import { outreachRoutes } from "./routes/outreach.ts";
+import { classRoutes } from "./routes/classes.ts";
 import { analyticsRoutes } from "./routes/analytics.ts";
 import { pushRoutes, processDailyVerse } from "./routes/push.ts";
 import { chatRoutes } from "./routes/chat.ts";
@@ -100,6 +101,7 @@ export default {
       fridayRoutes(router, env);
       voteRoutes(router, env);
       outreachRoutes(router, env);
+      classRoutes(router, env);
       analyticsRoutes(router, env);
       pushRoutes(router, env);
       chatRoutes(router, env);
@@ -149,6 +151,9 @@ export default {
           env.DB.prepare("DELETE FROM rate_limits WHERE window_start < ?").bind(Math.floor(now.getTime() / 1000) - 86400),
           env.DB.prepare("DELETE FROM email_log WHERE created_at < ?").bind(new Date(now.getTime() - 90 * 86400_000).toISOString()),
           env.DB.prepare("DELETE FROM analytics_events WHERE day < ?").bind(new Date(now.getTime() - 400 * 86400_000).toISOString().slice(0, 10)),
+          // Discipleship classes: stale connection messages, and what was said 60 days after the class (the summary stays).
+          env.DB.prepare("DELETE FROM dc_signals WHERE created_at < ?").bind(new Date(now.getTime() - 3600_000).toISOString()),
+          env.DB.prepare("DELETE FROM dc_transcript WHERE said_at < ?").bind(new Date(now.getTime() - 60 * 86400_000).toISOString()),
         ]);
         // Ask SCC was removed: clear any search data it left in KV (it would expire on its own, this just tidies sooner).
         const old = await env.FILES_KV?.list({ prefix: "rag:" }).catch(() => null);

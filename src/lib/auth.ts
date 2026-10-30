@@ -8,7 +8,7 @@ const USER_DAYS = 30;
 const ADMIN_HOURS = 12;
 
 export interface User { id: string; email: string; name: string | null; given_name: string | null; family_name: string | null; picture: string | null }
-export interface Session { user: User; kind: "user" | "admin"; role?: "super" | "staff" | "youth"; perms?: string[]; visitor?: boolean }
+export interface Session { user: User; kind: "user" | "admin"; role?: "super" | "staff" | "youth"; perms?: string[]; visitor?: boolean; pastor?: boolean }
 
 // ---------------------------------------------------------------- youth leaders: a limited admin role
 /** What a youth leader can be allowed to open. The main admin ticks these per person. */
@@ -53,6 +53,7 @@ export function permFor(method: string, path: string): string | null {
   if (/^\/api\/admin\/votes(\/|$)/.test(p)) return "votes";
   if (/^\/api\/admin\/(prayers|wall)(\/|$)/.test(p)) return "prayer";
   if (/^\/api\/admin\/calls(\/|$)/.test(p)) return "calls";
+  if (/^\/api\/admin\/discipleship(\/|$)/.test(p)) return "discipleship";   // verified pastors only (never a tickable permission)
   return null;
 }
 export function youthMay(perms: string[] | undefined, need: string | null): boolean {
@@ -186,9 +187,14 @@ async function loadSession(env: Env, req: Request): Promise<Session | null> {
   if (isAdminEmail(env, user.email)) { void kind; void admin_until; return { user, kind: "admin", role: "super" }; }
   // Everyone else: one account. Admins and youth leaders get exactly the parts the main admin ticked for them,
   // on their normal sign-in, with no switching and no codes. Remove the role and it's a member's sign-in again.
-  const r = await env.DB.prepare("SELECT role, perms FROM admin_roles WHERE user_id = ?").bind(user.id).first<{ role: string; perms: string | null }>();
-  if (r?.role === "youth_leader") return { user, kind: "admin", role: "youth", perms: parsePerms(r.perms) };
-  if (r) return { user, kind: "admin", role: "staff", perms: parsePerms(r.perms, ADMIN_DEFAULT) };
+  const r = await env.DB.prepare(`SELECT (SELECT role FROM admin_roles WHERE user_id = ?1) AS role, (SELECT perms FROM admin_roles WHERE user_id = ?1) AS perms,
+      EXISTS (SELECT 1 FROM pastors WHERE user_id = ?1) AS pastor`).bind(user.id).first<{ role: string | null; perms: string | null; pastor: number }>();
+  // Verified pastors (marked by the main admin) always look after discipleship classes, on top of any other role.
+  const pastor = !!r?.pastor;
+  const plus = (list: string[]) => (pastor ? [...new Set([...list, "discipleship"])] : list);
+  if (r?.role === "youth_leader") return { user, kind: "admin", role: "youth", perms: plus(parsePerms(r.perms)), pastor };
+  if (r?.role) return { user, kind: "admin", role: "staff", perms: plus(parsePerms(r.perms, ADMIN_DEFAULT)), pastor };
+  if (pastor) return { user, kind: "admin", role: "staff", perms: ["discipleship"], pastor };
   return { user, kind: "user" };
 }
 
@@ -198,8 +204,10 @@ export async function destroySession(env: Env, req: Request) {
 }
 
 export async function hasStaffRole(env: Env, userId: string): Promise<boolean> {
-  return !!(await env.DB.prepare("SELECT 1 FROM admin_roles WHERE user_id = ?").bind(userId).first());
+  return !!(await env.DB.prepare("SELECT 1 FROM admin_roles WHERE user_id = ?1 UNION ALL SELECT 1 FROM pastors WHERE user_id = ?1 LIMIT 1").bind(userId).first());
 }
+/** Discipleship classes are run only by the main admin and verified pastors. */
+export const canTeach = (s: Session | null | undefined) => !!s && !s.visitor && (s.role === "super" || !!s.pastor);
 /** Can this account open the admin dashboard (after the emailed code)? */
 export async function canAdmin(env: Env, user: { id: string; email: string }): Promise<boolean> {
   return isAdminEmail(env, user.email) || hasStaffRole(env, user.id);

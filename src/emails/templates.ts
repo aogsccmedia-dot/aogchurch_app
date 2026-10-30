@@ -911,3 +911,21 @@ export function eventWeeklyReminder(b: Brand, o: { name: string; title: string; 
     text: `Hi ${o.name},\n\n${o.title} is ${o.countdown}: ${o.when}${o.location ? `, ${o.location}` : ""}.\nYou have ${many ? `${o.tickets} tickets` : "a ticket"} (ref ${o.ref}).${o.entry ? `\nEntry from ${o.entry}: tickets are scanned at the door from ${o.entry}.` : ""}\n\nYour ${many ? "tickets" : "ticket"}: ${o.pdfUrl || o.ticketUrl}\nEvent details: ${o.eventUrl}\n\nSee you there!\nAOG Sandton City Church`,
   };
 }
+
+// ---------------------------------------------------------------- discipleship class notes
+export function classNotes(b: Brand, o: { name: string; title: string; when: string; teacher: string; summary: string; url: string }) {
+  return {
+    subject: `Your notes: ${o.title}`,
+    html: layout(b, {
+      preheader: "The summary and full notes from today's discipleship class are attached as a PDF.",
+      eyebrow: "Discipleship class",
+      heading: `Your class notes, ${esc(o.name)}`,
+      content: p(`Thank you for joining <strong>${esc(o.title)}</strong> (${esc(o.when)}) with ${esc(o.teacher)}.`) +
+        (o.summary ? box(esc(o.summary)) : "") +
+        p("The summary, key points, scriptures and everything that was said are in the attached PDF. Keep it for your quiet time this week.") +
+        button(o.url, "Open the class page"),
+      footerNote: "These notes were made automatically and may contain small mistakes.",
+    }),
+    text: `Your notes from ${o.title} (${o.when}) with ${o.teacher}.\n\n${o.summary}\n\nThe full notes are attached as a PDF. ${o.url}` + textFooter(b),
+  };
+}

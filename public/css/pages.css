@@ -2468,3 +2468,82 @@ select::-ms-expand { display: none; }
 :where(details:not(.cal-menu, .user-menu, .st-ask)) > summary:not(.btn, .avatar, .pill):hover::after { background-color: #efe5d2; }
 /* the old toggle marks these replace */
 .faq summary > .i:last-child, .other-devices summary > .i:last-child { display: none; }
+
+/* ---------------------------------------------------------------- Discipleship: coming soon, class list, pastor star */
+.dc-soon { display:inline-flex; align-items:center; justify-content:center; gap:8px; margin:0 0 14px; padding:7px 14px; border-radius:999px; background:#fbf3e2; color:#7a5a1e; font-weight:600; font-size:14px; border:1px solid #ecd9b0; }
+.dc-soon[hidden] { display:none; }
+.dc-soon .i { width:16px; height:16px; }
+.dc-list { display:grid; gap:12px; }
+.dc-class { display:grid; grid-template-columns: minmax(150px, 220px) 1fr auto; gap:16px; align-items:center; padding:18px 20px; border:1px solid #ece4d6; border-radius:14px; background:#fff; }
+.dc-class.live { border-color:#d6a650; box-shadow:0 0 0 3px #d6a65026; }
+.dc-when b { display:block; font-weight:600; }
+.dc-when span, .dc-what p { color:#6f665c; font-size:14px; }
+.dc-what h3 { margin:2px 0 4px; font-size:18px; }
+.dc-track { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#9a6a1f; font-weight:600; }
+.dc-go { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; }
+.dc-live { display:inline-flex; align-items:center; gap:6px; color:#b3261e; font-weight:600; font-size:13px; }
+.dc-live::before { content:""; width:8px; height:8px; border-radius:50%; background:#d93025; animation: dcPulse 1.4s infinite; }
+@keyframes dcPulse { 50% { opacity:.3; } }
+.dc-teach { margin-top:16px; display:flex; align-items:center; gap:8px; }
+@media (max-width: 640px) { .dc-class { grid-template-columns: 1fr; text-align:left; } .dc-go { justify-content:flex-start; } .dc-go .btn { width:100%; justify-content:center; } }
+
+.pastor-star { display:inline-flex; align-items:center; justify-content:center; margin-left:5px; vertical-align:-2px; color:#7c3aed; }
+.pastor-star .i { width:15px; height:15px; fill:#7c3aed; stroke:#7c3aed; }
+
+/* ---------------------------------------------------------------- the online class room */
+.room-page { padding-top:24px; padding-bottom:110px; }
+.room-lobby { max-width:640px; margin:0 auto; text-align:center; display:flex; flex-direction:column; align-items:center; }
+.room-lobby h1 { margin:4px 0 6px; }
+.room-lobby .actions { justify-content:center; width:100%; }
+.room-preview { position:relative; width:100%; max-width:520px; aspect-ratio:16/9; margin:18px 0 12px; border-radius:16px; overflow:hidden; background:#1c1712; }
+.room-preview video { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+.room-preview.no-video video { visibility:hidden; }
+.room-pre-ctl { position:absolute; left:0; right:0; bottom:12px; display:flex; justify-content:center; gap:10px; }
+.room-note { display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:flex-start; text-align:left; max-width:520px; padding:12px 14px; border-radius:12px; background:#fbf7f0; color:#4a4137; font-size:14px; line-height:1.5; }
+.room-note .i { flex:none; width:18px; height:18px; color:#9a6a1f; margin-top:2px; }
+.room-top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+.room-top h2 { margin:0; font-size:22px; }
+.room-notes { display:inline-flex; align-items:center; gap:7px; padding:7px 13px; border-radius:999px; background:#fdecea; color:#a1261b; font-weight:600; font-size:14px; }
+.room-notes[hidden] { display:none; }
+.room-notes .i { width:16px; height:16px; }
+.room-status { min-height:20px; margin:0 0 8px; color:#6f665c; font-size:14px; text-align:center; }
+.room-grid { display:grid; gap:10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+.room-grid[data-n="1"] { grid-template-columns: minmax(0, 760px); justify-content:center; }
+.room-grid[data-n="2"] { grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+.room-tile { position:relative; margin:0; aspect-ratio:16/9; border-radius:14px; overflow:hidden; background:#1c1712; }
+.room-tile video { width:100%; height:100%; object-fit:cover; }
+.room-tile.self:not(.sharing) video { transform:scaleX(-1); }
+.room-tile.sharing video, .room-tile[data-share] video { object-fit:contain; }
+.room-face { position:absolute; inset:0; margin:auto; width:72px; height:72px; border-radius:50%; display:none; align-items:center; justify-content:center; background:#d6a650; color:#fff; font:600 30px/1 inherit; }
+.room-tile.no-video video { visibility:hidden; }
+.room-tile.no-video .room-face { display:flex; }
+.room-tile.connecting::after { content:"Connecting…"; position:absolute; top:10px; right:10px; padding:4px 9px; border-radius:999px; background:#0009; color:#fff; font-size:12px; }
+.room-tile figcaption { position:absolute; left:10px; bottom:10px; display:flex; align-items:center; gap:6px; max-width:calc(100% - 20px); padding:5px 10px; border-radius:999px; background:#000a; color:#fff; font-size:13px; }
+.room-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.room-muted .i { width:15px; height:15px; color:#ff8a80; }
+.room-tile .pastor-star { color:#c4b5fd; }
+.room-tile .pastor-star .i { fill:#a78bfa; stroke:#a78bfa; }
+.room-bar { position:fixed; left:50%; transform:translateX(-50%); bottom:max(14px, env(safe-area-inset-bottom)); z-index:30; display:flex; gap:8px; justify-content:center; align-items:center; padding:10px 12px; border-radius:20px; background:#fff; border:1px solid #ece4d6; box-shadow:0 10px 30px #0000001f; max-width:calc(100vw - 24px); }
+.room-btn { display:inline-flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-width:64px; min-height:58px; padding:6px 8px; border:0; border-radius:14px; background:#f6f1e7; color:#2b241d; font:500 12px/1.1 inherit; cursor:pointer; text-align:center; }
+.room-btn .i { width:22px; height:22px; }
+.room-btn:hover { background:#efe5d2; }
+.room-btn.off { background:#fdecea; color:#a1261b; }
+.room-btn[aria-pressed="true"]#b-share, .room-btn[aria-pressed="true"]#b-notes { background:#d6a650; color:#fff; }
+.room-btn.leave { background:#fdecea; color:#a1261b; }
+.room-btn.end { background:#b3261e; color:#fff; }
+.room-btn[hidden] { display:none; }
+.room-pre-ctl .room-btn { background:#ffffffe6; }
+.room-pre-ctl .room-btn.off { background:#fdecea; }
+body:has(.room:not([hidden])) .app-bottom, body:has(.room:not([hidden])) .app-fade, body:has(.room:not([hidden])) .tabbar { display:none !important; }
+.room-bar { z-index:80; }
+@media (max-width: 520px) {
+  .room-bar { gap:4px; padding:8px; left:8px; right:8px; transform:none; max-width:none; }
+  .room-btn { flex:1 1 0; min-width:0; padding:6px 2px; font-size:11px; }
+  .room-btn span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
+  #b-share { display:none; }
+}
+.room-ask { border:0; border-radius:18px; padding:24px; max-width:min(420px, calc(100vw - 32px)); text-align:center; }
+.room-ask::backdrop { background:#1c171266; }
+.room-ask h3 { margin:0 0 8px; }
+.room-ask p { color:#4a4137; line-height:1.55; }
+.room-ask .actions { justify-content:center; gap:10px; margin-top:16px; }

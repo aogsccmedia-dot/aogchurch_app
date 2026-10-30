@@ -1,0 +1,38 @@
+  <main id="main" class="wrap room-page">
+    <section class="room-lobby" id="room-lobby" aria-labelledby="room-title">
+      <p class="eyebrow gold">Discipleship class</p>
+      <h1 id="room-title">Loading…</h1>
+      <p class="muted-text" id="room-when"></p>
+      <div class="room-preview" id="room-preview" hidden>
+        <video id="room-self-preview" autoplay playsinline muted></video>
+        <div class="room-pre-ctl">
+          <button type="button" class="room-btn" id="pre-mic" aria-pressed="true">{{i:mic}}<span>Mic on</span></button>
+          <button type="button" class="room-btn" id="pre-cam" aria-pressed="true">{{i:video}}<span>Camera on</span></button>
+        </div>
+      </div>
+      <p class="room-note" id="room-note" hidden>{{i:notebook}}<span>The pastor may switch on <b>automatic notes</b>. You'll always see when they're on, and everyone who joined gets the notes as a PDF by email afterwards.</span></p>
+      <div class="actions" id="room-actions"></div>
+    </section>
+
+    <section class="room" id="room" hidden aria-label="Class room">
+      <header class="room-top">
+        <div><p class="eyebrow gold">Live class</p><h2 id="room-live-title"></h2></div>
+        <span class="room-notes" id="room-notes" hidden role="status">{{i:notebook}} Notes are on</span>
+      </header>
+      <p class="room-status" id="room-status" role="status"></p>
+      <div class="room-grid" id="room-grid"></div>
+      <nav class="room-bar" aria-label="Class controls">
+        <button type="button" class="room-btn" id="b-mic" aria-pressed="true">{{i:mic}}<span>Mic</span></button>
+        <button type="button" class="room-btn" id="b-cam" aria-pressed="true">{{i:video}}<span>Camera</span></button>
+        <button type="button" class="room-btn" id="b-share" aria-pressed="false">{{i:monitor}}<span>Share screen</span></button>
+        <button type="button" class="room-btn" id="b-notes" aria-pressed="false" hidden>{{i:notebook}}<span>Notes</span></button>
+        <button type="button" class="room-btn leave" id="b-leave">{{i:phoneOff}}<span>Leave</span></button>
+        <button type="button" class="room-btn end" id="b-end" hidden>{{i:x}}<span>End class</span></button>
+      </nav>
+    </section>
+
+    <dialog class="room-ask" id="room-ask">
+      <h3 id="ask-title"></h3><p id="ask-text"></p>
+      <div class="actions"><button type="button" class="btn" id="ask-no">Not now</button><button type="button" class="btn btn-gold" id="ask-yes">Yes</button></div>
+    </dialog>
+  </main>

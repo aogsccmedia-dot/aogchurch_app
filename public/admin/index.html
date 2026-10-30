@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#f7f7fb">
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="stylesheet" href="/css/base.min.css?v=cd4a0a5c77">
-  <link rel="stylesheet" href="/css/pages.min.css?v=bef8e5f656">
+  <link rel="stylesheet" href="/css/pages.min.css?v=602733bb24">
   <link rel="stylesheet" href="/css/admin.min.css?v=a339fca942">
   <script src="/js/switch-boot.js?v=945410a364"></script>
 </head>
@@ -54,6 +54,7 @@
         <button data-tab="members" data-tone="mint" data-perm="members">Members <span class="badge" data-count="new_members"></span></button>
         <button data-tab="people" data-tone="mint" data-perm="members|people">My people</button>
         <button data-tab="calls" data-tone="mint" data-perm="calls">Call Office</button>
+        <button data-tab="discipleship" data-tone="mint" data-perm="discipleship">Discipleship</button>
         <button data-tab="prayers" data-tone="rose" data-perm="prayer">Prayer <span class="badge" data-count="prayer_total"></span></button>
         <button data-tab="messages" data-tone="rose">Messages <span class="badge" data-count="new_messages"></span></button>
         <button data-tab="complaints" data-tone="rose">Complaints <span class="badge" data-count="open_complaints"></span></button>
@@ -419,6 +420,24 @@
         <div id="co-list" class="co-list"></div>
       </section>
 
+      <section data-view="discipleship" hidden>
+        <header class="vh"><div><p class="eyebrow gold">Pastors &amp; main admin</p><h1>Discipleship classes</h1><p class="muted">Only verified pastors and the main admin can change classes. Online classes open in the church's own video room; switch on notes during the class and everyone who joined gets a summary and the full notes as a PDF.</p></div>
+          <button class="btn btn-gold" type="button" id="dc-new">Schedule a class</button></header>
+        <div class="card dc-state" id="dc-state"></div>
+        <form id="dc-class-form" class="card form-grid" hidden novalidate>
+          <div class="grid-2"><div class="field"><label class="req">Title</label><input class="input" name="title" maxlength="120" placeholder="Foundations 1: Salvation" required></div>
+            <div class="field"><label>Track</label><select class="input" name="track"><option value="foundations">Foundations</option><option value="baptism">Baptism</option><option value="growing">Growing</option><option value="serving">Serving</option></select></div></div>
+          <div class="grid-2"><div class="field"><label class="req">Date and time (SAST)</label><input class="input" type="datetime-local" name="starts_local" required></div>
+            <div class="field"><label>Length</label><select class="input" name="minutes"><option value="45">45 minutes</option><option value="60" selected>1 hour</option><option value="90">1½ hours</option><option value="120">2 hours</option></select></div></div>
+          <div class="grid-2"><div class="field"><label>Where</label><select class="input" name="mode"><option value="online">Online (church video room)</option><option value="in_person">At church</option></select></div>
+            <div class="field" data-dc-loc hidden><label>Place</label><input class="input" name="location" maxlength="160" placeholder="Sandton City Church, room 2"></div></div>
+          <div class="field"><label>Note for members (optional)</label><input class="input" name="details" maxlength="1000" placeholder="Bring a Bible and a notebook."></div>
+          <div class="row"><button class="btn btn-gold" type="submit" id="dc-save">Schedule</button><button class="btn" type="button" id="dc-cancel">Cancel</button></div>
+        </form>
+        <div class="card" style="margin-top:16px"><h3>Classes</h3><div id="dc-classes-list" class="list"><p class="muted">Loading…</p></div></div>
+        <div class="card" style="margin-top:16px"><h3>Sign-ups</h3><p class="muted">People who asked for classes. Members who signed up with their account can join online classes.</p><div id="dc-signups" class="list"></div></div>
+      </section>
+
       <section data-view="analytics" hidden>
         <header class="vh"><div><p class="eyebrow gold">Insights</p><h1>Analytics</h1><p class="muted">How people use the website and app: visits, where they come from, devices, taps and who comes back. Counted by our own server; no third parties.</p></div>
           <div class="an-tools"><nav class="an-range" id="an-range" aria-label="Date range"><button type="button" data-days="7">7 days</button><button type="button" data-days="30" class="on">30 days</button><button type="button" data-days="90">90 days</button><button type="button" data-days="365">1 year</button></nav>
@@ -451,6 +470,10 @@
         <header class="vh"><div><p class="eyebrow gold">Main admin only</p><h1>Team &amp; roles</h1><p class="muted"><b>Admins</b> and <b>youth leaders</b> only open what you tick for them (admins start with Reports and Weekly services; only admins can look after members). They use their normal sign-in, with no codes. Only your main account gets an emailed code.</p></div></header>
         <div class="card" id="team-requests-card" hidden><h3>Access requests</h3><div id="team-requests" class="list"></div></div>
         <div class="card" style="margin-top:16px"><h3>The team</h3><div id="team-admins" class="list"></div></div>
+        <div class="card" style="margin-top:16px"><h3>Verified pastors <span class="pastor-star" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/></svg></span></h3>
+          <p class="muted">Pastors get a purple star next to their name, members can message them, and they run discipleship classes. Only registered members can be verified.</p>
+          <div id="pastor-list" class="list"></div>
+          <input class="input" id="pastor-q" placeholder="Find a member to verify as a pastor…" style="margin:10px 0"><div id="pastor-find" class="list"></div></div>
         <div class="card" style="margin-top:16px"><h3>Add someone</h3><p class="muted">People appear here after they've signed in with Google on the website. They must be registered members.</p>
           <input class="input" id="team-q" placeholder="Search by name or email…" style="margin:10px 0"><div id="team-people" class="list"></div></div>
       </section>
@@ -489,247 +512,442 @@
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
   <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
   <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
   <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
-  <link rel="modulepreload" href="/js/icons.js?v=3d892f699f">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
   <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
   <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
   <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
   <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
   <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
-  <link rel="modulepreload" href="/js/portal.js?v=1197970fb5">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/admin-classes.js?v=26c9545356">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/admin-classes.js?v=26c9545356">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/admin-classes.js?v=26c9545356">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/admin-classes.js?v=26c9545356">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/admin-classes.js?v=26c9545356">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/admin-classes.js?v=26c9545356">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/admin-classes.js?v=26c9545356">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/admin-classes.js?v=26c9545356">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/admin-classes.js?v=26c9545356">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/admin-classes.js?v=26c9545356">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/admin-classes.js?v=26c9545356">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/admin-classes.js?v=26c9545356">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
+  <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
+  <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
+  <link rel="modulepreload" href="/js/otp.js?v=c1d0ca2678">
+  <link rel="modulepreload" href="/js/signin.js?v=3cd5316f13">
+  <link rel="modulepreload" href="/js/options.js?v=8151d4601a">
+  <link rel="modulepreload" href="/js/forms.js?v=e20bc55311">
+  <link rel="modulepreload" href="/js/icons.js?v=4070d70bce">
+  <link rel="modulepreload" href="/js/admin-insights.js?v=a0b4799fea">
+  <link rel="modulepreload" href="/js/report-fit.js?v=32b6d1b07d">
+  <link rel="modulepreload" href="/js/admin-more.js?v=e0fe8ea364">
+  <link rel="modulepreload" href="/js/admin-extra.js?v=1579e44d51">
+  <link rel="modulepreload" href="/js/admin-classes.js?v=26c9545356">
+  <link rel="modulepreload" href="/js/switcher.js?v=0a5957b3cf">
+  <link rel="modulepreload" href="/js/portal.js?v=d037082009">
   <link rel="modulepreload" href="/js/faces.js?v=df1ebd9a79">
   <link rel="modulepreload" href="/js/site.js?v=46e05eedb0">
   <link rel="modulepreload" href="/js/otp.js">
@@ -741,10 +959,11 @@
   <link rel="modulepreload" href="/js/report-fit.js">
   <link rel="modulepreload" href="/js/admin-more.js">
   <link rel="modulepreload" href="/js/admin-extra.js">
+  <link rel="modulepreload" href="/js/admin-classes.js">
   <link rel="modulepreload" href="/js/switcher.js">
   <link rel="modulepreload" href="/js/portal.js">
   <link rel="modulepreload" href="/js/faces.js">
   <link rel="modulepreload" href="/js/site.js">
-  <script type="module" src="/js/admin.js?v=e34bbb0c7e"></script>
+  <script type="module" src="/js/admin.js?v=834bdd2534"></script>
 </body>
 </html>
