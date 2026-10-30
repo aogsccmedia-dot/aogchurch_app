@@ -1097,3 +1097,5 @@ body.admin, body.admin[data-view], [data-tone] { --tint: #f7f1e6 !important; --i
 .tools-sheet { align-items: center !important; padding: 16px !important; }
 .ts-card { max-height: min(86dvh, 820px); }
 .ts-grab { display: none; }
+/* Fold-outs in the admin use the same chevron chip on the right (see pages.css) instead of + / – on the left */
+details.card > summary::before, #session-form .ss-more summary::before { content: none !important; display: none !important; }

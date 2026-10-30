@@ -137,7 +137,7 @@ function renderTester(s) {
   card.innerHTML = `<p class="eyebrow gold">Beta tester #${t.slot} of ${s.slots}</p><h2>You're in. Thank you!</h2>
     <div class="beta-key"><span>Your beta key</span><code id="bkey">${esc(t.beta_key)}</code><button class="btn btn-sm" type="button" id="bcopy">Copy</button></div>
     ${isPhone ? `<div class="phone-note">${icon("laptop")}<p><b>Open this page on your computer to download.</b> FreeCreator is for Windows and Mac laptops and desktops.</p></div>` : `<div class="dl-row">${order.map((os, i) => btn(os, i === 0)).join("")}</div>`}
-    <details class="install-help" ${t.downloads ? "" : "open"}><summary>How to install${icon("plus")}</summary>
+    <details class="install-help" ${t.downloads ? "" : "open"}><summary>How to install</summary>
       <ol>${(myOs === "mac" ? [
         "Open <b>SCC-Presenter.dmg</b> and drag FreeCreator into Applications.",
         "The first time: Control-click the app → <b>Open</b> → Open. (Or System Settings → Privacy &amp; Security → <b>Open Anyway</b>.)",

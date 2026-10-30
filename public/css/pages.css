@@ -2447,3 +2447,24 @@ section, .block, .panel, .card { min-width: 0; }
 body:has(.app-sheet, .tools-sheet, .push-offer.in, .consent.show, .app-tip.show, dialog[open]) .app-bottom,
 body:has(.app-sheet, .tools-sheet, .push-offer.in, .consent.show, .app-tip.show, dialog[open]) .app-fade { z-index: 1 !important; }
 body:has(.app-sheet, .tools-sheet, dialog[open]) :is(.push-offer, .app-tip) { display: none !important; }
+
+/* ===================================================================== Dropdowns and fold-outs: one neat arrow everywhere
+   Dropdown menus get a slim chevron, centred and sized the same in every box. Fold-out sections get the same chevron
+   in a small round chip on the right that flips when open (replacing the mix of +, –, ▸ and rotating plus icons).
+   Buttons that open something (Add to calendar, the avatar menu, Request more access) keep their own look. */
+:root { --dd-chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23806437' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1.5 1.75 6 6.25l4.5-4.5'/%3E%3C/svg%3E"); }
+select:not([multiple]):not([size]), select.input {
+  -webkit-appearance: none; appearance: none; background-image: var(--dd-chev) !important; background-repeat: no-repeat !important;
+  background-position: right 14px center !important; background-size: 12px 8px !important; padding-right: 40px !important; cursor: pointer; }
+select::-ms-expand { display: none; }
+:where(details:not(.cal-menu, .user-menu, .st-ask)) > summary:not(.btn, .avatar, .pill) {
+  list-style: none; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+:where(details:not(.cal-menu, .user-menu, .st-ask)) > summary:not(.btn, .avatar, .pill)::-webkit-details-marker { display: none; }
+:where(details:not(.cal-menu, .user-menu, .st-ask)) > summary:not(.btn, .avatar, .pill)::marker { content: ""; }
+:where(details:not(.cal-menu, .user-menu, .st-ask)) > summary:not(.btn, .avatar, .pill)::after {
+  content: "" !important; flex: none; order: 99; align-self: center; width: 28px; height: 28px; margin-left: auto; border-radius: 50%;
+  background: #f6f1e7 var(--dd-chev) center / 12px 8px no-repeat; font-size: 0 !important; line-height: 0; transition: transform .2s ease, background-color .15s; }
+:where(details[open]:not(.cal-menu, .user-menu, .st-ask)) > summary:not(.btn, .avatar, .pill)::after { transform: rotate(180deg); }
+:where(details:not(.cal-menu, .user-menu, .st-ask)) > summary:not(.btn, .avatar, .pill):hover::after { background-color: #efe5d2; }
+/* the old toggle marks these replace */
+.faq summary > .i:last-child, .other-devices summary > .i:last-child { display: none; }
