@@ -148,6 +148,9 @@ export function renderPortalNav(me) {
   if (av) av.innerHTML = faceInner(me.user) + badgeHtml(me, 15).replace('class="vbadge', 'class="vbadge vb-corner');
   const brand = document.querySelector(".app-brand"); if (brand) brand.href = me.admin_account ? "/admin/" : "/me";
   renderBottom(me);
+  // On computers the same four items sit in the top bar as bold capsules (the bottom bar is for phones).
+  const top = document.querySelector("[data-app-tabs]");
+  if (top) { const h = barHtml(me); if (top.dataset.html !== h) { top.innerHTML = h; top.dataset.html = h; } }
   // The logo takes you Home inside the app (signing out is the way back to the website).
   document.querySelectorAll(".site-header .brand, .menu .brand").forEach((b) => { b.href = me.admin_account ? "/admin/" : "/me"; });
   prefetchTabs(me);

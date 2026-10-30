@@ -1105,3 +1105,5 @@ details.card > summary::before, #session-form .ss-more summary::before { content
 .vl-spin { width: 28px; height: 28px; border-radius: 50%; border: 3px solid #efe5d2; border-top-color: #d6a650; animation: vlSpin .8s linear infinite; }
 @keyframes vlSpin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .vl-spin { animation-duration: 2.4s; } }
+.seg.eb-tabs button::after, .seg.eb-tabs button::before { display: none !important; content: none !important; }
+.seg.eb-tabs button { text-decoration: none !important; border: 0; }
