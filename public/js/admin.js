@@ -156,6 +156,7 @@ async function boot() {
   $("#greeting").textContent = `${hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"}${me.given_name ? ", " + me.given_name : ""}`;
   insights.loadMeta().catch(() => {});   // ministry groups for the event editor
   openTab(location.hash.slice(1) || (perms ? firstAllowed() : "overview"));
+  if (role === "super" || role === "staff") import("./ticket-progress.js").then((m) => m.mountTicketProgress($("#tp-admin"))).catch(() => {});
   switchReady();
 }
 

@@ -55,6 +55,8 @@ function paint(me, d, fromCache) {
   } else
   $("me-status").textContent = [d.member?.status === "member" ? `Member · ${d.member.ref_code}` : d.member ? "Membership being confirmed" : "Not a member yet", role].filter(Boolean).join(" · ");
   if (!me.visitor) $("me-member").innerHTML = memberCard(d.member);
+  // Church admins and verified pastors: ticket money against the target (the server checks who may see it).
+  if ((me.admin_role === "staff" || me.pastor) && !me.visitor) import("./ticket-progress.js").then((m) => m.mountTicketProgress($("tp-me"))).catch(() => {});
   // People with a role simply see their extra tools here (no separate admin area to switch to).
   const tools = toolsFor(me), tb = $("me-tools");
   if (tb) {

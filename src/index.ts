@@ -29,6 +29,8 @@ import { processElections } from "./routes/votes.ts";
 import { voteRoutes } from "./routes/votes.ts";
 import { outreachRoutes } from "./routes/outreach.ts";
 import { classRoutes } from "./routes/classes.ts";
+import { ticketProgressRoutes } from "./routes/ticket-progress.ts";
+import { processTicketRecon } from "./lib/ticket-progress.ts";
 import { analyticsRoutes } from "./routes/analytics.ts";
 import { pushRoutes, processDailyVerse } from "./routes/push.ts";
 import { chatRoutes } from "./routes/chat.ts";
@@ -102,6 +104,7 @@ export default {
       voteRoutes(router, env);
       outreachRoutes(router, env);
       classRoutes(router, env);
+      ticketProgressRoutes(router, env);
       analyticsRoutes(router, env);
       pushRoutes(router, env);
       chatRoutes(router, env);
@@ -116,6 +119,7 @@ export default {
    * Runs every 10 minutes:
    *  - sends due announcement letters in batches (Sunday afternoon by default)
    *  - Saturday 10:00 SAST: reminds the admin if no letter is scheduled for Sunday
+   *  - Sunday from 18:00 SAST: ticket money vs target to church leaders (main admin, admins, verified pastors) only
    *  - 05:00 SAST daily: housekeeping
    */
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
@@ -126,6 +130,7 @@ export default {
       await processWelcomes(env, now);
       await processServiceReminders(env, now).catch((e) => console.error("service reminders failed", e));
       await processEventReminders(env, now).catch((e) => console.error("event ticket reminders failed", e));
+      await processTicketRecon(env, now).catch((e) => console.error("ticket report failed", e));
       await backfillLeaders(env).catch((e) => console.error("leader catch-up failed", e));
       await processFollowups(env, now).catch((e) => console.error("leader follow-ups failed", e));
       await processFridayReminder(env, now).catch((e) => console.error("friday reminder failed", e));

@@ -929,3 +929,34 @@ export function classNotes(b: Brand, o: { name: string; title: string; when: str
     text: `Your notes from ${o.title} (${o.when}) with ${o.teacher}.\n\n${o.summary}\n\nThe full notes are attached as a PDF. ${o.url}` + textFooter(b),
   };
 }
+
+// ---------------------------------------------------------------- weekly ticket money (church leaders only)
+const rand = (n: number) => "R" + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+export function ticketRecon(b: Brand, o: { name: string; url: string; events: { title: string; starts_at: string; price: number; target: number | null; money: number; tickets: number;
+  pending_money: number; pending_tickets: number; week_money: number; week_tickets: number; percent: number | null }[] }) {
+  const main = o.events[0];
+  const bar = (pct: number) => `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:10px 0 6px;border-radius:999px;overflow:hidden;background:#f1e8d6"><tr>
+    ${pct > 0 ? `<td width="${Math.max(2, Math.round(pct))}%" style="height:14px;background:#d6a650;font-size:0;line-height:0">&nbsp;</td>` : ""}<td style="height:14px;font-size:0;line-height:0">&nbsp;</td></tr></table>`;
+  const block = (e: typeof main) => {
+    const left = e.target ? Math.max(0, e.target - e.money) : 0;
+    const need = e.target && e.price ? Math.ceil(left / e.price) : 0;
+    return box(`<strong style="font-size:17px">${esc(e.title)}</strong><br><span style="color:#6f665c">${esc(saDate(e.starts_at))} · R${esc(String(e.price))} a ticket</span>
+      ${e.target ? bar(e.percent || 0) + `<strong>${rand(e.money)}</strong> of <strong>${rand(e.target)}</strong> target · <strong>${e.percent ?? 0}%</strong>` : `<br><strong>${rand(e.money)}</strong> so far`}
+      <br>${e.tickets} tickets sold · this week: <strong>+${e.week_tickets}</strong> tickets, <strong>+${rand(e.week_money)}</strong>
+      ${e.pending_tickets ? `<br>Waiting for payment approval: ${e.pending_tickets} tickets (${rand(e.pending_money)})` : ""}
+      ${e.target && left > 0 ? `<br><span style="color:#6f665c">Still to go: ${rand(left)}, about ${need} more tickets.</span>` : e.target ? `<br><strong style="color:#1f6b3d">Target reached. Praise God!</strong>` : ""}`);
+  };
+  const head = main.target ? `${rand(main.money)} of ${rand(main.target)} (${main.percent ?? 0}%)` : `${rand(main.money)} so far`;
+  return {
+    subject: `Ticket progress: ${main.title} · ${head}`,
+    html: layout(b, {
+      preheader: `${main.tickets} tickets sold, +${rand(main.week_money)} this week.`,
+      eyebrow: "Weekly ticket report · leaders only",
+      heading: `Where we are this week, ${esc(o.name)}`,
+      content: p("Here's the money from ticket sales so far, against our target. Only confirmed (paid and approved) tickets count towards the total.") +
+        o.events.map(block).join("") + button(o.url, "Open the dashboard") +
+        p(`<span style="color:#8a7f72;font-size:13px">Sent every Sunday evening to the main admin, church admins and verified pastors only. Please don't forward it to members.</span>`),
+    }),
+    text: o.events.map((e) => `${e.title}: ${rand(e.money)}${e.target ? ` of ${rand(e.target)} (${e.percent ?? 0}%)` : ""}, ${e.tickets} tickets, +${e.week_tickets} tickets / +${rand(e.week_money)} this week${e.pending_tickets ? `, ${e.pending_tickets} awaiting approval` : ""}.`).join("\n") + `\n${o.url}` + textFooter(b),
+  };
+}

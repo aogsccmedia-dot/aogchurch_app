@@ -1668,3 +1668,45 @@ describe("Pastors and discipleship classes", () => {
     assert.equal((await as(pastor, "/api/admin/discipleship")).status, 401);
   });
 });
+
+describe("Weekly ticket money to church leaders only", () => {
+  test("only the main admin, church admins and verified pastors see it or get the Sunday email; the main admin sets the target", async () => {
+    const e = await makeEnv();
+    const sup = await adminCookie(e);
+    const { createHash } = await import("node:crypto");
+    const person = (id: string, email: string, opts: { role?: string; pastor?: boolean } = {}) => {
+      const tok = `tok-${id}-bbbbbbbbbbbbbbbbbbbbbbbb`;
+      e.DB._db.prepare("INSERT INTO users (id, email, name, given_name) VALUES (?, ?, ?, ?)").run(id, email, id, id);
+      if (opts.role) e.DB._db.prepare("INSERT INTO admin_roles (user_id, email, role, granted_by, perms) VALUES (?, ?, ?, 'x', '[\"reports\",\"events\"]')").run(id, email, opts.role);
+      if (opts.pastor) e.DB._db.prepare("INSERT INTO pastors (user_id, title, verified_by) VALUES (?, 'Pastor', 'x')").run(id);
+      e.DB._db.prepare("INSERT INTO sessions (token_hash, user_id, kind, expires_at) VALUES (?, ?, 'user', '2099-01-01T00:00:00Z')").run(createHash("sha256").update(tok).digest("hex"), id);
+      return { cookie: `scc_session=${tok}`, "x-scc-admin": "1" };
+    };
+    const admin = person("u-adm", "adm@example.com", { role: "admin" });
+    const elder = person("u-eld", "elder@example.com", { pastor: true });
+    const youth = person("u-yth", "youth@example.com", { role: "youth_leader" });
+    const member = person("u-mem", "mem@example.com");
+    const mk = await post("/api/admin/events", { title: "Worship Night", ministry_group: "youth", starts_at: "2030-11-29T15:30:00Z", is_published: true, rsvp_enabled: true, ticket_price: 150 }, A(sup), e);
+    const { id } = await mk.json() as { id: string };
+    e.DB._db.prepare("INSERT INTO event_registrations (id, event_id, ref_code, name, email, guests, status, amount_due, created_at) VALUES ('r1', ?, 'REF1', 'A', 'a@x.com', 1, 'confirmed', 300, ?), ('r2', ?, 'REF2', 'B', 'b@x.com', 0, 'pending', 150, ?)")
+      .run(id, new Date().toISOString(), id, new Date().toISOString());
+    const get = (h: Record<string, string>) => call("/api/leaders/ticket-progress", { headers: h }, e);
+    assert.equal((await get(member)).status, 403); assert.equal((await get(youth)).status, 403);
+    assert.equal((await get(admin)).status, 200); assert.equal((await get(elder)).status, 200);
+    assert.equal((await call(`/api/leaders/ticket-progress/${id}`, { method: "PUT", headers: { ...admin, ...JSONH }, body: JSON.stringify({ target: 1 }) }, e)).status, 403, "only the main admin sets targets");
+    assert.equal((await call(`/api/leaders/ticket-progress/${id}`, { method: "PUT", headers: { ...A(sup), ...JSONH }, body: JSON.stringify({ target: 80000 }) }, e)).status, 200);
+    const d = await (await get(elder)).json() as { events: { money: number; tickets: number; pending_tickets: number; percent: number; target: number }[] };
+    assert.deepEqual([d.events[0].money, d.events[0].tickets, d.events[0].pending_tickets, d.events[0].target], [300, 2, 1, 80000]);
+    assert.equal(d.events[0].percent, 0.4);
+    const { processTicketRecon } = await import("../src/lib/ticket-progress.ts");
+    assert.equal(await processTicketRecon(e, new Date("2030-11-03T15:50:00Z")), 0, "Sunday 17:50 SAST: not yet");
+    assert.equal(await processTicketRecon(e, new Date("2030-11-04T16:05:00Z")), 0, "Monday: no");
+    const n0 = e.EMAIL.outbox.length;
+    assert.equal(await processTicketRecon(e, new Date("2030-11-03T16:05:00Z")), 3, "Sunday 18:05 SAST: main admin, the admin and the elder");
+    const to = e.EMAIL.outbox.slice(n0).map((m) => JSON.stringify(m.to)).join(" ");
+    assert.match(to, /aogsccmedia@gmail\.com/); assert.match(to, /adm@example\.com/); assert.match(to, /elder@example\.com/);
+    assert.doesNotMatch(to, /youth@|mem@|a@x\.com|b@x\.com/, "never youth leaders, members or ticket holders");
+    assert.match(e.EMAIL.outbox.at(-1)!.html!, /R300.*of.*R80 000/s);
+    assert.equal(await processTicketRecon(e, new Date("2030-11-03T17:05:00Z")), 0, "once a week");
+  });
+});
