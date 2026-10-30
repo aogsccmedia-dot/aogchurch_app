@@ -1099,3 +1099,9 @@ body.admin, body.admin[data-view], [data-tone] { --tint: #f7f1e6 !important; --i
 .ts-grab { display: none; }
 /* Fold-outs in the admin use the same chevron chip on the right (see pages.css) instead of + / – on the left */
 details.card > summary::before, #session-form .ss-more summary::before { content: none !important; display: none !important; }
+
+/* A page that needs data first: a quiet "Opening…" (never the previous page) */
+.view-loading { min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--muted, #6f665c); font-size: 14px; }
+.vl-spin { width: 28px; height: 28px; border-radius: 50%; border: 3px solid #efe5d2; border-top-color: #d6a650; animation: vlSpin .8s linear infinite; }
+@keyframes vlSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .vl-spin { animation-duration: 2.4s; } }

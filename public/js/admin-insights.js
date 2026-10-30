@@ -80,11 +80,11 @@ export function initInsights(ctx) {
   // ------------------------------------------------------------ insights: one event
   let ii = null, iiFilter = "";
   detailRoutes.insight = safe(async (id) => {
-    showView("insight", `insight:${id}`, "insights");
     if (!META.groups.length) await loadMeta();
     ii = await api(`/api/admin/insights/events/${id}`);
     iiFilter = "";
     drawInsight();
+    showView("insight", `insight:${id}`, "insights");   // only once it's drawn: never the last event's numbers first
   });
   function drawInsight() {
     const e = ii.event;
@@ -191,9 +191,9 @@ export function initInsights(ctx) {
   $("#svc-filter").addEventListener("change", drawServices);
   // Shortcut from Home and the dashboard: /admin/#services:new opens the record form straight away.
   detailRoutes.services = async (arg) => {
+    // Load first (the portal shows "Opening…"), then show the page and the form together: no list flashing first.
+    await Promise.all([loaders.services(), arg === "new" ? (PEOPLE ??= api("/api/admin/sessions/people").then((r) => r.people).catch(() => [])) : null]);
     showView("services", "services", "services");
-    await loaders.services();
-    history.replaceState(null, "", "#services");
     if (arg === "new") openSession(null, SVC.services.find((w) => w.active && weekday(w) && w.next_date === SVC.today)?.id || SVC.services.find((w) => w.active && weekday(w))?.id, null);
   };
   $("#svc-new").addEventListener("click", () => openSession(null, SVC.services.find((w) => w.active && weekday(w))?.id, null));

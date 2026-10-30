@@ -2547,3 +2547,15 @@ body:has(.room:not([hidden])) .app-bottom, body:has(.room:not([hidden])) .app-fa
 .room-ask h3 { margin:0 0 8px; }
 .room-ask p { color:#4a4137; line-height:1.55; }
 .room-ask .actions { justify-content:center; gap:10px; margin-top:16px; }
+
+/* ---------------------------------------------------------------- one menu for every account */
+.sheet-find { position: sticky; top: -14px; z-index: 1; display: flex; align-items: center; gap: 10px; margin: 0 0 6px; padding: 10px 14px; border-radius: 14px; background: #faf7f1; border: 1px solid #efe7d8; }
+.sheet-find .i { width: 18px; height: 18px; color: #a8895a; flex: none; }
+.sheet-find input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 16px; color: #342a1c; outline: none; }
+.sheet-links a[hidden], [data-sec][hidden], .sheet-ask[hidden] { display: none !important; }
+.sheet-links a > span { flex: 1; min-width: 0; }
+.sl-b { flex: none; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: #d6a650; color: #fff; font: 600 12px/22px inherit; font-style: normal; text-align: center; }
+.sheet-none { text-align: center; padding: 16px; }
+.app-sheet .sheet-group { margin-top: 14px; }
+.app-sheet [data-sec]:first-of-type .sheet-group { margin-top: 6px; }
+.app-sheet .sheet-ask { width: 100%; margin: 4px 0 0; }

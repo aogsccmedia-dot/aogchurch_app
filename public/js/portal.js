@@ -12,7 +12,7 @@ export function mainTabs(me) {
   // Visitors: just Home (their tickets), what's on, and the daily verse.
   if (me?.visitor) return [["/me", "home", "Home"], ["/me#upcoming", "calendar", "Events"], ["/devotions", "bookOpen", "Devotions"]];
   return [
-    me.admin_account ? ["/admin/", "layoutDashboard", "Admin"] : ["/me", "home", "Home"],
+    me.admin_account ? ["/admin/#overview", "gauge", "Dashboard"] : ["/me", "home", "Home"],
     ["/messages", "messageCircle", "Messages"],
     ["/devotions", "bookOpen", "Devotions"],
   ];
@@ -57,24 +57,47 @@ export function moreTabs(me) {
 }
 // Extra tools for people the main admin has given a role: they simply appear in their portal (Home and More),
 // limited to what they're allowed to do. No separate "admin" area to switch to; the main admin can take them away any time.
+// Every tool in the church app, in the same groups everywhere. perm: what a team member needs ("*" = everyone on the team,
+// null = the main admin only). The menu shows each person exactly the tools they can open; the design never changes.
 const TOOLS = [
-  ["approvals", "check", "Approvals", "events|youth_tickets"],
-  ["fridays", "calendar", "Fridays", "fridays"],
-  ["scan", "scan", "Door scanner", "scan"],
-  ["events", "ticket", "Events & forms", "events"],
-  ["services", "clock", "Weekly services", "services"],
-  ["votes", "vote", "Voting", "votes"],
-  ["members", "users", "Members", "members"],
-  ["people", "userCheck", "My people", "members|people"],
-  ["prayers", "handHeart", "Prayer requests", "prayer"],
-  ["calls", "smartphone", "Call Office", "calls"],
-  ["discipleship", "bookOpen", "Discipleship classes", "discipleship"],
-  ["report", "layoutDashboard", "Reports", "reports"],
+  ["Today", "approvals", "ticketCheck", "Approvals", "events|youth_tickets"],
+  ["Today", "fridays", "calendar", "Fridays", "fridays"],
+  ["Today", "scan", "scan", "Door scanner", "scan"],
+  ["Events & services", "events", "ticket", "Events & forms", "events"],
+  ["Events & services", "services", "clock", "Weekly services", "*"],
+  ["Events & services", "programme", "calendarPlus", "Church programme", null],
+  ["Events & services", "votes", "vote", "Voting", "votes"],
+  ["People", "members", "users", "Members", "members"],
+  ["People", "people", "userCheck", "My people", "members|people"],
+  ["People", "calls", "smartphone", "Call Office", "calls"],
+  ["People", "discipleship", "bookOpen", "Manage discipleship", "discipleship"],
+  ["People", "prayers", "handHeart", "Prayer requests", "prayer"],
+  ["People", "messages", "inbox", "Office messages", null],
+  ["People", "complaints", "alert", "Complaints", null],
+  ["Insights", "analytics", "chartColumn", "Analytics", null],
+  ["Insights", "insights", "trendingUp", "Insights", "events"],
+  ["Insights", "report", "fileText", "Reports", "reports"],
+  ["Letters & email", "letters", "mail", "Weekly letter", null],
+  ["Letters & email", "subscribers", "megaphone", "Subscribers", null],
+  ["Letters & email", "templates", "palette", "Email templates", null],
+  ["Letters & email", "emails", "send", "Email log", null],
+  ["Settings", "settings", "settings", "Site settings", null],
+  ["Settings", "team", "shield", "Team & roles", null],
+  ["Settings", "code", "code", "Code changes", null],
 ];
-export function toolsFor(me) {
-  if (!me?.user || me.admin_account || !me.admin_role || me.admin_role === "super") return [];
+const isSuper = (me) => !!(me?.admin_account || me?.admin_role === "super");
+/** The tools this person can open, with their group: [group, href, icon, label]. */
+export function menuTools(me) {
+  if (!me?.user || me.visitor) return [];
+  if (isSuper(me)) return TOOLS.map(([g, t, i, l]) => [g, `/admin/#${t}`, i, l]);
+  if (!me.admin_role) return [];
   const perms = me.admin_perms || [];
-  return TOOLS.filter(([, , , need]) => need.split("|").some((p) => perms.includes(p))).map(([t, i, l]) => [`/admin/#${t}`, i, l]);
+  return TOOLS.filter(([, , , , need]) => need && (need === "*" || need.split("|").some((p) => perms.includes(p)))).map(([g, t, i, l]) => [g, `/admin/#${t}`, i, l]);
+}
+/** Shortcuts on a team member's Home (not the main admin, whose home is the dashboard). */
+export function toolsFor(me) {
+  if (isSuper(me)) return [];
+  return menuTools(me).filter(([, h]) => h !== "/admin/#services").map(([, h, i, l]) => [h, i, l]);
 }
 export const tabsFor = (me) => [...mainTabs(me), ...moreTabs(me)];
 
@@ -140,17 +163,13 @@ export function renderPortalNav(me) {
 const inMore = (me) => moreTabs(me).some(([h]) => isOn(h)) || toolsFor(me).some(([h]) => isOn(h));
 const onAdmin = () => location.pathname.startsWith("/admin");
 function barHtml(me) {
-  const more = inMore(me);
-  // In the admin portal the bar is the only navigation: Dashboard (or Home), all your Tools, Messages and More.
-  if (onAdmin()) {
-    const tab = location.hash.slice(1).split(":")[0] || "overview";
-    const dash = me.admin_account ? `<a href="/admin/#overview"${tab === "overview" ? ' class="on" aria-current="page"' : ""}>${icon("gauge")}<span>Dashboard</span></a>` : link("/me", "home", "Home");
-    // One menu for everything (tools + your own pages + sign out), like members' "More".
-    return dash + link("/messages", "messageCircle", "Messages") + link("/devotions", "bookOpen", "Devotions")
-      + `<button type="button" class="${tab !== "overview" || !me.admin_account ? "on" : ""}" data-admin-tools aria-haspopup="dialog">${icon("grid")}<span>Menu</span></button>`;
-  }
-  return mainTabs(me).map(([h, i, l]) => link(h, i, l)).join("")
-    + `<button type="button" class="${more ? "on" : ""}" data-app-more aria-haspopup="dialog" aria-expanded="false">${icon("menu")}<span>More</span></button>`;
+  const more = inMore(me) || (onAdmin() && (location.hash.slice(1).split(":")[0] || "overview") !== "overview");
+  // The same bar on every page for every account: Home (or Dashboard), Messages, Devotions, and one Menu.
+  const first = isSuper(me)
+    ? `<a href="/admin/#overview"${onAdmin() && (location.hash.slice(1).split(":")[0] || "overview") === "overview" ? ' class="on" aria-current="page"' : ""}>${icon("gauge")}<span>Dashboard</span></a>`
+    : link("/me", "home", "Home");
+  return first + link("/messages", "messageCircle", "Messages") + link("/devotions", "bookOpen", "Devotions")
+    + `<button type="button" class="${more ? "on" : ""}" data-app-more aria-haspopup="dialog" aria-expanded="false">${icon("grid")}<span>Menu</span></button>`;
 }
 
 let sheetMe = null;
@@ -164,21 +183,38 @@ function renderBottom(me) {
   document.body.classList.add("has-bottom");
 }
 
-function openSheet() {
+export function openSheet() {
   const me = sheetMe; if (!me?.user) return;
   closeSheet();
-  const u = me.user, role = roleName(me) || "Member";
+  const u = me.user, role = roleName(me) || (me.visitor ? "Visitor" : "Member");
+  const tools = menuTools(me), groups = [];
+  for (const [g, h, i, l] of tools) { let cur = groups.find((x) => x.g === g); if (!cur) groups.push(cur = { g, items: [] }); cur.items.push([h, i, l]); }
+  const own = [...(isSuper(me) ? [] : [["/me", "home", "Home"]]), ["/messages", "messageCircle", "Messages"], ["/devotions", "bookOpen", "Devotions"], ...moreTabs(me)];
+  const count = (h) => { const t = h.split("#")[1]; const n = t && document.querySelector(`#nav [data-tab="${t}"] .badge`)?.textContent?.trim(); return n && n !== "0" ? `<i class="sl-b">${esc(n)}</i>` : ""; };
+  const row = ([h, i, l]) => `<a href="${h}" data-find="${esc(l.toLowerCase())}"${isOn(h) ? ' class="on" aria-current="page"' : ""}>${icon(i)}<span>${esc(l)}</span>${count(h)}</a>`;
+  const many = tools.length + own.length > 12;
   const el = document.createElement("div");
-  el.className = "app-sheet"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "More");
+  el.className = "app-sheet"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "Menu");
   el.innerHTML = `<div class="sheet-card"><header class="sheet-me"><span class="avatar">${faceInner(u)}</span><div><b>${esc(u.name || u.email)}${badgeHtml(sheetMe || {}, 16)}</b><span>${esc(role)}</span></div>
       <button type="button" class="sheet-x" data-sheet-close aria-label="Close">${icon("x")}</button></header>
-    ${toolsFor(me).length && !onAdmin() ? `<p class="sheet-group">Your tools</p><nav class="sheet-links tools">${toolsFor(me).map(([h, i, l]) => link(h, i, l)).join("")}<button type="button" class="sheet-ask" data-ask-access>${icon("plus")}<span>Ask for more access</span></button></nav><p class="sheet-group">More</p>` : ""}
-    <nav class="sheet-links">${[...(onAdmin() ? [["/devotions", "bookOpen", "Devotions"]] : []), ...moreTabs(me)].map(([h, i, l]) => link(h, i, l)).join("")}</nav>
+    ${many ? `<label class="sheet-find">${icon("search")}<input type="search" placeholder="Find…" aria-label="Find in the menu" autocomplete="off"></label>` : ""}
+    ${groups.map((g) => `<section data-sec><p class="sheet-group">${esc(groups.length > 1 ? g.g : "Your tools")}</p><nav class="sheet-links tools">${g.items.map(row).join("")}</nav></section>`).join("")}
+    ${tools.length && !isSuper(me) ? `<button type="button" class="sheet-ask" data-ask-access>${icon("plus")}<span>Ask for more access</span></button>` : ""}
+    <section data-sec>${tools.length ? `<p class="sheet-group">You</p>` : ""}<nav class="sheet-links">${own.map(row).join("")}</nav></section>
+    <p class="sheet-none muted-text" hidden>Nothing by that name.</p>
     <button type="button" class="btn sheet-out" data-app-signout>${icon("logOut")} Sign out</button></div>`;
   document.body.append(el);
-  document.querySelector("[data-app-more]")?.setAttribute("aria-expanded", "true");
+  document.querySelectorAll("[data-app-more]").forEach((b) => b.setAttribute("aria-expanded", "true"));
+  const q = el.querySelector(".sheet-find input");
+  q?.addEventListener("input", () => {
+    const v = q.value.trim().toLowerCase();
+    el.querySelectorAll("[data-sec]").forEach((sec) => { let any = false; sec.querySelectorAll("[data-find]").forEach((a) => { const hit = !v || a.dataset.find.includes(v); a.hidden = !hit; any ||= hit; }); sec.hidden = !any; });
+    el.querySelector(".sheet-ask")?.toggleAttribute("hidden", !!v);
+    el.querySelector(".sheet-none").hidden = !!el.querySelector("[data-sec]:not([hidden])");
+  });
+  q?.addEventListener("keydown", (e) => { if (e.key === "Enter") el.querySelector("[data-sec]:not([hidden]) [data-find]:not([hidden])")?.click(); });
   requestAnimationFrame(() => el.classList.add("open"));
-  el.querySelector(".sheet-links a, .sheet-x")?.focus({ preventScroll: true });
+  if (q && matchMedia("(min-width: 861px)").matches) q.focus(); else el.querySelector(".sheet-x")?.focus({ preventScroll: true });
 }
 function closeSheet() {
   document.querySelectorAll(".app-sheet").forEach((s) => s.remove());
@@ -187,7 +223,7 @@ function closeSheet() {
 document.addEventListener("click", (e) => {
   const t = e.target;
   if (t.closest?.("[data-app-more]")) { e.preventDefault(); return document.querySelector(".app-sheet") ? closeSheet() : openSheet(); }
-  if (t.closest?.("[data-sheet-close]") || t.classList?.contains("app-sheet")) return closeSheet();
+  if (t.closest?.("[data-sheet-close]") || t.classList?.contains("app-sheet") || t.closest?.(".app-sheet:not(.ask-dialog) a")) return closeSheet();
   // The admin portal signs out with its own button.
   if (t.closest?.(".app-sheet [data-app-signout]") && document.getElementById("logout")) { e.preventDefault(); closeSheet(); document.getElementById("logout").click(); }
 });

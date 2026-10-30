@@ -9,7 +9,7 @@ import { initMore } from "./admin-more.js";
 import { initExtra } from "./admin-extra.js";
 import { initClasses } from "./admin-classes.js";
 import { arrivedBySwitch, switchReady } from "./switcher.js";
-import { badgeHtml, cacheMe, helloOnce, renderTabs, setBadge, moreTabs } from "./portal.js";
+import { badgeHtml, cacheMe, helloOnce, renderTabs, setBadge, moreTabs, openSheet } from "./portal.js";
 import { faceInner } from "./faces.js";
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -144,7 +144,7 @@ async function boot() {
   // People with a role are in their own portal here, just looking at their tools: same bar, logo goes Home.
   if (perms) {
     $$(".brand").forEach((b) => { b.href = "/me"; b.removeAttribute("target"); const t = b.querySelector("span"); if (t) t.textContent = "SCC · Your tools"; });
-    $("#m-menu").textContent = "Tools";
+
   }
   renderTabs($("#portal-tabs"), r, "/admin/"); cacheMe(r);
   // Shortcuts only for what this person can open.
@@ -217,44 +217,8 @@ function drawRecent() {
   const dash = $('#nav button[data-tab="overview"]'); if (dash && box.previousElementSibling !== dash) dash.after(box);
   box.innerHTML = list.length ? `<p class="nav-group">Recent</p><div class="sr-grid">${list.map((t) => tile(t)).join("")}</div>` : "";
 }
-function openTools() {
-  document.querySelector(".tools-sheet")?.remove();
-  const groups = []; let cur = null;
-  for (const el of $$("#nav > *")) {
-    if (el.matches(".nav-group")) { cur = { label: el.textContent, items: [] }; groups.push(cur); continue; }
-    if (el.matches("button[data-tab]") && !el.hidden && el.dataset.tab !== "overview" && cur) cur.items.push(toolBtn(el));
-  }
-  const all = new Map(visibleTools().map((t) => [t.tab, t])), rec = recent().filter((t) => all.has(t)).slice(0, 4).map((t) => all.get(t));
-  const sh = document.createElement("div");
-  sh.className = "tools-sheet"; sh.setAttribute("role", "dialog"); sh.setAttribute("aria-modal", "true"); sh.setAttribute("aria-label", "Menu");
-  sh.innerHTML = `<div class="ts-card"><div class="ts-grab" aria-hidden="true"></div>
-    <header class="ts-head"><h2>Menu</h2><button type="button" class="ts-x" data-ts-close aria-label="Close">${icon("x")}</button></header>
-    <label class="ts-search">${icon("search")}<input type="search" placeholder="Find a tool…" aria-label="Find a tool" autocomplete="off"></label>
-    <div class="ts-body">${rec.length ? `<section class="ts-sec" data-sec><p class="ts-label">Recent</p><div class="ts-grid ts-rec">${rec.map((t) => tile(t, "big")).join("")}</div></section>` : ""}
-      ${groups.filter((g) => g.items.length).map((g) => `<section class="ts-sec" data-sec><p class="ts-label">${esc(g.label)}</p><div class="ts-grid">${g.items.map((t) => tile(t)).join("")}</div></section>`).join("")}
-      <p class="ts-none" hidden>No tool by that name.</p>
-      ${perms ? `<button type="button" class="ts-ask" data-ask-access>${icon("plus")} Ask for more access</button>` : ""}
-      <section class="ts-sec ts-you" data-sec><p class="ts-label">You</p><div class="ts-links">
-        ${[["/me", "home", "My home"], ...moreTabs(meAll || {})].filter(([h]) => !(meAll?.admin_account && h === "/me")).map(([h, i, l]) => `<a href="${h}">${icon(i)}<span>${esc(l)}</span></a>`).join("")}
-        <button type="button" data-ts-signout>${icon("logOut")}<span>Sign out</span></button></div></section></div></div>`;
-  document.body.append(sh);
-  requestAnimationFrame(() => sh.classList.add("open"));
-  const close = () => { sh.classList.remove("open"); setTimeout(() => sh.remove(), 200); };
-  sh.addEventListener("click", (e) => {
-    if (e.target.closest("[data-ts-signout]")) { close(); $("#logout").click(); return; }
-    if (e.target === sh || e.target.closest("[data-ts-close], [data-go-tab], [data-ask-access]")) close();
-  });
-  const q = sh.querySelector("input");
-  q.addEventListener("input", () => {
-    const v = q.value.trim().toLowerCase();
-    sh.querySelectorAll(".ts-sec").forEach((sec) => { let any = false; sec.querySelectorAll(".tl").forEach((t) => { const hit = !v || t.textContent.toLowerCase().includes(v); t.hidden = !hit; any ||= hit; }); sec.hidden = !any || (v && sec.querySelector(".ts-rec")); });
-    sh.querySelector(".ts-none").hidden = !!sh.querySelector(".ts-sec:not([hidden])");
-  });
-  q.addEventListener("keydown", (e) => { if (e.key === "Enter") { const first = sh.querySelector(".ts-sec:not([hidden]) .tl:not([hidden])"); if (first) first.click(); } });
-  addEventListener("keydown", function esc1(e) { if (e.key === "Escape") { close(); removeEventListener("keydown", esc1); } });
-  if (matchMedia("(min-width: 861px)").matches) q.focus();
-}
-document.addEventListener("click", (e) => { if (e.target.closest?.("[data-admin-tools]")) { e.preventDefault(); openTools(); } });
+// The menu is the same one every account uses (portal.js): only what's in it depends on what you can open.
+document.addEventListener("click", (e) => { if (e.target.closest?.("[data-admin-tools]")) { e.preventDefault(); openSheet(); } });
 
 // ---- Overview pieces in the new look
 let attAll = [], attKind = null, attFilter = "all";
@@ -309,10 +273,16 @@ async function drawVisits() {
 const loaders = {};
 const detailRoutes = {};   // "#insight:<id>" style deep links
 const firstAllowed = () => $$("#nav [data-tab]").find((b) => !b.hidden)?.dataset.tab || "fridays";
+/** While a page that needs data first is opening, show a quiet "Opening…" instead of whatever page was there before. */
+function loadingView() {
+  document.body.dataset.view = "loading";
+  $$("[data-view]").forEach((v) => { v.hidden = v.dataset.view !== "loading"; });
+}
 function openTab(tab) {
   let [base, arg] = tab.split(":");
   rememberTool(base);
   if (perms && !allowed(base === "event" || base === "events-new" ? "events" : base)) { base = firstAllowed(); arg = undefined; tab = base; }
+  if ((arg && detailRoutes[base]) || base === "events-new" || base === "letters-new" || (base === "event" && arg) || (base === "letter" && arg)) loadingView();
   if (arg && detailRoutes[base]) return detailRoutes[base](arg);
   if (base === "events-new") return editEvent(null);
   if (base === "letters-new") return editLetter(null);
@@ -1139,7 +1109,7 @@ addEventListener("hashchange", () => { if (me) openTab(location.hash.slice(1) ||
 // Phone/tablet: menu drawer + quick bar
 // ---- Menus: one tap anywhere outside closes them and stays on the current screen ----
 const setSide = (open) => { document.body.classList.toggle("side-open", open); $("#m-menu").setAttribute("aria-expanded", String(open)); };
-$("#m-menu").addEventListener("click", () => setSide(!document.body.classList.contains("side-open")));
+$("#m-menu").addEventListener("click", (e) => { e.stopPropagation(); openSheet(); });   // the same menu as everywhere else
 $("#nav").addEventListener("click", (e) => { if (e.target.closest("button")) setSide(false); });
 function closeMenusFrom(target) {
   let closed = false;
@@ -1161,7 +1131,7 @@ $$("[data-ico]:not([data-go-tab])").forEach((b) => { b.innerHTML = icon(b.datase
 $$("[data-go-tab]").forEach((b) => { if (b.dataset.ico) b.insertAdjacentHTML("afterbegin", icon(b.dataset.ico)); b.addEventListener("click", () => { location.hash = b.dataset.goTab; }); });
 // Insights, weekly services and the board report live in their own module.
 watchReports(document.querySelector(".main"));
-const insights = initInsights({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate, canManageServices: () => !perms || perms.includes("services") });
+const insights = initInsights({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, loadingView, fmtDate, canManageServices: () => !perms || perms.includes("services") });
 const more = initMore({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate, icon });
 initExtra({ api, $, $$, esc, toast, safe, loaders, detailRoutes, showView, fmtDate, icon });
 initClasses({ api, $, esc, toast, safe, loaders, icon, fmtDate });
