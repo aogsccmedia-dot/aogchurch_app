@@ -283,8 +283,6 @@ describe("events & form builder", () => {
     assert.equal(ics.headers.get("content-type"), "text/calendar; charset=utf-8");
     const body = await ics.text();
     assert.ok(body.includes("DTSTART:20300701T080000Z") && body.includes("SUMMARY:Youth Camp 2030"));
-    const dup = await (await reg("Amahle Zulu", "amahle@example.com")).json() as { already: boolean };
-    assert.equal(dup.already, true);
     const b = await (await reg("Bongani Nkosi", "bongani@example.com", "1")).json() as { status: string };
     assert.equal(b.status, "waitlist", "1 + 1 guest exceeds the remaining capacity");
     assert.match(mails("bongani@example.com").at(-1)!.subject, /waitlist/);
@@ -298,6 +296,9 @@ describe("events & form builder", () => {
 
     const csv = await (await call(`/api/admin/events/${id}/registrations.csv`, { headers: { cookie } })).text();
     assert.ok(csv.includes("T-shirt size") && csv.includes("Vegetarian; Halaal"));
+    // Buying again with the same email makes a new booking with its own reference (and a short thank you on the page).
+    const again = await (await reg("Bongani Nkosi", "bongani@example.com")).json() as { again: boolean; ref: string; already?: boolean };
+    assert.equal(again.again, true); assert.ok(again.ref && !again.already);
   });
 
   test("duplicate for next week keeps the form as a draft", async () => {

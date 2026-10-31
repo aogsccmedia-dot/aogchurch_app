@@ -2642,3 +2642,15 @@ details.me-drop.me-section { margin-bottom: 14px; }
 @media (max-width: 380px) { .me-drop-hint { display: none; } }
 details.me-drop > summary.me-head { margin: 0 !important; }
 details.me-drop { display: block !important; }
+details.me-drop[hidden] { display: none !important; }
+@media (max-width: 520px) { .me-drop-hint { max-width: 40%; overflow: hidden; text-overflow: ellipsis; } }
+
+/* Booking again: a small thank you in the middle of the screen */
+.thanks-pop { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 20px; background: rgba(28, 23, 18, 0); transition: background-color .2s; }
+.thanks-pop.open { background: rgba(28, 23, 18, .35); }
+.thanks-card { width: min(320px, 100%); display: grid; justify-items: center; gap: 8px; padding: 26px 22px 20px; border-radius: 22px; background: #fff; text-align: center; box-shadow: 0 20px 60px rgba(34, 28, 18, .3); transform: scale(.94); opacity: 0; transition: transform .2s, opacity .2s; }
+.thanks-pop.open .thanks-card { transform: none; opacity: 1; }
+.thanks-ico { font-size: 34px; line-height: 1; }
+.thanks-card b { font-size: 21px; }
+.thanks-card p { margin: 0 0 6px; color: #4a4137; font-size: 15px; line-height: 1.45; }
+@media (prefers-reduced-motion: reduce) { .thanks-pop, .thanks-card { transition: none; } }

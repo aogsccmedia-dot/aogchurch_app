@@ -125,6 +125,9 @@ function maybeWelcome(m, u) {
   let seen = false;
   try { seen = localStorage.getItem(key) === "1"; } catch { seen = true; }
   if (!asked && seen) return false;
+  // Only around the time they were verified (the welcome email): never months later on a new phone or after clearing data.
+  const since = Date.parse(m.welcome_sent_at || m.created_at || "") || 0;
+  if (!asked && Date.now() - since > 14 * 86400_000) { try { localStorage.setItem(key, "1"); } catch { /* ignore */ } return false; }
   try { localStorage.setItem(key, "1"); } catch { /* ignore */ }
   if (asked) history.replaceState(null, "", "/me");
   import("./welcome.js").then(({ showWelcome }) => showWelcome({

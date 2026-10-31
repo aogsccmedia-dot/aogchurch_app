@@ -9,7 +9,7 @@ import { initMore } from "./admin-more.js";
 import { initExtra } from "./admin-extra.js";
 import { initClasses } from "./admin-classes.js";
 import { arrivedBySwitch, switchReady } from "./switcher.js";
-import { badgeHtml, cacheMe, helloOnce, renderTabs, setBadge, moreTabs, openSheet } from "./portal.js";
+import { badgeHtml, cacheMe, helloOnce, playWelcome, renderTabs, setBadge, moreTabs, openSheet } from "./portal.js";
 import { faceInner } from "./faces.js";
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -103,7 +103,11 @@ async function afterLogin() {
   const me2 = await fetch("/api/auth/me", { cache: "no-store" }).then((x) => x.json()).catch(() => ({}));
   if (!me2.is_admin) throw new Error("That account isn't on the church team. Ask the main church admin to add you under Team & roles.");
   cacheMe(me2);
-  $("#login-view").hidden = true; boot();
+  // Just signed in: the welcome plays now (and only now), while the dashboard loads behind it.
+  const el = await playWelcome(me2).catch(() => null);
+  try { sessionStorage.removeItem("scc-welcome"); } catch { /* fine */ }
+  $("#login-view").hidden = true; await boot();
+  setTimeout(() => { el?.classList.add("out"); setTimeout(() => el?.remove(), 460); }, 3600);
 }
 async function showLogin() {
   if (!$("#login-view").hidden) return;   // already showing

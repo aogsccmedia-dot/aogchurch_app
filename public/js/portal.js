@@ -321,34 +321,20 @@ export async function playWelcome(me) {
   return el;
 }
 
-/** The black welcome, once per sign-in session: "Welcome back, Thandi · Youth leader portal". Tap to skip. */
+/** After signing in, lets the carried-over welcome go once this page is ready. Never starts a welcome by itself. */
 export function helloOnce(me, { skip = false } = {}) {
   if (!me?.user) return;
   // Arrived from sign-in: the welcome is already up (carried over); this page is ready, so let it go.
   const carried = document.getElementById("welcome-carry");
   if (carried) {
-    let at = 0; try { at = JSON.parse(sessionStorage.getItem("scc-welcome") || "{}").at || 0; sessionStorage.removeItem("scc-welcome"); } catch { /* fine */ }
+    const at = Number(carried.dataset.at) || Date.now();
     setTimeout(() => { carried.classList.add("out"); setTimeout(() => carried.remove(), 460); }, Math.max(900, 4600 - (Date.now() - at)));
     return;
   }
   // Pages opened ahead of time in the background wait until they're actually shown.
   if (document.prerendering) { document.addEventListener("prerenderingchange", () => helloOnce(me, { skip }), { once: true }); return; }
-  // Once per sign-in, across every page and tab (cleared when they sign out).
-  const id = String(me.user.id || me.user.email);
-  try { if (localStorage.getItem("scc-hello") === id) return; localStorage.setItem("scc-hello", id); } catch { return; }
-  if (skip) return;
-  const first = (me.user.given_name || me.user.name || "").split(" ")[0];
-  const role = roleName(me);
-  // The hand-drawn "Welcome" writes itself (inspired by a video), then their name and portal. Tap to skip.
-  import("./welcome-art.js").then(({ WELCOME_SVG }) => {
-    const el = document.createElement("div");
-    el.className = "welcome-screen hello-write"; el.setAttribute("role", "status"); el.setAttribute("aria-label", `Welcome back${first ? ", " + first : ""}`);
-    el.innerHTML = `<div class="welcome-blobs" aria-hidden="true"><i></i><i></i><i></i></div><div class="welcome-inner">${WELCOME_SVG}
-      <h2 class="welcome-title">Welcome back${first ? `, ${esc(first)}` : ""}${badgeHtml(me, 26)}</h2><p class="welcome-line">${role ? `${esc(role)} portal` : "Your church family"}</p></div>`;
-    document.documentElement.append(el);
-    requestAnimationFrame(() => el.classList.add("play"));
-    const done = () => { el.classList.add("out"); setTimeout(() => el.remove(), 460); };
-    el.addEventListener("click", done);
-    setTimeout(done, matchMedia("(prefers-reduced-motion: reduce)").matches ? 900 : 4300);
-  }).catch(() => {});
+  // The welcome only ever plays as part of signing in (see auth.js and the admin sign-in): never on a refresh,
+  // a new tab or opening the app while already signed in.
+  try { localStorage.setItem("scc-hello", String(me.user.id || me.user.email)); } catch { /* fine */ }
+  void skip;
 }

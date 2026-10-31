@@ -35,23 +35,23 @@
         <div id="me-upcoming" class="slider" aria-label="Upcoming events"></div>
       </details>
       <section class="me-section tp-wrap" id="tp-me" hidden></section>
-      <section class="me-section" id="me-tools" hidden>
-        <div class="me-head"><h2>Your tools</h2><span class="me-more" id="me-tools-role"></span></div>
+      <details class="me-section me-drop" id="me-tools" data-remember="me-tools" hidden>
+        <summary class="me-head"><h2>{{i:layoutDashboard}} Your tools</h2><span class="me-drop-hint" id="me-tools-role"></span></summary>
         <div id="me-tools-grid" class="tool-grid"></div>
-      </section>
-      <section class="me-section">
-        <div class="me-head"><h2>More for you</h2></div>
+      </details>
+      <details class="me-section me-drop" id="me-more" data-remember="me-more">
+        <summary class="me-head"><h2>{{i:sparkle}} More for you</h2><span class="me-drop-hint">Voting · Find us · Verse · Store</span></summary>
         <div class="know-grid">
           <a class="know member-only" href="/vote" id="know-vote"><span>{{i:vote}}</span><b>Voting</b><small>Checking…</small></a>
           <a class="know" href="https://maps.google.com/?q=17+Humber+Street+Woodmead+Sandton" target="_blank" rel="noopener"><span>{{i:mapPin}}</span><b>Find us</b><small>17 Humber Street, Woodmead, Sandton</small></a>
           <a class="know know-word" href="/devotions"><span id="me-word-art">{{i:flame}}</span><b>Today's verse</b><small>Read, pray and share it</small></a>
           <a class="know" href="/store"><span>{{i:landmark}}</span><b>Church store</b><small>Books by our brethren · coming soon</small></a>
         </div>
-      </section>
-      <section class="me-section" id="members-calendar" hidden>
-        <div class="section-head" style="margin:0"><p class="eyebrow gold">Members only</p><h2>Germiston Sub-Region calendar</h2>
-          <p class="lede">Sub-regional monthlies, quarterlies, conventions and venues for 2026–2027.</p></div>
-        <div data-programme="members" class="programme"></div>
-      </section>
+      </details>
+      <details class="me-section me-drop" id="members-calendar" data-remember="me-calendar" hidden>
+        <summary class="me-head"><h2>{{i:lock}} Members only</h2><span class="me-drop-hint">Germiston Sub-Region calendar</span></summary>
+        <div><p class="muted-text" style="margin:0 0 12px">Sub-regional monthlies, quarterlies, conventions and venues for 2026–2027.</p>
+          <div data-programme="members" class="programme"></div></div>
+      </details>
     </div>
   </main>

@@ -193,7 +193,7 @@ export function authRoutes(router: Router, env: Env): void {
     const [member, { results: registrations }, sub, pw, reminders] = await Promise.all([
       env.DB.prepare(
         `SELECT ref_code, status, membership_type, first_name, last_name, preferred_name, phone, email, suburb, interests, created_at,
-                last_confirmed_at, next_checkin_at, revoked_at
+                last_confirmed_at, next_checkin_at, revoked_at, welcome_sent_at
            FROM members WHERE user_id = ? OR email = ? ORDER BY created_at DESC LIMIT 1`).bind(s.user.id, s.user.email).first(),
       env.DB.prepare(
         `SELECT r.ref_code, r.status, r.created_at, r.guests, e.title, e.slug, e.starts_at, e.ends_at, e.location,

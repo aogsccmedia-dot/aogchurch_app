@@ -24,7 +24,9 @@
     if (!raw) return;
     var w = JSON.parse(raw);
     if (!w || !w.inner || Date.now() - w.at > 20000) { sessionStorage.removeItem("scc-welcome"); return; }
+    sessionStorage.removeItem("scc-welcome");   // used once: a refresh never brings it back
     var el = document.createElement("div");
+    el.dataset.at = String(w.at);
     el.id = "welcome-carry"; el.className = "welcome-screen hello-write play done"; el.setAttribute("role", "status");
     el.innerHTML = '<div class="welcome-blobs" aria-hidden="true"><i></i><i></i><i></i></div><div class="welcome-inner">' + w.inner + "</div>";
     document.documentElement.appendChild(el);

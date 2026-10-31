@@ -29,7 +29,28 @@ function done(status, ref, message, already) {
     <span class="tag">Ref ${esc(ref)}${event.price_label ? " · " + esc(event.price_label) : ""}</span>
     ${wait || pendingApproval ? "" : `<p class="eyebrow" style="margin-top:6px">Add it to your calendar</p>
     <div class="cal-buttons"><a class="btn btn-sm" href="${esc(event.calendar_url)}" target="_blank" rel="noopener">${icon("calendarPlus")} Google</a><a class="btn btn-sm" href="${esc(event.ics_url)}">${icon("download")} Apple / iPhone</a><a class="btn btn-sm" href="${esc(event.outlook_url)}" target="_blank" rel="noopener">${icon("calendarPlus")} Outlook</a></div>`}
-    <a class="btn btn-ghost btn-sm" href="${MORE()}">${icon("arrowLeft")} More events</a>`;
+    <div class="actions" style="justify-content:center"><button type="button" class="btn btn-sm" data-more-tickets>${icon("ticket")} Get more tickets</button><a class="btn btn-ghost btn-sm" href="${MORE()}">${icon("arrowLeft")} More events</a></div>`;
+  $("reg-done").querySelector("[data-more-tickets]").onclick = () => {
+    $("reg-done").hidden = true; form.hidden = false;
+    for (const el of form.querySelectorAll('input[type="file"], [name="guests"]')) el.value = el.name === "guests" ? "0" : "";
+    form.querySelector('[type="submit"]').disabled = false;
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+}
+
+/** Booking again with the same email: a small, centred thank you (the full details are on the page behind it). */
+function thanks(status) {
+  document.querySelector(".thanks-pop")?.remove();
+  const el = document.createElement("div");
+  el.className = "thanks-pop"; el.setAttribute("role", "status");
+  el.innerHTML = `<div class="thanks-card"><span class="thanks-ico" aria-hidden="true">🙏🏽</span><b>Thank you!</b>
+    <p>${status === "pending" ? "We'll email these tickets as soon as your payment is approved." : status === "waitlist" ? "You're on the waitlist for these too." : "Your extra tickets are in your email."}</p>
+    <button type="button" class="btn btn-gold btn-sm" data-x>Done</button></div>`;
+  document.body.append(el);
+  requestAnimationFrame(() => el.classList.add("open"));
+  const close = () => { el.classList.remove("open"); setTimeout(() => el.remove(), 200); };
+  el.addEventListener("click", (e) => { if (e.target === el || e.target.closest("[data-x]")) close(); });
+  setTimeout(close, 6000);
 }
 
 function prefill(me) {
@@ -97,7 +118,8 @@ form.addEventListener("submit", async (e) => {
   btn.disabled = true;
   try {
     const r = await api(`/api/events/${encodeURIComponent(slug)}/register`, { method: "POST", form: new FormData(form) });
-    done(r.status, r.ref, r.message, r.already);
+    done(r.status, r.ref, r.message, false);
+    if (r.again) thanks(r.status);
   } catch (err) {
     let first;
     for (const [k, msg] of Object.entries(err.details || {})) {

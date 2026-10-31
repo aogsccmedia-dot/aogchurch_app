@@ -128,9 +128,10 @@ export function publicRoutes(router: Router, env: Env): void {
     if (e.requires_pop && (!popFile || typeof popFile === "string" || popFile.size === 0)) v.errors.pop = "Please upload your proof of payment.";
     v.assert();
 
-    const dupe = await env.DB.prepare("SELECT ref_code, status FROM event_registrations WHERE event_id = ? AND email = ? AND status NOT IN ('cancelled','rejected')")
-      .bind(e.id, email).first<{ ref_code: string; status: string }>();
-    if (dupe) return json({ ok: true, status: dupe.status, ref: dupe.ref_code, already: true });
+    // People can buy more tickets with the same email (each booking gets its own tickets and reference);
+    // we only note that it's another booking so the page can say a short thank you.
+    const again = !!(await env.DB.prepare("SELECT 1 FROM event_registrations WHERE event_id = ? AND email = ? AND status NOT IN ('cancelled','rejected') LIMIT 1")
+      .bind(e.id, email).first());
 
     // Paid events: proof of payment is required and the admin approves (unless auto-approve is on).
     const pending: PendingFile[] = [];
@@ -164,7 +165,7 @@ export function publicRoutes(router: Router, env: Env): void {
       for (const t of await teamRecipients(env, (e as { ministry_group?: string }).ministry_group === "youth" ? "events|youth_tickets" : "events")) await sendMail(env, { to: t.email, ...mail, template: status === "pending" ? "admin_payment_review" : "admin_new_ticket" });
     })().catch((err) => console.error("team registration email failed", err));
     if (ctx?.waitUntil) ctx.waitUntil(teamMail); else await teamMail;
-    return json({ ok: true, status, ref, message: e.confirmation_message, amount_due: amountDue }, 201);
+    return json({ ok: true, status, ref, message: e.confirmation_message, amount_due: amountDue, again }, 201);
   });
 
   // ---------------- join (membership onboarding)
