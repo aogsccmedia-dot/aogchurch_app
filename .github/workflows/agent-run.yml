@@ -51,7 +51,7 @@ jobs:
         if: steps.key.outputs.ready == '1'
         with: { fetch-depth: 0, persist-credentials: false }
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.key.outputs.ready == '1'
         with: { node-version: 22 }
 
@@ -142,7 +142,7 @@ jobs:
         with: { fetch-depth: 0, ref: main, persist-credentials: false }
       - name: Keep a trusted copy of the agent tools (from main, before any change is applied)
         run: cp -r tools/agents "$RUNNER_TEMP/trusted"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22 }
       - run: npm install --no-audit --no-fund
       - uses: actions/download-artifact@v4
@@ -172,7 +172,7 @@ jobs:
         with: { fetch-depth: 0, ref: main }
       - name: Trusted agent tools (from main)
         run: cp -r tools/agents "$RUNNER_TEMP/trusted"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22 }
       - uses: actions/download-artifact@v4
         with:
