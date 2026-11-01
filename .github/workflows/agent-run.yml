@@ -123,7 +123,7 @@ jobs:
           echo "### ${{ inputs.agent }}: $(git diff --cached --stat origin/main | tail -1)" >> "$GITHUB_STEP_SUMMARY"
           cat "$RUNNER_TEMP/out/LAST_RUN.md" >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: steps.patch.outputs.changed == '1'
         with:
           name: agent-${{ inputs.agent }}-${{ github.run_id }}
@@ -151,7 +151,7 @@ jobs:
           path: ${{ runner.temp }}/in
       - name: Build, type-check, test, gate (no AI, no secrets)
         run: bash "$RUNNER_TEMP/trusted/verify.sh" "${{ inputs.agent }}" "${{ needs.think.outputs.mode || 'online' }}" "$RUNNER_TEMP/in" "$RUNNER_TEMP/verified" "$RUNNER_TEMP/trusted"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: verified-${{ inputs.agent }}-${{ github.run_id }}
           path: ${{ runner.temp }}/verified
