@@ -1,5 +1,5 @@
 import type { Env } from "../env.ts";
-import { siteUrl } from "../env.ts";
+import { adminEmail, siteUrl } from "../env.ts";
 import { b64 } from "./crypto.ts";
 import { sendMail } from "./email.ts";
 import { calendarUrl, formatWhen, icsFile, outlookUrl } from "./time.ts";
@@ -43,6 +43,13 @@ export async function notifyRegistration(env: Env, e: EventRow, r: RegRow, opts:
     name: first, ref: r.ref_code, title: e.title, when: formatWhen(e.starts_at, e.ends_at), location: e.location,
     eventUrl, price: e.price_label, cover: e.cover_image ? `${site}${e.cover_image}` : null,
   };
+  // A postponed event never shows its old date: everyone is told it moved, and ticket holders get their ticket link.
+  if (e.postponed_at && ["pending", "confirmed", "waitlist"].includes(r.status)) {
+    const tk = r.status === "confirmed" ? await ticketsAttachment(env, e, r) : null;
+    const m = T.eventPostponed({ site }, { name: first, title: e.title, poster: e.cover_image ? `${site}${e.cover_image}` : `${site}/assets/events/youth-worship-night-2026-postponed-1200.jpg`,
+      url: eventUrl, holder: r.status !== "waitlist", tickets: 1 + r.guests, ref: r.ref_code, contact: adminEmail(env), ticketUrl: tk ? ticketUrl(env, tk.tickets[0].code) : undefined });
+    return sendMail(env, { to: r.email, toName: r.name, ...m, template: "event_postponed_ticket" });
+  }
   if (r.status === "pending") {
     const m = T.eventPending({ site }, { ...base, amount: rands(r.amount_due), people: 1 + r.guests });
     return sendMail(env, { to: r.email, toName: r.name, ...m, template: "event_pending" });

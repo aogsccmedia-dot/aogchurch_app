@@ -12,43 +12,43 @@
         <span class="avatar face-big" id="me-avatar"></span>
         <div><p class="eyebrow" id="me-greet">Welcome home</p><h1 id="me-name"></h1><p id="me-status"></p></div>
       </header>
-      <nav class="me-pills" aria-label="Quick links">
-        <a class="me-pill" href="/welcome-pack">{{i:bookOpen}}<span>Welcome pack</span></a>
-        <button type="button" class="me-pill tix-pill" id="me-tix-pill" hidden aria-expanded="false" aria-controls="me-tix">{{i:ticket}}<span>My tickets</span><b id="me-tix-n"></b></button>
-        <a class="me-pill rec-pill" id="me-rec-pill" href="/admin/#services:new" hidden>{{i:calendarPlus}}<span>Record a service</span></a>
-        <a class="me-pill member-only" href="/poster">{{i:palette}}<span>Make a poster</span></a>
-        <a class="me-pill fc-pill member-only" href="/freecreator" target="freecreator" rel="noopener">{{i:monitor}}<span>FreeCreator</span></a>
-        <a class="me-pill member-only" href="/messages">{{i:messageCircle}}<span>Message a leader</span><b id="me-msg-n" hidden></b></a>
+      <nav class="me-caps" id="me-caps" aria-label="What would you like to do?">
+        <a class="cap" href="#upcoming">{{i:calendar}}<span class="cap-t"><b>Upcoming events</b><small id="cap-up-n">What's on at church</small></span></a>
+        <a class="cap cap-tix" id="me-tix-pill" href="#tickets" hidden>{{i:ticket}}<span class="cap-t"><b>My tickets</b><small>Your QR codes</small></span><em id="me-tix-n"></em></a>
+        <a class="cap" href="#times">{{i:clock}}<span class="cap-t"><b>Service times</b><small>Every week</small></span></a>
+        <a class="cap" href="/devotions"><span class="cap-ico" id="me-word-art">{{i:flame}}</span><span class="cap-t"><b>Today's verse</b><small>Read, pray and share</small></span></a>
+        <a class="cap member-only" href="/vote" id="know-vote">{{i:vote}}<span class="cap-t"><b>Voting</b><small>Checking…</small></span></a>
+        <a class="cap member-only" id="cap-cal" href="#calendar" hidden>{{i:lock}}<span class="cap-t"><b>Members calendar</b><small>Sub-region dates</small></span></a>
+        <a class="cap member-only" href="/messages">{{i:messageCircle}}<span class="cap-t"><b>Message a leader</b><small>We're here for you</small></span><em id="me-msg-n" hidden></em></a>
+        <a class="cap" href="/welcome-pack">{{i:bookOpen}}<span class="cap-t"><b>Welcome pack</b><small>Start here</small></span></a>
+        <a class="cap member-only" href="/go">{{i:globe}}<span class="cap-t"><b>Go Ye</b><small>Share the good news</small></span></a>
+        <a class="cap member-only" href="/poster">{{i:palette}}<span class="cap-t"><b>Make a poster</b><small>In a few taps</small></span></a>
+        <a class="cap member-only" href="/freecreator" target="freecreator" rel="noopener">{{i:monitor}}<span class="cap-t"><b>FreeCreator</b><small>Church media tools</small></span></a>
+        <a class="cap" id="me-rec-pill" href="/admin/#services:new" hidden>{{i:calendarPlus}}<span class="cap-t"><b>Record a service</b><small>This week</small></span></a>
+        <a class="cap" id="cap-tools" href="#tools" hidden>{{i:layoutDashboard}}<span class="cap-t"><b>Your tools</b><small id="cap-tools-role">For your role</small></span></a>
+        <a class="cap" href="https://maps.google.com/?q=17+Humber+Street+Woodmead+Sandton" target="_blank" rel="noopener">{{i:mapPin}}<span class="cap-t"><b>Find us</b><small>17 Humber Street, Woodmead</small></span></a>
+        <a class="cap" href="/store">{{i:landmark}}<span class="cap-t"><b>Church store</b><small>Coming soon</small></span></a>
       </nav>
-      <section class="me-section me-tix" id="me-tix" hidden>
+      <div class="me-bar" id="me-bar" hidden><a class="btn btn-sm me-back" href="#home">{{i:arrowLeft}} Home</a><h2 id="me-bar-title"></h2></div>
+      <section class="me-section me-tix" id="me-tix">
         <div id="me-events" class="slider" aria-label="My tickets"></div>
       </section>
       <div id="me-member"></div>
-      <a class="goye-card member-only" href="/go"><span class="goye-ico">{{i:globe}}</span><span class="goye-txt"><small>Go Ye · our main calling</small><b>Share the good news this week</b><em>Met someone? Log them here and the Call Office follows up.</em></span><span class="goye-go">{{arrow}}</span></a>
-      <details class="me-section me-drop" id="me-times" data-remember="me-times">
+      <details class="me-section me-drop" id="me-times">
         <summary class="me-head"><h2>{{i:clock}} Service times</h2><span class="me-drop-hint">Every week</span></summary>
         <div class="svc-list" id="svc-list"><small>Loading…</small></div>
       </details>
-      <details class="me-section me-drop" id="upcoming" data-remember="me-upcoming">
+      <details class="me-section me-drop" id="upcoming">
         <summary class="me-head"><h2>{{i:calendar}} Coming up at church</h2><span class="me-drop-hint" id="me-upcoming-n"></span></summary>
         <div class="promo-slot" id="me-promo" hidden></div>
         <div id="me-upcoming" class="slider" aria-label="Upcoming events"></div>
       </details>
       <section class="me-section tp-wrap" id="tp-me" hidden></section>
-      <details class="me-section me-drop" id="me-tools" data-remember="me-tools" hidden>
+      <details class="me-section me-drop" id="me-tools" hidden>
         <summary class="me-head"><h2>{{i:layoutDashboard}} Your tools</h2><span class="me-drop-hint" id="me-tools-role"></span></summary>
         <div id="me-tools-grid" class="tool-grid"></div>
       </details>
-      <details class="me-section me-drop" id="me-more" data-remember="me-more">
-        <summary class="me-head"><h2>{{i:sparkle}} More for you</h2><span class="me-drop-hint">Voting · Find us · Verse · Store</span></summary>
-        <div class="know-grid">
-          <a class="know member-only" href="/vote" id="know-vote"><span>{{i:vote}}</span><b>Voting</b><small>Checking…</small></a>
-          <a class="know" href="https://maps.google.com/?q=17+Humber+Street+Woodmead+Sandton" target="_blank" rel="noopener"><span>{{i:mapPin}}</span><b>Find us</b><small>17 Humber Street, Woodmead, Sandton</small></a>
-          <a class="know know-word" href="/devotions"><span id="me-word-art">{{i:flame}}</span><b>Today's verse</b><small>Read, pray and share it</small></a>
-          <a class="know" href="/store"><span>{{i:landmark}}</span><b>Church store</b><small>Books by our brethren · coming soon</small></a>
-        </div>
-      </details>
-      <details class="me-section me-drop" id="members-calendar" data-remember="me-calendar" hidden>
+      <details class="me-section me-drop" id="members-calendar" hidden>
         <summary class="me-head"><h2>{{i:lock}} Members only</h2><span class="me-drop-hint">Germiston Sub-Region calendar</span></summary>
         <div><p class="muted-text" style="margin:0 0 12px">Sub-regional monthlies, quarterlies, conventions and venues for 2026–2027.</p>
           <div data-programme="members" class="programme"></div></div>

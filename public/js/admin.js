@@ -610,6 +610,7 @@ function drawResponses() {
 }
 $("#resp-q").addEventListener("input", drawResponses);
 $("#resp-filter").addEventListener("change", drawResponses);
+$("#add-holder").addEventListener("click", () => more.addHolder(currentEvent.id, currentEvent.title, () => loadResponses()));
 $("#notify-holders").addEventListener("click", () => more.notifyHolders(currentEvent.id, currentEvent.title));
 $("#approve-all").addEventListener("click", safe(async () => {
   const n = responses.filter((r) => r.status === "pending").length;

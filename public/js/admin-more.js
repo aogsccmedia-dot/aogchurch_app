@@ -219,5 +219,33 @@ export function initMore(ctx) {
   }
 
 
-  return { loadApprovals, notifyHolders };
+  // ------------------------------------------------------------ Add someone who bought a ticket another way
+  function addHolder(eventId, title, done) {
+    document.getElementById("holder-dlg")?.remove();
+    const dlg = document.createElement("dialog"); dlg.id = "holder-dlg"; dlg.className = "sheet";
+    dlg.innerHTML = `<form class="form-grid notify-form" method="dialog">
+      <h3>Add a ticket holder</h3>
+      <p class="muted">For someone who paid or booked another way. Their ticket for <b>${esc(title)}</b> is confirmed straight away and emailed to them.</p>
+      <label class="field"><span>Full name</span><input class="input" name="name" required maxlength="120" autocomplete="off"></label>
+      <label class="field"><span>Email</span><input class="input" name="email" type="email" required maxlength="254" autocomplete="off"></label>
+      <label class="field"><span>Phone (optional)</span><input class="input" name="phone" type="tel" maxlength="30" autocomplete="off"></label>
+      <label class="field"><span>Number of tickets</span><select class="input" name="tickets">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<option value="${n}">${n}</option>`).join("")}</select></label>
+      <label class="field"><span>Note (optional, e.g. paid cash to Sipho)</span><input class="input" name="note" maxlength="300"></label>
+      <label class="check"><input type="checkbox" name="send" checked> Email them their ticket</label>
+      <div class="row"><button class="btn btn-gold" type="submit">${icon("ticket")} Add ticket</button><button class="btn" type="button" data-x>Cancel</button></div></form>`;
+    document.body.append(dlg);
+    dlg.querySelector("[data-x]").addEventListener("click", () => dlg.close());
+    dlg.querySelector("form").addEventListener("submit", safe(async (e) => {
+      e.preventDefault();
+      const f = e.target, btn = f.querySelector("[type=submit]");
+      btn.disabled = true;
+      try {
+        const r = await api(`/api/admin/events/${encodeURIComponent(eventId)}/registrations`, { method: "POST", body: { name: f.name.value, email: f.email.value, phone: f.phone.value, tickets: Number(f.tickets.value), note: f.note.value, send_email: f.send.checked } });
+        dlg.close(); toast(`Added · ref ${r.ref}${r.emailed ? " · ticket emailed" : ""}`); done?.();
+      } finally { btn.disabled = false; }
+    }));
+    dlg.showModal(); dlg.querySelector("input").focus();
+  }
+
+  return { loadApprovals, notifyHolders, addHolder };
 }

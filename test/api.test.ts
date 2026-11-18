@@ -1749,3 +1749,22 @@ describe("Postponed events", () => {
     assert.equal(await processEventReminders(e, new Date("2030-11-06T10:05:00Z")), 0, "no weekly reminders for a postponed event");
   });
 });
+
+describe("Adding a ticket holder by hand", () => {
+  test("an admin adds someone who paid another way: confirmed, ticketed, emailed; strangers can't", async () => {
+    const e = await makeEnv();
+    const c = await adminCookie(e);
+    const mk = await post("/api/admin/events", { title: "Door Night", ministry_group: "youth", starts_at: "2030-11-29T15:30:00Z", is_published: true, rsvp_enabled: true }, A(c), e);
+    const { id } = await mk.json() as { id: string };
+    const bad = await post(`/api/admin/events/${id}/registrations`, { name: "", email: "nope" }, A(c), e);
+    assert.equal(bad.status, 422);
+    const r = await post(`/api/admin/events/${id}/registrations`, { name: "Thabo Mokoena", email: "thabo@example.com", tickets: 3, note: "Paid cash" }, A(c), e);
+    assert.equal(r.status, 201);
+    const row = e.DB._db.prepare("SELECT status, guests FROM event_registrations WHERE email = 'thabo@example.com'").get() as { status: string; guests: number };
+    assert.deepEqual({ ...row }, { status: "confirmed", guests: 2 });
+    const n = (e.DB._db.prepare("SELECT COUNT(*) AS n FROM tickets t JOIN event_registrations r ON r.id = t.registration_id WHERE r.email = 'thabo@example.com' AND t.status = 'valid'").get() as { n: number }).n;
+    assert.equal(n, 3, "three valid tickets");
+    assert.ok(e.EMAIL.outbox.some((m) => JSON.stringify(m.to).includes("thabo@example.com")), "ticket emailed");
+    assert.equal((await post(`/api/admin/events/${id}/registrations`, { name: "X Y", email: "x@example.com" }, {}, e)).status, 401, "signed-out visitors can't");
+  });
+});

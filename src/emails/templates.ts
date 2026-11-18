@@ -962,7 +962,7 @@ export function ticketRecon(b: Brand, o: { name: string; url: string; events: { 
 }
 
 /** Event postponed (not cancelled). Ticket holders also get the refund-by-email paragraph. */
-export function eventPostponed(b: Brand, o: { name: string; title: string; poster: string; url: string; holder: boolean; tickets?: number; ref?: string; contact: string }) {
+export function eventPostponed(b: Brand, o: { name: string; title: string; poster: string; url: string; holder: boolean; tickets?: number; ref?: string; contact: string; ticketUrl?: string }) {
   const refund = o.holder
     ? p(`<strong>Your ticket${o.tickets && o.tickets > 1 ? "s stay" : " stays"} valid for the new date</strong>${o.ref ? ` (reference ${esc(o.ref)})` : ""}, so you don't need to do anything. ` +
         `If you would rather have a refund, please email us at <a href="mailto:${esc(o.contact)}" style="color:${C.gold}">${esc(o.contact)}</a> (or just reply to this email) with your full name and ticket reference, and we will sort it out for you.`)
@@ -978,7 +978,7 @@ export function eventPostponed(b: Brand, o: { name: string; title: string; poste
         p(`We have made the decision to <strong>postpone ${esc(o.title)}</strong> to an early 2027 date. It is <strong>not cancelled</strong>. It is only moving, and we will announce the new date as soon as it is confirmed.`) +
         refund +
         p(`Thank you for your love, patience and support. We can't wait to worship with you.`) +
-        button(o.url, "See the event page"),
+        (o.ticketUrl ? button(o.ticketUrl, "View your ticket") : button(o.url, "See the event page")),
     }),
     text: `Hi ${o.name},\n\n${o.title} has been POSTPONED to an early 2027 date (not cancelled). We will announce the new date soon.\n\n` +
       (o.holder ? `Your ticket stays valid for the new date. If you would rather have a refund, email ${o.contact} (or reply to this email) with your full name and ticket reference.\n\n` : "") +

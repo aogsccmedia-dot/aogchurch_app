@@ -1,7 +1,7 @@
 import type { Env } from "../env.ts";
 import { adminEmail, siteUrl } from "../env.ts";
 import { HttpError, Router, json, readJson, trustedWrite } from "../lib/http.ts";
-import { randomToken, uuid } from "../lib/crypto.ts";
+import { randomToken, refCode, uuid } from "../lib/crypto.ts";
 import { Validator } from "../lib/validate.ts";
 import { getFile } from "../lib/storage.ts";
 import { ADMIN_DEFAULT, isAdminEmail, parsePerms, requireAdmin, YOUTH_DEFAULT, YOUTH_PERMS, type Session } from "../lib/auth.ts";
@@ -423,6 +423,32 @@ export function adminRoutes(router: Router, env: Env): void {
          FROM event_registrations r JOIN events e ON e.id = r.event_id LEFT JOIN attachments a ON a.id = r.pop_attachment_id
         WHERE r.status = 'pending' ${youthOnly(s) ? "AND e.ministry_group = 'youth'" : ""} ORDER BY r.created_at DESC LIMIT 200`).all();
     return json({ ok: true, approvals: results, scope: youthOnly(s) ? "youth" : "all" });
+  }));
+
+  // Add someone who bought a ticket another way (cash, EFT sent to a leader, WhatsApp...). Their ticket is confirmed straight away and emailed to them.
+  router.post("/api/admin/events/:id/registrations", guard(async (req, { id }, s, ctx) => {
+    const e = await env.DB.prepare("SELECT * FROM events WHERE id = ?").bind(id).first<EventRow>();
+    if (!e) throw new HttpError(404, "Event not found.");
+    checkEventScope(s, e as { ministry_group?: string });
+    const b = await readJson<Record<string, unknown>>(req);
+    const v = new Validator({ name: String(b.name ?? ""), email: String(b.email ?? ""), phone: String(b.phone ?? "") });
+    const name = v.text("name", { required: true, max: 120, label: "Full name" });
+    const email = v.email("email", true);
+    const phone = v.phone("phone", false);
+    v.assert();
+    const tickets = Math.max(1, Math.min(11, Math.floor(Number(b.tickets)) || 1));
+    const guests = tickets - 1;
+    const note = String(b.note || "").trim().slice(0, 300) || null;
+    const user = await env.DB.prepare("SELECT id FROM users WHERE lower(email) = ?").bind(email!.toLowerCase()).first<{ id: string }>();
+    const regId = uuid(), ref = refCode().replace("SCCY", "EVT"), now = new Date().toISOString();
+    const amountDue = e.ticket_price ? e.ticket_price * tickets : null;
+    await env.DB.prepare(`INSERT INTO event_registrations (id, event_id, user_id, ref_code, name, email, phone, guests, answers, status, ip_hash, amount_due, reviewed_at, review_note)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(regId, e.id, user?.id ?? null, ref, name, email, phone, guests, "{}", "confirmed", null, amountDue, now, note ? `Added by ${s.user.email}: ${note}` : `Added by ${s.user.email}`).run();
+    const reg: RegRow = { id: regId, event_id: e.id, ref_code: ref, name: name!, email: email!, guests, status: "confirmed", amount_due: amountDue };
+    await ensureTickets(env, reg);
+    if (b.send_email !== false) await later(ctx, notifyRegistration(env, e, reg));
+    await audit(env, s, "add_ticket_holder", "registration", regId, { event: id, tickets });
+    return json({ ok: true, ref, tickets, emailed: b.send_email !== false }, 201);
   }));
 
   // Tell everyone holding a ticket (confirmed, awaiting approval or waitlisted) about a change to the event.

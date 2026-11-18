@@ -84,7 +84,7 @@ function paint(me, d, fromCache) {
   const pill = $("me-tix-pill");
   pill.hidden = !upcoming.length;
   $("me-tix-n").textContent = upcoming.length || "";
-  if (!upcoming.length) { $("me-tix").hidden = true; pill.setAttribute("aria-expanded", "false"); }
+  
   if (!fromCache && !me.visitor) fetch("/api/chat/unread", { cache: "no-store" }).then((r) => r.json()).then((c) => { const b = $("me-msg-n"); b.hidden = !c.unread; b.textContent = c.unread || ""; }).catch(() => {});
   loadUpcoming(fromCache); loadKnow(fromCache);
   if (!fromCache) wordThumb();
@@ -101,11 +101,6 @@ async function wordThumb() {
   } catch { /* keep the icon */ }
 }
 
-$("me-tix-pill").addEventListener("click", () => {
-  const box = $("me-tix"), open = box.hidden;
-  box.hidden = !open; $("me-tix-pill").setAttribute("aria-expanded", String(open));
-  if (open) box.scrollIntoView({ behavior: "smooth", block: "nearest" });
-});
 $("me-events").addEventListener("click", async (e) => {
   const b = e.target.closest("[data-cancel]");
   if (!b || !confirm("Cancel this registration? Your spot will go to someone on the waitlist.")) return;
@@ -165,6 +160,7 @@ async function loadUpcoming(fromCache) {
       <span class="ev-body"><b>${esc(e.title)}</b><small>${e.postponed ? "Postponed · new date soon" : esc(fmt(e.starts_at))}${e.postponed ? "" : e.price_label ? ` · ${esc(e.price_label)}` : ""}</small>
       ${e.registration_open ? `<span class="btn btn-sm btn-gold btn-glow">${icon("ticket")} Get Ticket</span>` : ""}</span></a>`).join("")
     : `<div class="slide empty-slide"><b>Nothing new just yet</b><p class="muted-text">New events appear here first.</p></div>`;
+  const cu = $("cap-up-n"); if (cu) cu.textContent = list.length ? `${list.length} ${list.length === 1 ? "event" : "events"} coming up` : "What's on at church";
   const n = $("me-upcoming-n"); if (n) n.textContent = list.length ? `${list.length} ${list.length === 1 ? "event" : "events"}` : "";
 }
 
@@ -181,12 +177,24 @@ async function loadKnow(fromCache) {
   s.textContent = v?.member === false ? "For confirmed members" : open ? `Voting is open: ${open.title}` : next ? `Next: ${next.title}, ${new Date(next.opens_at).toLocaleDateString("en-ZA", { day: "numeric", month: "long" })}` : v ? `No votes planned yet in ${new Date().getFullYear()}` : "For confirmed members";
 }
 
-// Service times and Coming up are fold-outs: each person's choice (open or closed) is remembered on this device.
-for (const d of document.querySelectorAll("details[data-remember]")) {
-  const k = "scc-open:" + d.dataset.remember;
-  try { if (localStorage.getItem(k) === "1") d.open = true; } catch { /* storage blocked */ }
-  d.addEventListener("toggle", () => { try { localStorage.setItem(k, d.open ? "1" : "0"); } catch { /* storage blocked */ } });
+// ---------- one thing at a time: capsules on Home, each opens its own page-in-a-page ("#upcoming", "#tickets" ...) ----------
+const PANELS = { tickets: ["me-tix"], times: ["me-times"], upcoming: ["upcoming"], calendar: ["members-calendar"], tools: ["me-tools", "tp-me"] };
+const TITLES = { tickets: "My tickets", times: "Service times", upcoming: "Coming up at church", calendar: "Members only calendar", tools: "Your tools" };
+function route() {
+  const key = location.hash.slice(1), view = PANELS[key] ? key : "home", home = $("me-view");
+  home.dataset.view = view;
+  document.querySelectorAll("[data-active]").forEach((el) => el.removeAttribute("data-active"));
+  $("me-bar").hidden = view === "home";
+  if (view !== "home") {
+    $("me-bar-title").textContent = TITLES[view];
+    for (const id of PANELS[view]) { const el = $(id); el.setAttribute("data-active", ""); if (el.tagName === "DETAILS") el.open = true; }
+  }
+  scrollTo(0, 0);
 }
-// "Get Ticket" and other links to #upcoming open it first.
-document.addEventListener("click", (e) => { const a = e.target.closest?.('a[href="#upcoming"]'); if (a) { const d = document.getElementById("upcoming"); if (d) d.open = true; } });
-if (location.hash === "#upcoming") { const d = document.getElementById("upcoming"); if (d) d.open = true; }
+addEventListener("hashchange", route);
+route();
+// A capsule only shows when what it opens is there for this person (tools for a role, the members calendar for members).
+for (const [cap, panel] of [["cap-tools", "me-tools"], ["cap-cal", "members-calendar"]]) {
+  const c = $(cap), p = $(panel), sync = () => { c.hidden = p.hidden; if (cap === "cap-tools") $("cap-tools-role").textContent = $("me-tools-role").textContent || "For your role"; };
+  new MutationObserver(sync).observe(p, { attributes: true, attributeFilter: ["hidden"] }); sync();
+}
