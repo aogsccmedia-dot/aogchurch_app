@@ -38,6 +38,7 @@ import { processAnnouncements } from "./lib/newsletter.ts";
 import { processCheckins, processWelcomes } from "./lib/membership.ts";
 import { processServiceReminders } from "./lib/reminders.ts";
 import { processEventReminders } from "./lib/event-reminders.ts";
+import { processPostponements } from "./lib/postponement.ts";
 import { backfillLeaders, processFollowups } from "./lib/leaders.ts";
 import { nextSundayAfternoon } from "./lib/time.ts";
 import { sendMail } from "./lib/email.ts";
@@ -129,6 +130,7 @@ export default {
       await processCheckins(env, now);
       await processWelcomes(env, now);
       await processServiceReminders(env, now).catch((e) => console.error("service reminders failed", e));
+      await processPostponements(env).catch((e) => console.error("postponement emails failed", e));
       await processEventReminders(env, now).catch((e) => console.error("event ticket reminders failed", e));
       await processTicketRecon(env, now).catch((e) => console.error("ticket report failed", e));
       await backfillLeaders(env).catch((e) => console.error("leader catch-up failed", e));

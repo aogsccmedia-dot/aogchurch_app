@@ -55,7 +55,7 @@ export async function processEventReminders(env: Env, now = new Date()): Promise
             (SELECT code FROM tickets t WHERE t.registration_id = r.id AND t.status = 'valid' ORDER BY seq LIMIT 1) AS code,
             (SELECT COUNT(*) FROM tickets t WHERE t.registration_id = r.id AND t.status = 'valid') AS n
        FROM event_registrations r JOIN events e ON e.id = r.event_id
-      WHERE r.status = 'confirmed' AND e.is_published = 1 AND e.starts_at > ?
+      WHERE r.status = 'confirmed' AND e.is_published = 1 AND e.postponed_at IS NULL AND e.starts_at > ?
         AND NOT EXISTS (SELECT 1 FROM event_reminders x WHERE x.registration_id = r.id AND x.week = ?)
       ORDER BY e.starts_at, r.created_at LIMIT ?`)
     .bind(now.toISOString(), week, BATCH).all<RegRow & { code: string | null; n: number }>();
@@ -84,7 +84,7 @@ async function sendTestIfAsked(env: Env, now: Date) {
   if (!t?.value) return;
   await env.DB.prepare("DELETE FROM settings WHERE key = 'event_reminder_test'").run();
   const to = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(t.value) ? t.value : adminEmail(env);
-  const e = await env.DB.prepare("SELECT * FROM events WHERE is_published = 1 AND starts_at > ? ORDER BY starts_at LIMIT 1").bind(now.toISOString()).first<EventRow>();
+  const e = await env.DB.prepare("SELECT * FROM events WHERE is_published = 1 AND postponed_at IS NULL AND starts_at > ? ORDER BY starts_at LIMIT 1").bind(now.toISOString()).first<EventRow>();
   if (!e) return;
   const site = siteUrl(env), ev = `${site}/event?e=${encodeURIComponent(e.slug)}`;
   const m = reminderEmail(env, e, { name: "Thandi", ref: "SCC-TEST", tickets: 2, ticketUrl: ev, pdfUrl: null }, now);

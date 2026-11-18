@@ -6,6 +6,7 @@
         <div class="event-info">
           <p class="eyebrow gold" id="ev-cat">Event</p>
           <h1 id="ev-title">Loading…</h1>
+          <div class="postponed-banner" id="ev-postponed" role="status" hidden></div>
           <div class="event-facts">
             <div>{{i:calendar}}<span id="ev-when"></span></div>
             <div>{{i:mapPin}}<span id="ev-where"></span></div>
@@ -57,4 +58,9 @@
         <div class="reg-done" id="reg-done" hidden></div>
       </aside>
     </div>
+    <section class="ev-archive" id="ev-archive" aria-labelledby="ev-archive-h" hidden>
+      <p class="eyebrow gold">Archive</p><h2 id="ev-archive-h">Worship Night videos</h2>
+      <p class="muted-text">A look back at the previews, saved here until the new date is announced.</p>
+      <div class="archive-grid" id="ev-archive-grid"></div>
+    </section>
   </main>

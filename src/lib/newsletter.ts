@@ -75,7 +75,7 @@ export async function buildAnnouncement(env: Env, a: AnnouncementRow, ref = new 
   let events: T.AnnouncementData["events"] = [];
   if (a.include_events) {
     const { results } = await env.DB.prepare(
-      `SELECT title, slug, starts_at, ends_at, location FROM events WHERE is_published = 1 AND starts_at >= ? AND starts_at < ? ORDER BY starts_at LIMIT 8`,
+      `SELECT title, slug, starts_at, ends_at, location FROM events WHERE is_published = 1 AND postponed_at IS NULL AND starts_at >= ? AND starts_at < ? ORDER BY starts_at LIMIT 8`,
     ).bind(ref.toISOString(), new Date(ref.getTime() + 8 * 86400_000).toISOString())
       .all<{ title: string; slug: string; starts_at: string; ends_at: string | null; location: string | null }>();
     events = results.map((e) => ({ title: e.title, when: formatWhen(e.starts_at, e.ends_at), location: e.location, url: `${siteUrl(env)}/event?e=${encodeURIComponent(e.slug)}` }));

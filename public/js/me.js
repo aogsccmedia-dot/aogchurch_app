@@ -67,15 +67,15 @@ function paint(me, d, fromCache) {
   }
   switchReady();
   if (!fromCache) { helloOnce(me, { skip: maybeWelcome(d.member, u) }); if (d.member?.status === "member") voteBanner(); }
-  const upcoming = d.registrations.filter((r) => new Date(r.ends_at || r.starts_at) > new Date(Date.now() - 6 * 3600_000) && r.status !== "rejected");
+  const upcoming = d.registrations.filter((r) => r.postponed_at || new Date(r.ends_at || r.starts_at) > new Date(Date.now() - 6 * 3600_000) && r.status !== "rejected");
   $("me-events").innerHTML = upcoming.length ? upcoming.map((r) => `
     <article class="slide tix">
       <span class="tix-status ${esc(r.status)}">${{ waitlist: "Waitlist", pending: "Awaiting approval", confirmed: "Confirmed" }[r.status] || esc(r.status)}</span>
       <h3><a href="/event?e=${encodeURIComponent(r.slug)}">${esc(r.title)}</a></h3>
-      <p class="meta">${esc(fmt(r.starts_at))}${r.location ? "<br>" + esc(r.location) : ""}</p>
+      <p class="meta">${r.postponed_at ? "Postponed to early 2027 · new date soon. Your ticket stays valid." : esc(fmt(r.starts_at))}${r.location ? "<br>" + esc(r.location) : ""}</p>
       <p class="tix-ref">Ref ${esc(r.ref_code)}${r.guests ? ` · ${1 + Number(r.guests)} people` : ""}</p>
       <div class="foot">${r.ticket_code ? `<a class="btn btn-sm btn-gold" href="/ticket?c=${esc(r.ticket_code)}">${icon("ticket")} Show ticket</a>` : ""}
-        ${new Date(r.starts_at) > new Date() ? `<button class="btn btn-sm btn-ghost" data-cancel="${esc(r.ref_code)}">Can't make it</button>` : ""}</div>
+        ${r.postponed_at || new Date(r.starts_at) > new Date() ? `<button class="btn btn-sm btn-ghost" data-cancel="${esc(r.ref_code)}">Can't make it</button>` : ""}</div>
     </article>`).join("")
     : `<div class="slide empty-slide"><b>No tickets yet</b><p class="muted-text">When you get a ticket, it shows here with its QR code.</p><a class="btn btn-sm btn-gold btn-glow" href="#upcoming">${icon("ticket")} Get Ticket</a></div>`;
   // Team members (any admin role) get a one-tap shortcut to record this week's service.
@@ -162,7 +162,7 @@ async function loadUpcoming(fromCache) {
   if (promo && slot && !slot.dataset.v) { slot.dataset.v = promo.id; const { promoHtml, initPromos } = await import("./promo.js"); slot.innerHTML = promoHtml(promo, { ticket: promo.registration_open, label: promo.registration_open ? "Get Ticket" : "Details" }); slot.hidden = false; initPromos(slot); }
   $("me-upcoming").innerHTML = list.length ? list.map((e) => `<a class="slide ev-slide" href="/event?e=${encodeURIComponent(e.slug)}">
       ${e.cover_url ? `<img src="${esc(e.cover_url)}" alt="" loading="lazy">` : `<span class="ev-ph">${icon("calendar")}</span>`}
-      <span class="ev-body"><b>${esc(e.title)}</b><small>${esc(fmt(e.starts_at))}${e.price_label ? ` · ${esc(e.price_label)}` : ""}</small>
+      <span class="ev-body"><b>${esc(e.title)}</b><small>${e.postponed ? "Postponed · new date soon" : esc(fmt(e.starts_at))}${e.postponed ? "" : e.price_label ? ` · ${esc(e.price_label)}` : ""}</small>
       ${e.registration_open ? `<span class="btn btn-sm btn-gold btn-glow">${icon("ticket")} Get Ticket</span>` : ""}</span></a>`).join("")
     : `<div class="slide empty-slide"><b>Nothing new just yet</b><p class="muted-text">New events appear here first.</p></div>`;
   const n = $("me-upcoming-n"); if (n) n.textContent = list.length ? `${list.length} ${list.length === 1 ? "event" : "events"}` : "";

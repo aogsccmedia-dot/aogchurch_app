@@ -1711,3 +1711,41 @@ describe("Weekly ticket money to church leaders only", () => {
     assert.equal(await processTicketRecon(e, new Date("2030-11-03T17:05:00Z")), 0, "once a week");
   });
 });
+
+describe("Postponed events", () => {
+  test("sales close, videos move to the archive, everyone is told once, reminders stop", async () => {
+    const e = await makeEnv();
+    const c = await adminCookie(e);
+    const mk = await post("/api/admin/events", { title: "Postpone Night", ministry_group: "youth", starts_at: "2030-11-29T15:30:00Z", is_published: true, rsvp_enabled: true, collect_phone: true }, A(c), e);
+    const { slug, id } = await mk.json() as { slug: string; id: string };
+    e.DB._db.prepare("UPDATE events SET cover_video = '/assets/events/worship-night-promo', video_playlist = ? WHERE id = ?").run('[{"src":"/assets/events/worship-night-gift","label":"Gift"}]', id);
+    const fd = new FormData(); Object.entries({ name: "Lerato Khumalo", email: "lerato@example.com", phone: "0821234567", guests: "1" }).forEach(([k, v]) => fd.append(k, v));
+    assert.equal((await call(`/api/events/${slug}/register`, { method: "POST", body: fd }, e)).status, 201);
+    e.DB._db.prepare("INSERT INTO subscribers (id, email, name, status, token, source) VALUES ('s1','friend@example.com','Sam Friend','active','tok1','footer')").run();
+
+    assert.equal((await post(`/api/admin/events/${id}/postpone`, {}, A(c), e)).status, 200);
+    const ev = (await (await call(`/api/events/${slug}`, {}, e)).json() as { event: { postponed: boolean; registration_open: boolean; cover_video: string | null; videos: unknown[]; archive_videos: { src: string }[] } }).event;
+    assert.equal(ev.postponed, true);
+    assert.equal(ev.registration_open, false);
+    assert.equal(ev.cover_video, null, "no autoplay promo");
+    assert.equal(ev.archive_videos.length, 2, "main promo + clip are in the archive");
+    const again = new FormData(); Object.entries({ name: "Late Comer", email: "late@example.com", phone: "0821234567" }).forEach(([k, v]) => again.append(k, v));
+    assert.equal((await call(`/api/events/${slug}/register`, { method: "POST", body: again }, e)).status, 409, "no new tickets");
+    const list = (await (await call("/api/events", {}, e)).json() as { events: { slug: string }[] }).events;
+    assert.ok(list.some((x) => x.slug === slug), "still listed");
+
+    const { processPostponements } = await import("../src/lib/postponement.ts");
+    const { processEventReminders } = await import("../src/lib/event-reminders.ts");
+    const n0 = e.EMAIL.outbox.length;
+    assert.ok((await processPostponements(e)) >= 2);
+    const sent = e.EMAIL.outbox.slice(n0);
+    const holder = sent.find((m) => JSON.stringify(m.to).includes("lerato@example.com"))!;
+    assert.match(holder.html!, /refund/i);
+    assert.match(holder.html!, /not cancelled/i);
+    assert.match(holder.html!, /postponed-wide-1600\.jpg/, "poster in the email");
+    const sub = sent.find((m) => JSON.stringify(m.to).includes("friend@example.com"))!;
+    assert.ok(!/reference/i.test(sub.html!), "non-holders don't get ticket details");
+    assert.equal(await processPostponements(e), 0, "each address once");
+    assert.equal(await processEventReminders(e, new Date("2030-11-06T10:05:00Z")), 0, "no weekly reminders for a postponed event");
+  });
+});

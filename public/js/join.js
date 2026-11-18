@@ -155,13 +155,26 @@ function renderReview() {
 document.getElementById("review").addEventListener("click", (e) => { const b = e.target.closest("[data-goto]"); if (b) go(Number(b.dataset.goto)); });
 
 // ---------- navigation ----------
+// The middle steps are optional: if nothing is filled in on them, the button says "Skip for now" so nobody feels stuck.
+const OPTIONAL = ["Where you're at", "Faith journey", "Get involved"];
+function setNextLabel() {
+  const last = current === steps.length - 1;
+  const step = steps[current];
+  const optional = OPTIONAL.includes(step.dataset.step);
+  const touched = optional && [...step.querySelectorAll("input, select, textarea")].some((el) => (el.type === "checkbox" || el.type === "radio") ? el.checked : el.value.trim() !== "");
+  const eye = step.querySelector(".step-head .eyebrow");
+  if (eye && optional && !eye.dataset.opt) { eye.dataset.opt = "1"; eye.textContent += " · Optional"; }
+  nextBtn.innerHTML = last ? "Submit &amp; join the family ✦" : optional && !touched ? `Skip for now ${icon("arrowRight", "arr")}` : `Continue ${icon("arrowRight", "arr")}`;
+}
+form.addEventListener("input", () => { if (nextBtn.textContent !== "Sending…") setNextLabel(); });
+form.addEventListener("change", () => { if (nextBtn.textContent !== "Sending…") setNextLabel(); });
 function go(i) {
   current = Math.max(0, Math.min(steps.length - 1, i));
   steps.forEach((s, k) => s.classList.toggle("active", k === current));
   [...stepList.children].forEach((li, k) => { li.classList.toggle("done", k < current); li.classList.toggle("current", k === current); });
   backBtn.style.visibility = current === 0 ? "hidden" : "visible";
   const last = current === steps.length - 1;
-  nextBtn.innerHTML = last ? "Submit &amp; join the family ✦" : `Continue ${icon("arrowRight", "arr")}`;
+  setNextLabel();
   if (last) renderReview();
   document.querySelector(".join-card").scrollIntoView({ behavior: "smooth", block: "start" });
   saveDraft();

@@ -448,6 +448,21 @@ export function adminRoutes(router: Router, env: Env): void {
     return json({ ok: true, sent: to.length });
   }));
 
+  // Postpone an event: sales close, the old date and promo videos are hidden, and everyone is emailed (by the cron, once each).
+  router.post("/api/admin/events/:id/postpone", guard(async (req, { id }, s) => {
+    const e = await env.DB.prepare("SELECT * FROM events WHERE id = ?").bind(id).first<EventRow>();
+    if (!e) throw new HttpError(404, "Event not found.");
+    checkEventScope(s, e as { ministry_group?: string });
+    const b = await readJson<{ note?: string }>(req);
+    const note = String(b.note || "").trim().slice(0, 600) || `${e.title} has been postponed. We will announce the new date soon. Your tickets stay valid for the new date. If you would rather have a refund, please email us.`;
+    await env.DB.batch([
+      env.DB.prepare("UPDATE events SET postponed_at = ?, postponed_note = ?, rsvp_enabled = 0, updated_at = ? WHERE id = ?").bind(new Date().toISOString(), note, new Date().toISOString(), id),
+      env.DB.prepare("DELETE FROM settings WHERE key = ?").bind(`postponed_mail_done_${id}`),
+    ]);
+    await audit(env, s, "postpone_event", "event", id, {});
+    return json({ ok: true });
+  }));
+
   // Approve every registration still awaiting approval for an event, in sign-up order.
   router.post("/api/admin/events/:id/approve-all", guard(async (_req, { id }, s, ctx) => {
     const e = await env.DB.prepare("SELECT * FROM events WHERE id = ?").bind(id).first<EventRow>();

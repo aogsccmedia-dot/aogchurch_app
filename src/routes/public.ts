@@ -40,10 +40,14 @@ function playlist(e: EventRow): { src: string; label: string }[] {
 }
 
 function publicEvent(e: EventRow, counts: { people: number }) {
-  const closed = !e.rsvp_enabled || (e.registration_closes_at ? e.registration_closes_at < new Date().toISOString() : false) || e.starts_at < new Date(Date.now() - 3 * 3600_000).toISOString();
+  const postponed = !!e.postponed_at;
+  const closed = postponed || !e.rsvp_enabled || (e.registration_closes_at ? e.registration_closes_at < new Date().toISOString() : false) || e.starts_at < new Date(Date.now() - 3 * 3600_000).toISOString();
   return {
     id: e.id, slug: e.slug, title: e.title, category: e.category, description: e.description, starts_at: e.starts_at, ends_at: e.ends_at,
-    location: e.location, cover_video: e.cover_video || null, videos: playlist(e), cover_url: e.cover_attachment_id ? `/api/media/${e.cover_attachment_id}` : e.cover_image || null, price_label: e.price_label,
+    location: e.location, postponed, postponed_note: postponed ? e.postponed_note || null : null,
+    // A postponed event stops auto-playing its promos; they move to the page's archive.
+    cover_video: postponed ? null : e.cover_video || null, videos: postponed ? [] : playlist(e),
+    archive_videos: postponed && e.cover_video ? [{ src: e.cover_video, label: e.title }, ...playlist(e)] : [], cover_url: e.cover_attachment_id ? `/api/media/${e.cover_attachment_id}` : e.cover_image || null, price_label: e.price_label,
     ticket_price: e.ticket_price || null, requires_pop: !!e.requires_pop, auto_approve: !!e.auto_approve,
     registration_open: !closed, capacity: e.capacity, spots_left: e.capacity ? Math.max(0, e.capacity - counts.people) : null,
     collect_phone: !!e.collect_phone,
@@ -77,7 +81,7 @@ export function publicRoutes(router: Router, env: Env): void {
   // ---------------- events
   router.get("/api/events", async () => {
     const { results } = await env.DB.prepare(
-      `SELECT * FROM events WHERE is_published = 1 AND COALESCE(ends_at, starts_at) >= ? ORDER BY starts_at ASC LIMIT 24`,
+      `SELECT * FROM events WHERE is_published = 1 AND (postponed_at IS NOT NULL OR COALESCE(ends_at, starts_at) >= ?) ORDER BY (postponed_at IS NOT NULL), starts_at ASC LIMIT 24`,
     ).bind(new Date(Date.now() - 3 * 3600_000).toISOString()).all<EventRow>();
     const events = await Promise.all(results.map(async (e) => publicEvent(e, await eventCounts(env, e.id))));
     return json({ ok: true, events }, 200, { "Cache-Control": "public, max-age=30" });

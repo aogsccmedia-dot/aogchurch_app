@@ -201,7 +201,7 @@ async function handleMessage(env: Env, msg: Inbound, name: string | null) {
 
 async function churchFacts(env: Env) {
   const { results: svcs } = await env.DB.prepare("SELECT day, title, start_time, end_time FROM weekly_services WHERE active = 1 ORDER BY CASE day WHEN 0 THEN 7 ELSE day END, sort").all<Svc>();
-  const { results: events } = await env.DB.prepare("SELECT title, slug, starts_at FROM events WHERE is_published = 1 AND COALESCE(ends_at, starts_at) >= ? ORDER BY starts_at LIMIT 3")
+  const { results: events } = await env.DB.prepare("SELECT title, slug, starts_at FROM events WHERE is_published = 1 AND postponed_at IS NULL AND COALESCE(ends_at, starts_at) >= ? ORDER BY starts_at LIMIT 3")
     .bind(new Date().toISOString()).all<{ title: string; slug: string; starts_at: string }>();
   const site = siteUrl(env);
   const services = svcs.map((s) => `• ${DAYS[s.day]}: ${s.title}${s.start_time ? ` (${s.start_time}${s.end_time ? `–${s.end_time}` : ""})` : ""}`).join("\n");

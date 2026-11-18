@@ -32,7 +32,8 @@ const TZ = "Africa/Johannesburg";
 const fmt = (o) => new Intl.DateTimeFormat("en-ZA", { ...o, timeZone: TZ });
 const FALLBACKS = ["worship", "congregation", "prayer", "hospitality"];
 const eventsEl = document.getElementById("events");
-const whenShort = (s) => `${fmt({ weekday: "short", day: "numeric", month: "short" }).format(new Date(s))} · ${fmt({ hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(s))}`;
+const whenShort = (s, ev) => ev?.postponed ? "Postponed · new date soon" : whenShort0(s);
+const whenShort0 = (s) => `${fmt({ weekday: "short", day: "numeric", month: "short" }).format(new Date(s))} · ${fmt({ hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(s))}`;
 const whenLong = (s, e) => `${fmt({ weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date(s))}<br>${fmt({ hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(s))}${e ? " – " + fmt({ hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(e)) : ""}`;
 const coverImg = (ev, i, eager = false) => ev.cover_url
   ? `<img src="${esc(ev.cover_url)}" alt="${esc(ev.title)}" ${eager ? "" : 'loading="lazy"'}>`
@@ -50,7 +51,7 @@ async function renderFeatured(ev) {
       <h2 id="featured-title">${esc(ev.title)}</h2>
       ${ev.description ? `<p class="lede">${esc(ev.description)}</p>` : ""}
       <ul class="facts-list">
-        <li>${icon("calendar")}<span>${whenLong(ev.starts_at, ev.ends_at)}</span></li>
+        <li>${icon("calendar")}<span>${ev.postponed ? "Postponed to early 2027<br>New date to be announced" : whenLong(ev.starts_at, ev.ends_at)}</span></li>
         <li>${icon("mapPin")}<span>${esc(ev.location || "17 Humber Street, Woodmead, Sandton")}</span></li>
         ${ev.price_label ? `<li>${icon("ticket")}<span>${esc(ev.price_label)}</span></li>` : ""}
       </ul>
@@ -82,9 +83,9 @@ async function loadEvents() {
     const promo = events.find((e) => e.cover_video), slot = $id("promo-slot");
     if (promo && slot) { const { promoHtml, initPromos } = await import("./promo.js"); slot.innerHTML = promoHtml(promo, { ticket: promo.registration_open, label: promo.registration_open ? "Get Ticket" : "Details" }); slot.hidden = false; initPromos(slot, { sound: true }); }
     if (featured && $id("featured")) renderFeatured(featured);
-    eventsEl.innerHTML = (limit ? events.slice(0, limit) : events).map((ev, i) => `<a class="event-card" href="/event?e=${encodeURIComponent(ev.slug)}">
+    eventsEl.innerHTML = (limit ? events.slice(0, limit) : events).map((ev, i) => `<a class="event-card${ev.postponed ? " is-postponed" : ""}" href="/event?e=${encodeURIComponent(ev.slug)}">
         <figure class="photo cover-square">${coverImg(ev, i)}</figure>
-        <div class="body"><span class="eyebrow gold">${esc(whenShort(ev.starts_at))}</span><h3>${esc(ev.title)}</h3>
+        <div class="body"><span class="eyebrow gold">${esc(whenShort(ev.starts_at, ev))}</span><h3>${esc(ev.title)}</h3>
           <p class="meta">${esc(ev.location || "17 Humber Street, Woodmead")}</p>
           <div class="foot"><span class="price">${esc(ev.price_label || "Free")}</span>${spots(ev)}<span class="btn btn-sm${ev.registration_open ? " btn-gold btn-glow" : ""}">${ev.registration_open ? "Get Ticket" : "Details"} ${icon("arrowRight", "arr")}</span></div></div></a>`).join("");
     initPhotos(eventsEl);

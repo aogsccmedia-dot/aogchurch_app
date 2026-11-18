@@ -196,7 +196,7 @@ export function authRoutes(router: Router, env: Env): void {
                 last_confirmed_at, next_checkin_at, revoked_at, welcome_sent_at
            FROM members WHERE user_id = ? OR email = ? ORDER BY created_at DESC LIMIT 1`).bind(s.user.id, s.user.email).first(),
       env.DB.prepare(
-        `SELECT r.ref_code, r.status, r.created_at, r.guests, e.title, e.slug, e.starts_at, e.ends_at, e.location,
+        `SELECT r.ref_code, r.status, r.created_at, r.guests, e.title, e.slug, e.starts_at, e.ends_at, e.location, e.postponed_at,
                 (SELECT code FROM tickets t WHERE t.registration_id = r.id AND t.status = 'valid' ORDER BY seq LIMIT 1) AS ticket_code FROM event_registrations r
            JOIN events e ON e.id = r.event_id WHERE (r.user_id = ? OR r.email = ?) AND r.status NOT IN ('cancelled') ORDER BY e.starts_at DESC LIMIT 50`,
       ).bind(s.user.id, s.user.email).all(),

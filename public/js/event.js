@@ -78,9 +78,11 @@ async function load() {
   addEventSchema(event);
   $("ev-cat").textContent = event.category;
   $("ev-title").textContent = event.title;
-  $("ev-when").textContent = fmtWhen(event.starts_at, event.ends_at);
+  $("ev-when").textContent = event.postponed ? "New date to be announced · early 2027" : fmtWhen(event.starts_at, event.ends_at);
+  if (event.postponed) showPostponed();
   $("ev-where").textContent = event.location || "17 Humber Street, Woodmead, Sandton";
   $("ev-desc").textContent = event.description || "";
+  if (event.postponed) $("ev-cal").closest(".cal-menu").hidden = true;
   $("ev-cal").href = event.calendar_url;
   $("ev-ics").href = event.ics_url;
   $("ev-outlook").href = event.outlook_url;
@@ -98,6 +100,7 @@ async function load() {
   $("custom-fields").innerHTML = event.form.map(renderField).join("");
   setupPayment();
 
+  if (event.postponed) { postponedCard(r.mine); return; }
   if (r.mine) { done(r.mine.status, r.mine.ref_code, null, true); return; }
   if (!event.registration_open) {
     $("reg-card").innerHTML = `<p class="eyebrow gold">Tickets</p><h3>Tickets are closed</h3><p class="muted-text">You're still very welcome to join us!</p>`;
@@ -137,6 +140,7 @@ $("ev-share").addEventListener("click", async () => {
 });
 
 whenSignedIn(async (me) => {
+  if (event?.postponed) return;
   prefill(me);
   const r = await api(`/api/events/${encodeURIComponent(slug)}`).catch(() => null);
   if (r?.mine) done(r.mine.status, r.mine.ref_code, null, true);
@@ -191,12 +195,12 @@ function addEventSchema(e) {
     const url = `${location.origin}/event?e=${encodeURIComponent(e.slug)}`;
     const data = {
       "@context": "https://schema.org", "@type": "Event", name: e.title, description: e.description || undefined,
-      startDate: e.starts_at, endDate: e.ends_at || undefined, eventStatus: "https://schema.org/EventScheduled",
+      startDate: e.starts_at, endDate: e.ends_at || undefined, eventStatus: e.postponed ? "https://schema.org/EventPostponed" : "https://schema.org/EventScheduled",
       eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
       location: { "@type": "Place", name: "AOG Sandton City Church", address: { "@type": "PostalAddress", streetAddress: "17 Humber Street", addressLocality: "Woodmead, Sandton", addressRegion: "Gauteng", addressCountry: "ZA" } },
       image: e.cover_url ? [new URL(e.cover_url, location.origin).href] : [`${location.origin}/assets/og.jpg`],
       organizer: { "@type": "Organization", name: "AOG Sandton City Church", url: location.origin },
-      offers: { "@type": "Offer", url, price: e.ticket_price || 0, priceCurrency: "ZAR", availability: e.spots_left === 0 ? "https://schema.org/SoldOut" : "https://schema.org/InStock" },
+      offers: { "@type": "Offer", url, price: e.ticket_price || 0, priceCurrency: "ZAR", availability: e.postponed || e.spots_left === 0 ? "https://schema.org/SoldOut" : "https://schema.org/InStock" },
     };
     const tag = document.createElement("script"); tag.type = "application/ld+json"; tag.textContent = JSON.stringify(data); document.head.append(tag);
     const canon = document.createElement("link"); canon.rel = "canonical"; canon.href = url; document.head.append(canon);
@@ -231,4 +235,26 @@ function lockUntilComplete() {
   form.addEventListener("input", update);
   form.addEventListener("change", update);
   update();
+}
+
+// ---------- postponed events ----------
+function showPostponed() {
+  $("ev-postponed").hidden = false;
+  $("ev-postponed").innerHTML = `<b>${icon("calendar")} Postponed, not cancelled</b><span>${esc(event.postponed_note || "We will announce the new date soon.")}</span>`;
+  $("ev-price-row").hidden = true; $("ev-cap-row").hidden = true;
+  // The promo videos rest here, to be played on request, until the new date is out.
+  const list = event.archive_videos || [];
+  if (!list.length) return;
+  $("ev-archive").hidden = false;
+  $("ev-archive-grid").innerHTML = list.map((v) => `<figure class="archive-card"><video controls playsinline preload="none" poster="${esc(v.src)}-poster.jpg" aria-label="${esc(v.label)} video">
+      <source src="${esc(v.src)}-720.mp4" type="video/mp4"><source src="${esc(v.src)}-720.webm" type="video/webm"></video><figcaption>${esc(v.label)}</figcaption></figure>`).join("");
+  $("ev-archive-grid").addEventListener("play", (e) => { for (const v of $("ev-archive-grid").querySelectorAll("video")) if (v !== e.target) v.pause(); }, true);
+}
+async function postponedCard(mine) {
+  const email = await api("/api/settings").then((r) => r.settings?.contact_email).catch(() => "");
+  const href = email ? `mailto:${email}?subject=${encodeURIComponent(`${event.title} refund request`)}&body=${encodeURIComponent(`Hi, I would like a refund.\n\nFull name:\nTicket reference:${mine ? " " + mine.ref_code : ""}\n`)}` : "/visit#contact";
+  $("reg-card").innerHTML = `<p class="eyebrow gold">Tickets</p><h3>${mine ? "Your ticket stays valid" : "Tickets are paused"}</h3>
+    <p class="muted-text">${mine ? `You're booked (ref ${esc(mine.ref_code)}). Your ticket works on the new date, so you don't need to do anything.` : "Ticket sales will open again when the new date is announced."}</p>
+    <p class="muted-text">Would you like a refund? Just email us with your full name and ticket reference and we'll sort it out.</p>
+    <a class="btn btn-gold" href="${esc(href)}">${icon("mail")} Ask about a refund</a>`;
 }

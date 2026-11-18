@@ -21,7 +21,7 @@ export type Facts = { services: Service[]; events: EventRow[]; settings: Record<
 export async function facts(env: Env): Promise<Facts> {
   const [s, e, st] = await Promise.all([
     env.DB.prepare("SELECT day, title, start_time, end_time, note, frequency FROM weekly_services WHERE active = 1 ORDER BY CASE day WHEN 0 THEN 7 ELSE day END, sort, start_time").all<Service>(),
-    env.DB.prepare("SELECT * FROM events WHERE is_published = 1 AND COALESCE(ends_at, starts_at) >= ? ORDER BY starts_at LIMIT 20").bind(new Date().toISOString()).all<EventRow>(),
+    env.DB.prepare("SELECT * FROM events WHERE is_published = 1 AND postponed_at IS NULL AND COALESCE(ends_at, starts_at) >= ? ORDER BY starts_at LIMIT 20").bind(new Date().toISOString()).all<EventRow>(),
     env.DB.prepare("SELECT key, value FROM settings WHERE key IN ('service_summary','contact_email','whatsapp_number')").all<{ key: string; value: string }>(),
   ]);
   return { services: s.results, events: e.results, settings: Object.fromEntries(st.results.map((r) => [r.key, r.value])) };
@@ -46,7 +46,7 @@ export function eventLd(env: Env, e: EventRow) {
   return {
     "@type": "Event", name: e.title, startDate: e.starts_at, ...(e.ends_at ? { endDate: e.ends_at } : {}), url: eventUrl(env, e),
     description: plain(e.description) || `${e.title} at ${NAME}, Woodmead, Sandton.`, image: [cover(env, e)],
-    eventStatus: "https://schema.org/EventScheduled", eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    eventStatus: e.postponed_at ? "https://schema.org/EventPostponed" : "https://schema.org/EventScheduled", eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     location: e.location && !/humber|woodmead|sandton city church/i.test(e.location) ? { "@type": "Place", name: e.location, address: e.location } : PLACE,
     organizer: { "@type": "Organization", "@id": `${siteUrl(env)}/#church`, name: NAME, url: `${siteUrl(env)}/` },
     ...((e as EventRow & { cover_video?: string | null }).cover_video ? { video: { "@type": "VideoObject", name: `${e.title} · promo`, description: plain(e.description) || e.title,
@@ -127,7 +127,7 @@ const text = (body: string) => new Response(body, { headers: { "Content-Type": "
 async function sitemap(req: Request, env: Env): Promise<Response> {
   const base = await env.ASSETS.fetch(new Request(new URL("/sitemap-pages.xml", req.url))).then((r) => r.ok ? r.text() : "").catch(() => "");
   const pages = [...base.matchAll(/<url>[\s\S]*?<\/url>/g)].map((m) => m[0]);
-  const { results } = await env.DB.prepare("SELECT slug FROM events WHERE is_published = 1 AND COALESCE(ends_at, starts_at) >= ? ORDER BY starts_at LIMIT 200")
+  const { results } = await env.DB.prepare("SELECT slug FROM events WHERE is_published = 1 AND (postponed_at IS NOT NULL OR COALESCE(ends_at, starts_at) >= ?) ORDER BY starts_at LIMIT 200")
     .bind(new Date(Date.now() - 30 * 86400_000).toISOString()).all<{ slug: string }>().catch(() => ({ results: [] as { slug: string }[] }));
   const evs = results.map((e) => `  <url><loc>${siteUrl(env)}/event?e=${encodeURIComponent(e.slug)}</loc><changefreq>daily</changefreq><priority>0.7</priority></url>`);
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...pages.map((p) => `  ${p}`), ...evs].join("\n")}\n</urlset>\n`;
