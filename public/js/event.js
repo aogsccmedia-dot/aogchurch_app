@@ -93,7 +93,7 @@ async function load() {
     const fig = $("ev-cover"); fig.classList.remove("cover-square", "alive", "photo"); fig.classList.add("cover-video");
     fig.innerHTML = promoHtml(event, { ticket: event.registration_open, href: "#reg-card", reel: true });
     initPromos(fig, { sound: true });
-  } else if (event.cover_url) $("ev-cover").innerHTML = `<img src="${esc(event.cover_url)}" alt="${esc(event.title)} poster">`;
+  } else if (event.cover_url && !$("ev-cover").querySelector(`img[src="${event.cover_url}"]`)) $("ev-cover").innerHTML = `<img src="${esc(event.cover_url)}" alt="${esc(event.title)} poster">`;
   if (event.capacity) { $("ev-cap-row").hidden = false; $("ev-cap").textContent = event.spots_left > 0 ? `${event.spots_left} of ${event.capacity} spots left` : "Fully booked — join the waitlist"; }
   if (!event.collect_phone) { $("r-phone-field").hidden = true; }
   else form.phone.required = true;

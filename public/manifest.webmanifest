@@ -9,6 +9,8 @@
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
+  "launch_handler": { "client_mode": ["navigate-existing", "auto"] },
+  "handle_links": "preferred",
   "background_color": "#f6f1e8",
   "theme_color": "#f6f1e8",
   "categories": ["lifestyle", "social", "education"],

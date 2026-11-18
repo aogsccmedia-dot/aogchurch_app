@@ -18,6 +18,12 @@ const TZ = "Africa/Johannesburg";
 type Service = { day: number; title: string; start_time: string | null; end_time: string | null; note: string | null; frequency: string };
 export type Facts = { services: Service[]; events: EventRow[]; settings: Record<string, string> };
 
+let factsMemo: { at: number; v: Facts; db: unknown } | null = null;
+/** The live facts, shared for 45 seconds per Worker instance: public pages don't wait on the database for every visitor. */
+export async function factsCached(env: Env): Promise<Facts> {
+  if (factsMemo && factsMemo.db === env.DB && Date.now() - factsMemo.at < 45_000) return factsMemo.v;
+  const v = await facts(env); factsMemo = { at: Date.now(), v, db: env.DB }; return v;
+}
 export async function facts(env: Env): Promise<Facts> {
   const [s, e, st] = await Promise.all([
     env.DB.prepare("SELECT day, title, start_time, end_time, note, frequency FROM weekly_services WHERE active = 1 ORDER BY CASE day WHEN 0 THEN 7 ELSE day END, sort, start_time").all<Service>(),
@@ -34,6 +40,11 @@ export function serviceSummary(f: Facts): string {
   const parts = [...sun, ...rest].map((s) => `${s.title} ${DAYS[s.day]}s ${s.start_time || ""}${s.end_time ? `–${s.end_time}` : ""}`.trim());
   return parts.length ? `Everyone is welcome. ${parts.join(" · ")}.` : f.settings.service_summary || "Join us every Sunday.";
 }
+const evWhen = (s: string, e: string | null) => {
+  const day = new Intl.DateTimeFormat("en-ZA", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: TZ }).format(new Date(s));
+  const t = (x: Date) => new Intl.DateTimeFormat("en-ZA", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: TZ }).format(x);
+  return `${day} · ${t(new Date(s))}${e ? "–" + t(new Date(e)) : ""}`;
+};
 const when = (iso: string) => new Intl.DateTimeFormat("en-ZA", { weekday: "short", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: TZ }).format(new Date(iso));
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 const plain = (s: string | null, n = 300) => String(s || "").replace(/[#*_`>]+/g, "").replace(/\s+/g, " ").trim().slice(0, n);
@@ -83,10 +94,15 @@ export async function seoResponse(req: Request, env: Env): Promise<Response> {
   if (url.pathname === "/sitemap.xml") return sitemap(req, env);
   if (url.pathname === "/llms.txt") return text(await llms(env, false));
   if (url.pathname === "/llms-full.txt") return text(await llms(env, true));
-  const res = await env.ASSETS.fetch(req);
-  if (!res.ok || !(res.headers.get("content-type") || "").includes("text/html") || typeof HTMLRewriter === "undefined") return res;
-  let f: Facts;
-  try { f = await facts(env); } catch { return res; }
+  // The page, the live facts and (for an event link) the event itself are fetched together, not one after another.
+  const slug = path === "/event" ? url.searchParams.get("e") || "" : "";
+  const [res, factsRes, ev] = await Promise.all([
+    env.ASSETS.fetch(req),
+    factsCached(env).catch(() => null),
+    slug ? env.DB.prepare("SELECT * FROM events WHERE (slug = ? OR id = ?) AND is_published = 1").bind(slug, slug).first<EventRow>().catch(() => null) : Promise.resolve(null),
+  ]);
+  if (!res.ok || !(res.headers.get("content-type") || "").includes("text/html") || typeof HTMLRewriter === "undefined" || !factsRes) return res;
+  const f: Facts = factsRes;
   const summary = serviceSummary(f);
   let rw = new HTMLRewriter().on('[data-setting="service_summary"]', { element(el) { el.setInnerContent(summary); } });
   const head: unknown[] = [];
@@ -104,9 +120,18 @@ export async function seoResponse(req: Request, env: Env): Promise<Response> {
     } });
   }
   if (path === "/event") {
-    const slug = url.searchParams.get("e") || "";
-    const e = slug ? await env.DB.prepare("SELECT * FROM events WHERE (slug = ? OR id = ?) AND is_published = 1").bind(slug, slug).first<EventRow>().catch(() => null) : null;
+    const e = ev;
     if (e) {
+      // The right event is in the page from the very first paint (no "Loading…" and no stand-in photo before it).
+      const longWhen = e.postponed_at ? "New date to be announced · early 2027" : evWhen(e.starts_at, e.ends_at);
+      const coverSrc = e.cover_attachment_id ? `/api/media/${e.cover_attachment_id}` : e.cover_image || "";
+      rw = rw.on("#ev-cat", { element(el) { el.setInnerContent(e.category || "Event"); } })
+        .on("#ev-title", { element(el) { el.setInnerContent(e.title); } })
+        .on("#ev-when", { element(el) { el.setInnerContent(longWhen); } })
+        .on("#ev-where", { element(el) { el.setInnerContent(e.location || "17 Humber Street, Woodmead, Sandton"); } })
+        .on("#ev-desc", { element(el) { el.setInnerContent(e.description || ""); } });
+      if (coverSrc && !e.cover_video) rw = rw.on("#ev-cover", { element(el) { el.setInnerContent(`<img src="${esc(coverSrc)}" alt="${esc(e.title)} poster" fetchpriority="high" decoding="async">`, { html: true }); } });
+      else if (e.cover_video) rw = rw.on("#ev-cover", { element(el) { el.setInnerContent(""); } });
       const title = `${e.title} · ${when(e.starts_at)} · ${NAME}`, desc = plain(e.description, 155) || `${e.title} at ${NAME}, Woodmead, Sandton. ${when(e.starts_at)}.`, img = cover(env, e), link = eventUrl(env, e);
       const set = (sel: string, attr: string, v: string) => { rw = rw.on(sel, { element(el) { el.setAttribute(attr, v); } }); };
       rw = rw.on("title", { element(el) { el.setInnerContent(title); } });
