@@ -83,8 +83,16 @@ export function publicRoutes(router: Router, env: Env): void {
     const { results } = await env.DB.prepare(
       `SELECT * FROM events WHERE is_published = 1 AND (postponed_at IS NOT NULL OR COALESCE(ends_at, starts_at) >= ?) ORDER BY (postponed_at IS NOT NULL), starts_at ASC LIMIT 24`,
     ).bind(new Date(Date.now() - 3 * 3600_000).toISOString()).all<EventRow>();
-    const events = await Promise.all(results.map(async (e) => publicEvent(e, await eventCounts(env, e.id))));
-    return json({ ok: true, events }, 200, { "Cache-Control": "public, max-age=30" });
+    // One query for every event's seats, not one per event.
+    const taken = new Map<string, number>();
+    if (results.length) {
+      const { results: rows } = await env.DB.prepare(
+        `SELECT event_id, SUM(1 + guests) AS n FROM event_registrations WHERE status IN ('confirmed','pending') AND event_id IN (${results.map(() => "?").join(",")}) GROUP BY event_id`,
+      ).bind(...results.map((e) => e.id)).all<{ event_id: string; n: number }>();
+      for (const r of rows) taken.set(r.event_id, r.n);
+    }
+    const events = results.map((e) => publicEvent(e, { people: taken.get(e.id) ?? 0 }));
+    return json({ ok: true, events }, 200, { "Cache-Control": "public, max-age=30, stale-while-revalidate=120" });
   });
 
   router.get("/api/events/:slug", async (req, { slug }) => {
